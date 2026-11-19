@@ -124,7 +124,7 @@ export class SelectTool implements Tool {
     }
     const b=this.box;
     if(!additive&&b&&s.x>=b.minX&&s.x<=b.maxX&&s.y>=b.minY&&s.y<=b.maxY){this.mode='move';return;}
-    const p=this.app.view.toWorld(s.x,s.y),pad=14/this.app.view.scale;
+    const p=this.app.view.toWorld(s.x,s.y),pad=24/this.app.view.scale;
     const candidates=this.app.doc.query({minX:p.x-pad,minY:p.y-pad,maxX:p.x+pad,maxY:p.y+pad}).sort((a,b)=>b.z-a.z);
     const found=candidates.find(o=>this.hits(o,p,pad))??null;
     if(found){
