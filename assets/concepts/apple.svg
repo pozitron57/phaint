@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef2f8"/>
+    </linearGradient>
+    <clipPath id="clip"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#1b2740" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#paper)" filter="url(#shadow)"/>
+  <g clip-path="url(#clip)" stroke="#c9d5e6" stroke-width="4" opacity=".6">
+    <path d="M203 100V924M306 100V924M409 100V924M512 100V924M615 100V924M718 100V924M821 100V924"/>
+    <path d="M100 203H924M100 306H924M100 409H924M100 512H924M100 615H924M100 718H924M100 821H924"/>
+  </g>
+  <g fill="none" stroke="#315ca8" stroke-linecap="round">
+    <path d="M345 263 L357 340 M430 220 L445 321" stroke-width="30"/>
+    <path d="M532 445 Q535 400 512 369" stroke-width="28"/>
+  </g>
+  <path d="M526 450 C471 405 410 420 372 469 C323 533 342 641 391 709 C423 754 452 770 490 753 C521 739 545 739 578 753 C616 771 654 747 693 690 C748 611 748 518 694 465 C653 425 600 423 556 453 C547 458 536 458 526 450Z" fill="#f8fbf6" stroke="#79ad65" stroke-width="52" stroke-linejoin="round"/>
+  <path d="M539 382 C557 317 614 304 665 307 C656 365 608 401 539 382Z" fill="#c9514e"/>
+</svg>

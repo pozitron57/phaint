@@ -1,0 +1,30 @@
+// Один SVG открыт в двух окнах: устаревшая версия не затирает сохранение соседнего окна.
+const {app,test}=window.__phaint,native=window.phaintNative;
+const assert=(value,message)=>{if(!value)throw new Error(message);};
+const evaluate=(id,code)=>native.testWindows('eval',{id,code});
+await test.pen([[160,180,.3],[360,220,.8]],4);
+await native.testFiles('choices',{choices:{saves:['общий.svg']}});
+assert(await app.files.save(),'первый рисунок сохранён');
+const before=await native.testWindows('list');
+assert(await native.testKeys('menu',{id:'app.newWindow'})==='Cmd+T','меню показывает Cmd+T');
+test.key('KeyT',{metaKey:true});
+let windows=[];
+for(let i=0;i<1000;i++){windows=await native.testWindows('list');if(windows.length===2)break;await test.sleep(10);}
+assert(windows.length===2,'Cmd+T открывает второй холст');
+const second=windows.find(win=>!before.some(old=>old.id===win.id)).id;
+await native.testFiles('choices',{choices:{opens:['общий.svg']}});
+assert(await evaluate(second,'return window.__phaint.app.files.open();'),'второе окно открыло тот же SVG');
+await test.pen([[160,280,.3],[360,320,.8]],4);
+assert(await app.files.save(),'первое окно обновило файл');
+const saved=await native.testFiles('read',{name:'общий.svg'});
+assert(!await evaluate(second,`const {app,test}=window.__phaint;await test.pen([[450,400,.3],[650,440,.8]],4);return app.files.save();`),'устаревшая копия не перезаписала файл');
+assert(await native.testFiles('read',{name:'общий.svg'})===saved,'запись первого окна сохранена точно');
+assert(await evaluate(second,'return window.__phaint.app.files.dirty;'),'неудачное сохранение не сбросило изменения');
+const errors=await native.testFiles('errors');assert(errors.length===1&&errors[0].includes('изменён другой программой'),'причина отказа показана');
+await native.testFiles('choices',{choices:{saves:['другой.svg']}});
+assert(await evaluate(second,'return window.__phaint.app.files.save(true);'),'Сохранить как сохраняет второй рисунок');
+assert(await native.testFiles('read',{name:'другой.svg'})!==saved,'получились разные рисунки');
+assert(await native.testWindows('close',{id:second}),'второе окно закрыто после сохранения');
+assert(app.doc.size===2&&!app.files.dirty,'первое окно продолжает работу с сохранённым рисунком');
+await test.idle();await test.shot('saved');
+return {ok:true,protected:true};

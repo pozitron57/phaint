@@ -1,0 +1,25 @@
+// Сохранение 50 000 штрихов: измеряем паузы экрана, пока Worker строит SVG.
+const { app, test, generate } = window.__phaint;
+generate(50000); await test.idle();
+await window.phaintNative.testFiles('choices',{choices:{saves:['большой.svg']}});
+const dts=[]; let previous=0, run=true;
+const tick = t => { if(previous) dts.push(t-previous); previous=t; if(run) requestAnimationFrame(tick); };
+requestAnimationFrame(tick); await test.frames(2);
+const start = performance.now();
+const saved = await app.files.save();
+const saveMs = performance.now()-start;
+await test.frames(2); run=false;
+const bytes = await window.phaintNative.testFiles('size',{name:'большой.svg'});
+if (!saved || app.files.dirty) throw new Error('Большой SVG не сохранился');
+if(app.files.lastWrite.bytes!==bytes)throw new Error('Размер большого SVG в F12 не совпал с файлом');
+const saveFrames = {maxFrame:Math.max(...dts), slowFrames:dts.filter(v=>v>25).length};
+await test.pen([[100,100,.3],[180,130,.8],[220,140,.4]],8); await test.idle();
+dts.length=0; previous=0; run=true; requestAnimationFrame(tick); await test.frames(2);
+const backupStart=performance.now(); await app.files.backup();
+const backupMs=performance.now()-backupStart;
+await test.frames(2); run=false;
+const backupFrames={maxFrame:Math.max(...dts), slowFrames:dts.filter(v=>v>25).length};
+await test.sleep(5500);
+if (app.files.worker.worker !== null) throw new Error('Worker не освобождён после простоя');
+const idleFrames=app.renderer.frames; await test.sleep(1000);
+return {saveMs:Math.round(saveMs), megabytes:+(bytes/1e6).toFixed(1), saveFrames, backupMs:Math.round(backupMs), backupFrames, idleFrames:app.renderer.frames-idleFrames, heapMB:Math.round(performance.memory.usedJSHeapSize/1e6)};

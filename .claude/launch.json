@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "renderer",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4847",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/Users/slisakov/projects/phaint/dist/renderer"
+      ],
+      "port": 4847
+    }
+  ]
+}

@@ -1,0 +1,436 @@
+/* Оформление интерфейса. Холсты занимают всё окно, интерфейс лежит поверх и пропускает перо там, где пусто. */
+
+:root {
+  --ui-bg: rgba(255, 255, 255, 0.97);
+  --ui-border: rgba(20, 30, 50, 0.13);
+  --ui-text: #23262d;
+  --ui-muted: #6b7280;
+  --ui-hover: rgba(20, 30, 50, 0.07);
+  --accent: #3f6fb5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #fff;
+  color: var(--ui-text);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#scene,
+#live {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#live {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+/* Панель инструментов */
+
+.toolbar {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(20, 30, 50, 0.1);
+}
+
+.tb-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ui-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.tb-btn:hover {
+  background: var(--ui-hover);
+}
+
+.tb-btn.active {
+  background: rgba(63, 111, 181, 0.15);
+  color: var(--accent);
+}
+
+.tb-btn:disabled {
+  opacity: 0.32;
+  cursor: default;
+  background: transparent;
+}
+
+.tb-btn.small {
+  width: 26px;
+  height: 26px;
+  margin: -4px -6px -4px 0;
+  color: var(--ui-muted);
+}
+
+.tb-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--ui-border);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+}
+
+.exponent-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Панели настроек */
+
+.panel {
+  position: absolute;
+  left: 70px;
+  top: 12px;
+  width: 290px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(20, 30, 50, 0.14);
+}
+
+.no-toolbar .panel {
+  left: 12px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.row {
+  display: block;
+  margin: 9px 0;
+}
+
+.row-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.row-label span:last-child {
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+.row.disabled { opacity:.4; }
+.checks-row { display:flex; justify-content:space-between; gap:10px; }
+.checks-row .check { gap:5px; white-space:nowrap; }
+.choice-buttons { display:flex; gap:6px; }
+.choice-buttons .btn { flex:1; }
+.choice-buttons .btn.active { border-color:var(--accent); color:var(--accent); background:var(--ui-hover); }
+.choice-buttons[aria-label="Рисунок линии"] .btn { padding:6px; font-size:12px; white-space:nowrap; }
+
+input[type='range'] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 9px 0;
+}
+
+.check input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.btn {
+  padding: 5px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ui-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--ui-hover);
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+
+/* Подсказка и отладочная панель */
+
+#ui > .toast {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  border-radius: 999px;
+  background: rgba(35, 38, 45, 0.86);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+#ui > .toast.show {
+  opacity: 1;
+}
+
+.debug {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  max-width: min(520px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 8px 10px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(20, 30, 50, 0.1);
+}
+
+.debug-text {
+  margin: 0 0 6px;
+  font: 11px/1.5 ui-monospace, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.debug-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.file-dialog { max-width: 430px; border: 1px solid var(--ui-border); border-radius: 12px; padding: 20px; color: var(--ui-text); }
+.file-dialog::backdrop { background: rgba(0,0,0,0.2); }
+.file-dialog .btn { margin: 8px 8px 0 0; }
+/* Высота самого полного SVG-варианта; на маленьком экране прокручивается содержимое. */
+.export-dialog { width:430px; max-width:calc(100vw - 32px); height:540px; max-height:calc(100vh - 32px); overflow:hidden; }
+.export-dialog[open] { display:flex; flex-direction:column; }
+.export-content { flex:1; min-height:0; overflow:auto; }
+.export-actions { display:flex; flex:none; gap:8px; padding-top:8px; }
+.export-dialog .export-actions .btn { margin:0; }
+.export-dialog h3 { margin:0 0 12px; }
+.export-dialog label { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:12px 0; }
+.export-dialog label[hidden] { display:none; }
+.export-dialog select { min-width:160px; }
+.export-dialog input[type=number] { width:160px; padding:5px 7px; border:1px solid var(--ui-border); border-radius:4px; font:inherit; }
+.export-jpeg { display:flex; align-items:center; gap:12px; width:180px; }
+.export-jpeg input { min-width:0; }
+.export-jpeg output { white-space:nowrap; min-width:42px; font-variant-numeric:tabular-nums; }
+.export-width { display:flex; align-items:center; gap:12px; width:250px; }
+.export-width input[type=range] { flex:1; min-width:0; }
+.export-width input[type=number] { width:84px; }
+.export-compression[hidden] { display:none; }
+.export-compression label { margin-bottom:6px; }
+.export-compression output { font-variant-numeric:tabular-nums; }
+.export-compression input[type=range] { width:100%; margin:2px 0; }
+.export-range-ends { display:flex; justify-content:space-between; color:var(--ui-muted); font-size:12px; }
+.export-dialog .export-editable { justify-content:flex-start; gap:8px; }
+.export-description[hidden] { display:none; }
+.export-description { color:var(--ui-muted); font-size:13px; }
+
+/* Быстрый выбор цвета: вне рабочей области под пером, доступен и в полном экране. */
+.palette {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 12px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: var(--ui-bg);
+  box-shadow: 0 4px 20px rgba(20,30,50,0.15);
+}
+.palette-label { display: flex; justify-content: space-between; gap: 24px; margin: 0 3px 8px; }
+.palette-label span:last-child { color: var(--ui-muted); }
+.palette-colors { display: flex; gap: 8px; }
+.color-btn {
+  width: 38px; height: 38px; padding: 5px;
+  border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer;
+}
+.color-btn::before { content: ''; display: block; width: 100%; height: 100%; background: var(--color); border-radius: 50%; box-shadow: inset 0 0 0 1px #0003; }
+.color-btn.selected { border-color: var(--text, #30343b); }
+.color-btn:hover { background: var(--ui-hover); }
+
+/* Компактные инструменты и встроенный переключатель импорта у ластика. */
+.toolbar { max-height:calc(100vh - 24px); overflow-y:auto; }
+.toolbar .tb-btn { min-height:30px; height:30px; }
+.toolbar .tb-btn.reserved { visibility:hidden; }
+.panel { max-height:calc(100vh - 24px); overflow-y:auto; }
+.panel fieldset { border:0; border-top:1px solid #ddd; margin:12px 0 0; padding:10px 0 0; }
+.panel legend { color:#626875; font-size:12px; }
+.panel fieldset[hidden] { display:none; }
+.panel fieldset:disabled { opacity:.4; }
+.custom-color { width:26px; height:26px; padding:0; border:0; background:transparent; }
+.panel select { margin-left:8px; font:inherit; max-width:100%; }
+.custom-picker { position:relative; display:grid; place-items:center; width:38px; height:38px; border:1px solid var(--ui-border); border-radius:50%; font-size:24px; color:var(--ui-muted); }
+.custom-picker:hover { background:var(--ui-hover); }
+.custom-picker .icon { display:flex; align-items:center; justify-content:center; }
+.custom-picker .custom-color { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+
+/* Настройки клавиш: единый список команд и модификаторов, черновик до сохранения. */
+.shortcut-dialog { width:min(920px,calc(100vw - 40px)); height:min(710px,calc(100vh - 40px)); max-width:none; max-height:none; padding:0; border:1px solid var(--ui-border); border-radius:16px; color:var(--ui-text); background:#fff; box-shadow:0 16px 80px #10182830; overflow:hidden; }
+.shortcut-dialog[open] { display:flex; flex-direction:column; }
+.shortcut-dialog::backdrop { background:#202b3d42; }
+.shortcut-header { display:flex; justify-content:space-between; align-items:center; padding:22px 26px 16px; border-bottom:1px solid var(--ui-border); }
+.shortcut-header h2 { margin:0; font-size:22px; font-weight:650; }
+.shortcut-header p { margin:4px 0 0; color:var(--ui-muted); }
+.shortcut-close,.shortcut-add,.shortcut-default { display:grid; place-items:center; flex:none; border:0; background:transparent; color:var(--ui-muted); padding:6px; border-radius:6px; cursor:pointer; }
+.shortcut-close:hover,.shortcut-add:hover,.shortcut-default:hover { background:var(--ui-hover); color:var(--accent); }
+.shortcut-body { min-height:0; flex:1; display:flex; flex-direction:column; }
+.shortcut-body[inert] { opacity:.35; }
+.shortcut-filters { display:flex; align-items:center; gap:18px; padding:18px 24px; }
+.shortcut-filters input[type=search] { flex:1; min-width:100px; padding:10px 12px; border:1px solid var(--ui-border); border-radius:8px; font:inherit; color:inherit; background:#f9fafb; }
+.shortcut-filters label { display:flex; align-items:center; gap:7px; color:var(--ui-muted); white-space:nowrap; }
+.shortcut-layout { display:flex; flex:1; min-height:0; border-top:1px solid var(--ui-border); border-bottom:1px solid var(--ui-border); }
+.shortcut-nav { width:195px; flex:none; padding:12px; background:#f7f8fa; border-right:1px solid var(--ui-border); overflow:auto; }
+.shortcut-nav button { display:flex; align-items:center; justify-content:space-between; width:100%; padding:9px 10px; margin:2px 0; border:0; border-radius:7px; color:var(--ui-text); background:transparent; font:inherit; text-align:left; cursor:pointer; }
+.shortcut-nav button span { color:var(--ui-muted); font-size:11px; padding-left:6px; }
+.shortcut-nav button:hover { background:var(--ui-hover); }
+.shortcut-nav button[aria-pressed=true] { background:#e6edf8; color:#315ca8; font-weight:600; }
+.shortcut-table { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; }
+.shortcut-columns { display:grid; grid-template-columns:1fr 42%; gap:14px; padding:11px 20px; font-size:11px; font-weight:600; color:var(--ui-muted); background:#fafbfc; border-bottom:1px solid var(--ui-border); }
+.shortcut-rows { overflow:auto; flex:1; min-height:0; scrollbar-gutter:stable; }
+.shortcut-row { display:grid; grid-template-columns:1fr 42%; gap:14px; padding:15px 18px 15px 20px; border-bottom:1px solid #edf0f4; align-items:center; }
+.shortcut-row:hover { background:#fafbfe; }
+.shortcut-title { font-weight:600; line-height:1.4; }
+.shortcut-row p { margin:5px 0 0; font-size:12px; line-height:1.45; color:var(--ui-muted); }
+.shortcut-changed { color:var(--accent); padding-left:6px; }
+.shortcut-bindings { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.shortcut-chip { display:inline-flex; border:1px solid #dce1e9; background:white; border-radius:6px; overflow:hidden; box-shadow:0 1px 1px #1822330a; }
+.shortcut-key { font:600 12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif; min-height:30px; padding:5px 8px; border:0; background:transparent; color:var(--ui-text); cursor:pointer; }
+.shortcut-key:hover { color:#315ca8; background:#edf3fc; }
+.shortcut-key-remove { padding:0 6px; font-size:14px; border:0; border-left:1px solid #edf0f4; background:transparent; color:#8c95a3; cursor:pointer; }
+.shortcut-key-remove:hover { color:#b73d36; background:#fbeeed; }
+.shortcut-add .icon svg,.shortcut-default .icon svg { width:16px; height:16px; }
+.shortcut-unassigned { color:#9ba3af; font-size:12px; }
+.shortcut-empty { padding:24px; color:var(--ui-muted); }
+.shortcut-note { color:var(--ui-muted); font-size:11px; padding:0 24px; margin:12px 0; }
+.shortcut-dialog footer { display:flex; align-items:center; gap:10px; padding:4px 24px 20px; }
+.shortcut-footer-left { display:flex; align-items:flex-start; gap:8px; flex-direction:column; flex:1; }
+.shortcut-dialog .btn { margin:0; padding:8px 13px; font:inherit; white-space:nowrap; }
+.shortcut-dialog .primary { color:#fff; background:#315ca8; border-color:#315ca8; }
+.shortcut-dialog .primary:disabled { opacity:.4; cursor:default; }
+.shortcut-status { font-size:11px; color:var(--ui-muted); }
+.shortcut-editor { position:absolute; z-index:1; left:50%; top:50%; transform:translate(-50%,-50%); width:min(490px,calc(100% - 32px)); max-height:calc(100% - 32px); overflow:auto; padding:24px; background:white; border:1px solid #d5dce7; border-radius:14px; box-shadow:0 8px 60px #172c4933; }
+.shortcut-editor.recording { display:flex; flex-direction:column; height:360px; overflow:hidden; }
+.shortcut-recording-content { flex:1; min-height:0; overflow:auto; }
+.shortcut-editor.recording .shortcut-editor-buttons { flex:none; }
+.shortcut-editor.recording .primary { min-width:126px; }
+.shortcut-editor h3 { font-size:17px; margin:0 0 10px; }
+.shortcut-editor p { color:var(--ui-muted); font-size:13px; line-height:1.5; }
+.shortcut-recorded { text-align:center; padding:20px; margin:18px 0; min-height:70px; background:#f1f5fb; border:1px dashed #99b0d2; border-radius:8px; font-size:22px; font-weight:600; color:#315ca8; }
+.shortcut-editor .shortcut-conflict { color:#9c5419; background:#fff5e8; padding:10px 12px; border-radius:7px; }
+.shortcut-editor-buttons { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+.shortcut-dialog button:focus-visible,.shortcut-dialog input:focus-visible { outline:2px solid #6c93d0; outline-offset:2px; }
+@media (max-width:650px) {
+ .shortcut-dialog { width:calc(100vw - 16px); height:calc(100vh - 16px); }
+ .shortcut-header { padding:14px 16px; }
+ .shortcut-filters { padding:12px; flex-wrap:wrap; gap:8px; }
+ .shortcut-filters label { font-size:11px; }
+ .shortcut-layout { flex-direction:column; }
+ .shortcut-nav { width:auto; display:flex; overflow:auto; padding:6px; border-right:0; border-bottom:1px solid var(--ui-border); }
+ .shortcut-nav button { width:auto; white-space:nowrap; flex:none; font-size:12px; }
+ .shortcut-row { grid-template-columns:1fr 43%; padding:12px; gap:10px; }
+ .shortcut-columns { padding:9px 12px; grid-template-columns:1fr 43%; }
+ .shortcut-dialog footer { padding:4px 12px 12px; flex-wrap:wrap; }
+ .shortcut-note { padding:0 12px; }
+ .shortcut-footer-left { flex-basis:100%; }
+}
+
+.number-input { box-sizing:border-box; width:100%; padding:6px 8px; border:1px solid var(--ui-border); border-radius:6px; color:var(--ui-text); background:var(--ui-bg); font:inherit; }
+.number-input[aria-invalid="true"] { border-color:#c9514e; }
+.toast svg { display:block; }
+.toast-tool { display:flex; align-items:center; gap:12px; }
+.toast-color { flex:none; width:36px; height:36px; border:2px solid rgba(255,255,255,.65); border-radius:50%; }
+.toast-tool-detail { display:flex; flex-direction:column; min-width:0; }
+
+/* Формат экспорта выбирается одним нажатием; стрелки клавиатуры меняют активную кнопку. */
+.export-formats { display:flex; gap:6px; margin:16px 0; }
+.export-formats button { flex:1; min-width:0; padding:9px 12px; border:1px solid var(--ui-border); border-radius:7px; background:var(--ui-bg); color:var(--ui-text); font:inherit; cursor:pointer; }
+.export-formats button[aria-checked=true] { background:#3266ad; border-color:#3266ad; color:white; }
+.export-formats button:disabled { opacity:.35; cursor:default; }
+.export-formats button:focus-visible { outline:2px solid #3266ad; outline-offset:2px; }
+.file-progress {
+  position: fixed; right: 20px; bottom: 20px; z-index: 1000;
+  display: flex; align-items: center; gap: 16px;
+  max-width: calc(100vw - 40px); padding: 12px 16px;
+  background: white; color: #30343b; border: 1px solid #dce0e6;
+  border-radius: 12px; box-shadow: 0 3px 18px #0002;
+  font-size: 14px; pointer-events: auto;
+}
+.file-progress span { overflow-wrap: anywhere; }
+.file-progress button { flex-shrink: 0; }

@@ -1,0 +1,51 @@
+// Равномерные ступени 0–20, кнопки формата, захват пера и независимые настройки SVG/PDF.
+const {app,test}=window.__phaint,native=window.phaintNative;
+const assert=(ok,message)=>{if(!ok)throw new Error(message);};
+app.settings.snapToGrid=false;app.settings.grid.enabled=app.settings.grid.save=true;
+app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
+app.selectTool('pen',false);
+await test.pen(Array.from({length:180},(_,i)=>[50+i*2,150+Math.sin(i*.05)*45,.1+.65*Math.sin(i/180*Math.PI)]),0);
+const data=app.files.snapshot(),original=await app.files.worker.run('svg',data),objects=[...app.doc.values()];
+const start=async(format,name)=>{
+ await native.testFiles('choices',{choices:{saves:[name]}});const pending=app.files.export(),dialog=document.querySelector('.export-dialog');
+ dialog.querySelector(`[data-format="${format}"]`).click();return {pending,dialog};
+};
+const set=(dialog,value)=>{const input=dialog.querySelector('[aria-label="Сжатие"]');input.value=String(value);input.dispatchEvent(new Event('input'));};
+let job=await start('svg','безье.svg');
+assert(!job.dialog.querySelector('[aria-label="Качество"]')&&!job.dialog.querySelector('[aria-label="Знаков после запятой"]')&&!job.dialog.querySelector('[aria-label="Сильнее сжимать тонкие линии"]'),'один бегунок вместо пресетов и отдельных параметров');
+assert(job.dialog.querySelectorAll('[data-format]').length===4&&!job.dialog.querySelector('select[aria-label="Формат"]'),'четыре кнопки форматов');
+const svgButton=job.dialog.querySelector('[data-format="svg"]');svgButton.focus();
+svgButton.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',code:'ArrowRight',bubbles:true,cancelable:true}));
+assert(document.activeElement.dataset.format==='pdf'&&document.activeElement.getAttribute('aria-checked')==='true','формат доступен с клавиатуры');
+svgButton.click();
+const slider=job.dialog.querySelector('[aria-label="Сжатие"]'),output=job.dialog.querySelector('.export-compression output');
+assert(slider.min==='0'&&slider.max==='20'&&slider.step==='1','только целые ступени');
+slider.scrollIntoView({block:'nearest'});
+const rect=slider.getBoundingClientRect(),fire=(type,x,y)=>window.dispatchEvent(new PointerEvent(type,{pointerId:503,pointerType:'pen',button:0,buttons:type==='pointerup'?0:1,clientX:x,clientY:y,bubbles:true}));
+slider.dispatchEvent(new PointerEvent('pointerdown',{pointerId:503,pointerType:'pen',button:0,buttons:1,clientX:rect.left+8,clientY:rect.top+4,bubbles:true}));
+for(let i=0;i<=20;i++){
+ fire('pointermove',rect.left+8+(rect.width-16)*i/20,rect.top-80);
+ assert(Number(slider.value)===i&&output.textContent===`${i} / 20`,'равные расстояния дают целые значения: '+i);
+}
+fire('pointerup',rect.right-8,rect.top-80);
+assert(slider.getAttribute('aria-valuetext').includes('с потерями')&&job.dialog.textContent.includes('Сжатие с потерями:'),'верх шкалы объясняет потери');
+await test.frames(3);await test.shot('settings');
+set(job.dialog,3);assert(!job.dialog.textContent.includes('Сжатие с потерями:'),'малое сжатие сохраняет точный режим');
+set(job.dialog,20);slider.focus();slider.dispatchEvent(new KeyboardEvent('keydown',{code:'Enter',key:'Enter',bubbles:true,cancelable:true}));
+assert(await job.pending&&app.settings.export.svg.compression===20,'Enter подтверждает положение бегунка');
+const svg=await native.testFiles('read',{name:'безье.svg'}),restored=await app.files.worker.run('native',svg);
+assert(svg.length<original.length&&/[CcQq]/.test(svg),'сохранён компактный SVG с кривыми');
+assert(restored.objects[0].pts.every((v,i)=>v===objects[0].pts[i]),'точные данные пера остались в metadata');
+job=await start('pdf','безье.pdf');assert(job.dialog.querySelector('[aria-label="Сжатие"]').value==='0','положение независимо для PDF');
+set(job.dialog,18);await test.frames(3);await test.shot('pdf');[...job.dialog.querySelectorAll('button')].at(-1).click();assert(await job.pending,'PDF экспортирован');
+assert(app.settings.export.pdf.compression===18&&app.settings.export.svg.compression===20,'настройки форматов независимы');
+const before=JSON.stringify(app.settings.export);job=await start('svg','отмена.svg');set(job.dialog,0);job.dialog.querySelector('.export-cancel').click();assert(!await job.pending&&before===JSON.stringify(app.settings.export),'отмена не меняет настройки');
+job=await start('png','растр.png');assert(job.dialog.querySelector('.export-compression').hidden,'для PNG нет векторного сжатия');job.dialog.querySelector('.export-cancel').click();await job.pending;
+assert(await app.files.worker.run('svg',app.files.snapshot())===original&&objects.every(o=>app.doc.get(o.id)===o),'экспорт не меняет рисунок и обычное сохранение');
+app.selectTool('select',false);app.selection.show(objects[0]);await native.testFiles('choices',{choices:{saves:[]}});
+const saving=app.files.save(),dialog=document.querySelector('.export-dialog');
+assert(dialog.querySelector('[data-format="svg"]').getAttribute('aria-checked')==='true'&&[...dialog.querySelectorAll('[data-format]')].filter(b=>b.disabled).length===3,'сохранение выделения ограничено SVG');
+dialog.querySelector('.export-cancel').click();assert(!await saving,'отмена выделения');
+const path=await native.testFiles('prepare',{name:'проверка.pdf',text:''});
+await native.testFiles('prepareBytes',{name:'проверка.pdf',bytes:Uint8Array.from(await native.testFiles('readBytes',{name:'безье.pdf'}))});
+return {ok:true,path,svgBytes:new TextEncoder().encode(svg).length};

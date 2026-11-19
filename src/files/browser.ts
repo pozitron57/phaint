@@ -1,0 +1,87 @@
+// Браузерный вариант: SVG/картинки/PDF, скачивание файлов, резервная копия в IndexedDB.
+import type { FileApi, RecoveryFile, UnsavedChoice } from './api.ts';
+import { imageTypes } from './binary.ts';
+import { exportName, workingName } from './names.ts';
+
+async function recovery(write: boolean, value?: RecoveryFile | null): Promise<RecoveryFile | null> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open('phaint.documents', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('recovery');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('recovery', write ? 'readwrite' : 'readonly');
+      const store = tx.objectStore('recovery');
+      const req = write ? (value ? store.put(value, 'current') : store.delete('current')) : store.get('current');
+      tx.oncomplete = () => resolve(write ? null : req.result ?? null);
+      tx.onabort = tx.onerror = () => reject(tx.error ?? new Error('Не удалось записать резервную копию.'));
+    });
+  } finally { db.close(); }
+}
+
+function choose(message: string, labels: string[]): Promise<number> {
+  return new Promise(resolve => {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'file-dialog';
+    const p = document.createElement('p'); p.textContent = message; dialog.append(p);
+    const finish = (i: number): void => { dialog.close(); dialog.remove(); resolve(i); };
+    labels.forEach((label, i) => {
+      const button = document.createElement('button'); button.className = 'btn'; button.textContent = label;
+      button.onclick = () => finish(i); dialog.append(button);
+    });
+    dialog.oncancel = event => { event.preventDefault(); finish(labels.length - 1); };
+    document.body.append(dialog); dialog.showModal();
+  });
+}
+
+export function browserFiles(): FileApi {
+  let dirty = false;
+  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  return {
+    open: () => new Promise((resolve, reject) => {
+      const input = document.createElement('input'); input.type = 'file'; input.accept = '.svg,.pdf,'+Object.keys(imageTypes).map(s=>'.'+s).join(',');
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) { resolve(null); return; }
+        const extension=file.name.split('.').pop()!.toLowerCase(),ref={name:file.name,handle:crypto.randomUUID()};
+        if(extension==='svg')void file.text().then(text=>resolve({...ref,text}),reject);
+        else void file.arrayBuffer().then(buffer=>resolve({...ref,type:extension==='pdf'?'pdf':'image',mime:extension==='pdf'?'application/pdf':imageTypes[extension],bytes:new Uint8Array(buffer)}),reject);
+      };
+      input.oncancel = () => resolve(null);
+      input.click();
+    }),
+    chooseSave: async (current, saveAs, selection) => {
+      if (current && !saveAs&&!selection&&/\.svg$/i.test(current.name)) return current;
+      let name = window.prompt(selection?'Сохранить выделение в отдельный SVG':'Название SVG-файла', selection?exportName(current?.name,'svg',true):workingName(current?.name));
+      if (!name?.trim()) return null;
+      name = name.trim(); if (!/\.svg$/i.test(name)) name += '.svg';
+      return { handle: crypto.randomUUID(), name };
+    },
+    write: async (file, text) => {
+      const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+      const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    },
+    chooseExport: async (current, format, selection) => {
+      let name=window.prompt('Название файла',exportName(current?.name,format,selection))?.trim();
+      if(!name)return null;
+      if(!name.toLowerCase().endsWith(`.${format}`))name+=`.${format}`;
+      return {handle:crypto.randomUUID(),name};
+    },
+    writeBinary: async (file, bytes) => {
+      const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)]));
+      const a=document.createElement('a');a.href=url;a.download=file.name;a.click();
+      window.setTimeout(()=>URL.revokeObjectURL(url),30000);
+    },
+    confirmUnsaved: async name => (['save', 'discard', 'cancel'] as UnsavedChoice[])[await choose(`Сохранить изменения в «${name}»?`, ['Сохранить', 'Не сохранять', 'Отмена'])],
+    recoveryRead: () => recovery(false),
+    recoveryWrite: async file => { await recovery(true, file); },
+    confirmRecovery: async file => (await choose(`Восстановить «${file.name}» после незавершённой работы?`, ['Восстановить', 'Начать с пустого холста'])) === 0,
+    status: (name, changed) => { dirty = changed; document.title = `${name}${dirty ? ' •' : ''} — Phaint`; },
+    error: async message => { await choose(message, ['Понятно']); },
+    onCommand: () => undefined,
+    closeReady: () => undefined,
+  };
+}

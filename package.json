@@ -1,0 +1,39 @@
+{
+  "name": "phaint",
+  "productName": "Phaint",
+  "version": "0.6.38",
+  "description": "Векторная рисовалка для онлайн-уроков на графическом планшете",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && electron .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.ts\"",
+    "smoke": "node build.mjs && electron . --smoke-test --shot=dist/e2e/smoke.png",
+    "package": "node build.mjs && node scripts/package.mjs",
+    "e2e": "node build.mjs && node scripts/e2e.mjs",
+    "load": "node build.mjs && electron . --run=test/e2e/load.js --shot=dist/e2e/load.png --visible",
+    "icon": "node scripts/make-icon.mjs",
+    "load:files": "node build.mjs && electron . --run=test/e2e/files-load.js --shot=dist/e2e/files-load.png --visible"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/clipper-lib": "^6.4.0",
+    "@types/node": "^26.6.6",
+    "@types/rbush": "^4.0.0",
+    "electron": "^45.3.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "clipper-lib": "^6.4.2",
+    "fflate": "0.8.2",
+    "mupdf": "1.28.6",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "6.5.438",
+    "rbush": "^4.0.1",
+    "svgo": "3.3.2"
+  }
+}

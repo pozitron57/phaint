@@ -1,0 +1,67 @@
+// Прямая: неподвижное начало, живые толщина/цвет без движения пера, одна фиксация и SVG.
+const { app, test } = window.__phaint;
+// Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
+app.settings.snapToGrid=false;
+const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
+const live = document.getElementById('live');
+const g = live.getContext('2d');
+const pixel = (x,y) => g.getImageData(Math.round(x*app.view.dpr),Math.round(y*app.view.dpr),1,1).data;
+const thickness = () => {
+  const data=g.getImageData(Math.round(450*app.view.dpr),Math.round(220*app.view.dpr),1,Math.round(80*app.view.dpr)).data;
+  let count=0;for(let i=3;i<data.length;i+=4)if(data[i]>128)count++;
+  return count;
+};
+test.key('KeyL'); assert(app.tool.id==='line','L включает прямую');
+const pen = {...app.settings.pen};
+app.settings.line.width=8;
+const state=app.history.state;
+const start=app.view.toWorld(200,260), end=app.view.toWorld(900,420);
+test.pointer('pointerdown',200,260,.1);
+test.pointer('pointermove',800,260,.9);
+await test.idle();
+assert(app.doc.size===0 && app.history.state===state,'до отрыва нет объекта или истории');
+const thin=thickness();
+for(let i=0;i<8;i++)test.key('F2');
+await test.idle();const thick=thickness();
+assert(thick>thin*1.8,'F2 сразу утолщает всю неподвижную прямую');
+test.key('F1');await test.idle();assert(thickness()<thick,'F1 сразу уменьшает толщину');
+test.key('Tab');await test.idle();
+assert(app.tool.id==='line' && app.input.drawing && app.doc.size===0,'Tab не завершает прямую и не включает ручку');
+assert(pixel(450,260)[1]===173,'предпросмотр стал зелёным без движения');
+test.key('Tab',{shiftKey:true});assert(app.palette.open && !app.palette.el.querySelector('.palette-label').hidden,'Shift+Tab открывает полную палитру во время линии');app.palette.el.querySelectorAll('button')[0].click();await test.idle();assert(pixel(450,260)[0]===49,'выбор в полной палитре перекрашивает живую линию');
+test.key('Tab');test.key('Tab');await test.idle();assert(pixel(450,260)[0]===201,'весь предпросмотр стал красным');
+test.pointer('pointermove',900,420,.05);await test.idle();
+assert(pixel(200,260)[3]>0 && pixel(900,420)[3]>0 && pixel(800,260)[3]===0,'начало закреплено, конец следует за пером, прежняя линия очищена');
+await test.shot('preview');
+test.pointer('pointerup',900,420,0);await test.idle();
+const line=[...app.doc.values()][0];
+assert(app.doc.size===1 && !app.input.drawing && app.renderer.busy===false,'отрыв фиксирует одну линию');
+assert(line.kind==='stroke' && line.pts.length===6 && line.ox===start.x && line.oy===start.y,'две точки с исходным началом');
+assert(Math.abs(line.pts[3]-(end.x-start.x))<.001 && Math.abs(line.pts[4]-(end.y-start.y))<.001,'точный конец');
+assert(line.pts[2]===line.pts[5] && Math.abs(line.pts[2]-app.settings.line.width)<.001 && line.color==='#c9514e','цвет и постоянная толщина сохранены');
+assert(pixel(450,260)[3]===0,'живой слой очищен');
+test.key('KeyZ',{metaKey:true});assert(app.doc.size===0,'одна отмена всей прямой');
+test.key('KeyY');assert([...app.doc.values()][0]===line,'повтор возвращает прямую');
+const native=window.phaintNative;
+await native.testFiles('choices',{choices:{saves:['прямая.svg']}});assert(await app.files.save(),'сохранение SVG');
+await native.testFiles('choices',{choices:{opens:['прямая.svg']}});assert(await app.files.open(),'открытие SVG');
+const restored=[...app.doc.values()][0];
+assert(restored.color===line.color && String(restored.pts)===String(line.pts),'SVG сохраняет цвет и геометрию');
+test.pointer('pointerdown',250,500,.4);test.pointer('pointermove',850,520,.6);test.key('Escape');await test.idle();
+assert(app.doc.size===1 && !app.input.drawing && !app.renderer.busy,'Esc отменяет только предпросмотр');
+// Потеря захвата сохраняет линию, как и для ручки; координаты служебного события не используются.
+test.pointer('pointerdown',250,550,.4);test.pointer('pointermove',850,550,.6);
+test.pointer('lostpointercapture',0,0,0);await test.idle();
+assert(app.doc.size===2,'потеря захвата не теряет прямую');
+const lost=[...app.doc.values()].at(-1);assert(lost.pts[3]===600 && lost.pts[4]===0,'служебные координаты не портят конец');
+test.key('KeyD',{metaKey:true,shiftKey:true});
+assert(app.settings.pen.width===pen.width && app.settings.pen.color===pen.color,'настройки ручки независимы');
+test.key('KeyL');assert(app.ink.color===line.color,'прямая помнит свой цвет');
+// После поворота и масштаба начало также фиксируется в координатах документа.
+app.view.zoomStep(1);app.view.rotate(1);await test.idle();
+const a=app.view.toWorld(300,400),b=app.view.toWorld(700,600);
+await test.pen([[300,400,.2],[500,250,.8],[700,600,.1]],3);await test.idle();
+const rotated=[...app.doc.values()].at(-1);
+assert(Math.abs(rotated.ox-a.x)<.001 && Math.abs(rotated.pts[3]-(b.x-a.x))<.001 && Math.abs(rotated.pts[4]-(b.y-a.y))<.001,'прямая работает на повёрнутом холсте');
+await test.shot('finished');
+return {ok:true,objects:app.doc.size,thin,thick,color:line.color};
