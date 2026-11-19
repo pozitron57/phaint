@@ -3,13 +3,13 @@ import type { App } from '../app.ts';
 import type { Obj, StrokeObj } from '../core/types.ts';
 import { makeStroke, isLocked } from '../core/types.ts';
 import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Pt } from '../core/geom.ts';
-import { around, objectMatrix, rotation, transformObject } from '../core/transform.ts';
+import { around, rotation, transformObject } from '../core/transform.ts';
 import { identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
-import { drawObj, inheritImage, objPath, vectorPath } from '../view/draw.ts';
+import { inheritImage } from '../view/draw.ts';
+import { ObjectPicker, PICK_RADIUS } from '../view/pick.ts';
 import type { DocChange } from '../core/doc.ts';
 import type { PenSample, Tool } from './tool.ts';
 import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from './bezier.ts';
-import { insideClip } from '../core/clip.ts';
 import type { KeyLike } from '../core/actions.ts';
 
 type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
@@ -37,7 +37,7 @@ export class SelectTool implements Tool {
   private pivotSnapped=false;
   private replacing=false;
   private curveIndex=0;
-  private hit=document.createElement('canvas').getContext('2d')!;
+  private picker=new ObjectPicker();
   constructor(app:App){this.app=app;}
   show(o:Obj|null):void{this.set(o?[o]:[]);}
   showObjects(objects:Obj[]):void{this.set(objects);}
@@ -124,9 +124,9 @@ export class SelectTool implements Tool {
     }
     const b=this.box;
     if(!additive&&b&&s.x>=b.minX&&s.x<=b.maxX&&s.y>=b.minY&&s.y<=b.maxY){this.mode='move';return;}
-    const p=this.app.view.toWorld(s.x,s.y),pad=24/this.app.view.scale;
-    const candidates=this.app.doc.query({minX:p.x-pad,minY:p.y-pad,maxX:p.x+pad,maxY:p.y+pad}).sort((a,b)=>b.z-a.z);
-    const found=candidates.find(o=>this.hits(o,p,pad))??null;
+    const p=this.app.view.toWorld(s.x,s.y),pad=PICK_RADIUS/this.app.view.scale;
+    const candidates=this.app.doc.query({minX:p.x-pad,minY:p.y-pad,maxX:p.x+pad,maxY:p.y+pad});
+    const found=this.picker.nearest(candidates,p,this.app.view.scale);
     if(found){
       if(additive){this.set(this.objects.some(o=>o.id===found.id)?this.objects.filter(o=>o.id!==found.id):[...this.objects,found]);this.mode='none';}
       else{this.set([found]);this.mode='move';this.originals=[found];this.box=this.screenBox();this.initialPivot=this.center();}
@@ -135,38 +135,6 @@ export class SelectTool implements Tool {
   secondary(s:PenSample):void {
     if(this.mode!=='none'||this.objects.length!==1||!bendable(this.selected))return;
     const next=withoutControlAt(this.app,this.selected,s);if(next)this.replace([next]);
-  }
-  private hits(o:Obj,p:Pt,pad:number):boolean {
-    if(isLocked(o)||(o.kind==='vector'&&o.background))return false;
-    const q=matApply(matInvert(objectMatrix(o)),p.x,p.y);
-    if(o.clip&&!insideClip(o.clip,q))return false;
-    if(o.kind==='stroke'){
-      if(this.erased(o,q))return false;
-      this.hit.lineWidth=pad*2;return this.hit.isPointInPath(objPath(o),q.x,q.y)||this.hit.isPointInStroke(objPath(o),q.x,q.y);
-    }
-    if(o.kind==='vector'){
-      if(this.erased(o,q))return false;
-      const path=vectorPath(o);if(o.fill!=='none'&&this.hit.isPointInPath(path,q.x,q.y,o.fillRule))return true;
-      this.hit.lineWidth=o.strokeWidth+pad*2;return o.stroke!=='none'&&this.hit.isPointInStroke(path,q.x,q.y);
-    }
-    if(o.kind==='svg'){
-      // Пустота внутри сложного SVG тоже подходит для начала рамки M.
-      // Проверка нужна только при касании, не на каждом движении пера.
-      const canvas=this.hit.canvas,size=9,scale=4/pad;
-      canvas.width=canvas.height=size;
-      drawObj(this.hit,o,{a:scale,b:0,c:0,d:scale,e:0,f:0},4-p.x*scale,4-p.y*scale);
-      const pixels=this.hit.getImageData(0,0,size,size).data;this.hit.resetTransform();
-      for(let i=3;i<pixels.length;i+=4)if(pixels[i])return true;
-      return false;
-    }
-    return q.x>=0&&q.y>=0&&q.x<=o.width&&q.y<=o.height;
-  }
-  private erased(o:Obj,q:Pt):boolean {
-    return o.kind!=='image'&&!!o.erasures?.some(([x,y,u,v,r,...m])=>{
-      const p=m.length===6?matApply(matInvert({a:m[0],b:m[1],c:m[2],d:m[3],e:m[4],f:m[5]}),q.x,q.y):q;
-      const dx=u-x,dy=v-y,t=Math.max(0,Math.min(1,((p.x-x)*dx+(p.y-y)*dy)/(dx*dx+dy*dy||1)));
-      return Math.hypot(p.x-x-t*dx,p.y-y-t*dy)<=r;
-    });
   }
   move(samples:PenSample[]):void {
     const s=samples.at(-1);if(!s)return;this.last={x:s.x,y:s.y};
