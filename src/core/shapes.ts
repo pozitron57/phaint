@@ -33,7 +33,7 @@ export function inkDash(ink:{dashed:boolean;dotted:boolean;dotSpacing:number;das
 }
 export const identity = (): Mat => ({a:1,b:0,c:0,d:1,e:0,f:0});
 export function shapeData(kind: ShapeKind): ShapeData {
-  return {kind,frame:identity(),length:1,height:0,bend:0,amplitude:24,period:144,cycles:1,headLength:5,headWidth:3,headRound:.4,headType:'open',both:false,...(kind==='adiabat'?{gamma:DEFAULT_GAMMA}:{})};
+  return {kind,frame:identity(),length:1,height:0,bend:0,amplitude:72,period:192,cycles:1,headLength:5,headWidth:3,headRound:.4,headType:'open',both:false,...(kind==='adiabat'?{gamma:DEFAULT_GAMMA}:{})};
 }
 export function shapePoints(s: ShapeData, width: number): Float32Array {
   if((s.kind==='line'||s.kind==='arrow')&&s.controls?.length)return bezierPoints({x:s.length,y:s.height},s.controls,s.frame,width);

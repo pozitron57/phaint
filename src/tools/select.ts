@@ -196,7 +196,11 @@ export class SelectTool implements Tool {
     }else{
       const o=this.originals[0];if(o.kind!=='stroke'||!o.shape)return;
       const shape={...o.shape},local=matApply(matInvert(shape.frame),p.x-o.ox,p.y-o.oy);
-      if(this.mode==='amplitude')shape.amplitude=Math.max(1,Math.abs(local.y));
+      if(this.mode==='amplitude'){
+        shape.amplitude=Math.abs(local.y);
+        // Переход через ось отражает волну и ручку, не делая матрицу вырожденной в нуле.
+        if(local.y>0)shape.frame={...shape.frame,c:-shape.frame.c,d:-shape.frame.d};
+      }
       if(this.mode==='period')shape.period=Math.max(12,Math.abs(local.x));
       if(this.mode==='length')shape.cycles=Math.min(1000,Math.max(0,local.x/shape.period));
       if(this.mode==='bend')shape.bend=local.y-shape.height/2;
@@ -220,7 +224,7 @@ export class SelectTool implements Tool {
         shape.length=end.x;shape.height=end.y;
       }
       const current=this.selected?.kind==='stroke'?this.selected.shape:undefined;
-      if(current&&(['amplitude','period','cycles','bend','length','height'] as const).every(key=>shape[key]===current[key])&&JSON.stringify(shape.controls)===JSON.stringify(current.controls))return;
+      if(current&&(['amplitude','period','cycles','bend','length','height'] as const).every(key=>shape[key]===current[key])&&JSON.stringify(shape.frame)===JSON.stringify(current.frame)&&JSON.stringify(shape.controls)===JSON.stringify(current.controls))return;
       this.replace([rebuildShape(o,shape)],this.group);return;
     }
     if(Math.abs(s.x-this.start.x)+Math.abs(s.y-this.start.y)<.01){

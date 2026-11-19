@@ -32,7 +32,7 @@ test('синусоида и парабола: целые периоды, точ�
 });
 test('синусоида: произвольная часть периода до точного конца сохраняется в SVG',async()=>{
  for(const cycles of [0,.03,.25,.7,1.73,2]){
-  const shape={...shapeData('sine'),period:144,cycles},pts=shapePoints(shape,3);
+  const shape={...shapeData('sine'),period:144,amplitude:24,cycles},pts=shapePoints(shape,3);
   assert.ok(Math.abs(pts.at(-3)!-144*cycles)<.0001);
   assert.ok(Math.abs(pts.at(-2)!+24*Math.sin(cycles*Math.PI*2))<.0001);
   const o=rebuildShape({...makeStroke(1,1,20,30,pts,'#315ca8'),shape});

@@ -14,6 +14,14 @@ assert(await windows('second-instance')===first&&(await list()).length===1,'по
 await windows('switch-app');assert((await list()).length===1,'Cmd+Tab не создаёт окно');
 const second=await windows('new');
 assert((await list()).length===2,'команда нового окна создала второй холст');
+const firstBounds=(await list()).find(win=>win.id===first).bounds,secondBounds=(await list()).find(win=>win.id===second).bounds;
+assert(firstBounds.x!==secondBounds.x||firstBounds.y!==secondBounds.y,'новое окно сдвинуто относительно первого');
+await windows('focus',{id:second});
+for(const action of ['activate','second-instance','activate','switch-app','activate']){
+  await windows(action);assert((await list()).length===2,'повторная активация не создаёт холст');
+}
+await windows('focus',{id:first});
+assert(await windows('activate')===first,'возврат к последнему активному, а не последнему созданному окну');
 const third=await windows('new');
 assert((await list()).length===3,'можно открыть ещё одно независимое окно');
 assert(await windows('close',{id:third}),'пустое третье окно закрывается отдельно');

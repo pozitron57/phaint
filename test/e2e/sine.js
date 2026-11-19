@@ -1,0 +1,44 @@
+// Настоящие жесты ручки: переход через ноль, повторное отражение, отмена, SVG, поворот и масштаб.
+const {app,test}=window.__phaint;
+const assert=(v,m)=>{if(!v)throw new Error(m);},near=(a,b)=>Math.abs(a-b)<.001;
+const pointer=(type,p)=>test.pointer(type,p.x,p.y,type==='pointerup'?0:.5);
+const handle=()=>app.selection.handles().find(h=>h.name==='amplitude').point;
+const localScreen=(o,x,y)=>{const m=o.shape.frame;return app.view.toScreen(o.ox+m.a*x+m.c*y+m.e,o.oy+m.b*x+m.d*y+m.f);};
+app.settings.snapToGrid=false;app.view.reset();
+assert(app.settings.sine.amplitude===3*app.settings.grid.step&&app.settings.sine.period===8*app.settings.grid.step,'стандартные 3 и 8 клеток');
+app.selectTool('sine',false);await test.pen([[300,350,.5],[700,350,.5]],1);
+app.selectTool('select',false);app.selection.show([...app.doc.values()][0]);
+const initial=app.selection.selected,amplitude=initial.shape.amplitude;
+await test.idle();await test.shot('before');
+const start=handle(),zero=localScreen(initial,initial.shape.period/4,0),opposite=localScreen(initial,initial.shape.period/4,amplitude);
+pointer('pointerdown',start);pointer('pointermove',zero);
+assert(near(app.selection.selected.shape.amplitude,0),'точный ноль доступен');
+assert(Array.from(app.selection.selected.pts).every((v,i)=>i%3!==1||near(v,0)),'в нуле волна становится прямой');
+pointer('pointermove',opposite);await test.idle();
+let reflected=app.selection.selected;
+for(let i=0;i<initial.pts.length;i++)assert(near(reflected.pts[i],i%3===1?-initial.pts[i]:initial.pts[i]),'волна зеркальна, длина и толщина прежние');
+assert(near(handle().x,opposite.x)&&near(handle().y,opposite.y),'ручка следует за пером через ноль');
+pointer('pointerup',opposite);await test.idle();await test.shot('reflected');
+app.undo();assert(app.selection.selected===initial,'весь жест отменяется одним шагом');
+app.redo();assert(app.selection.selected===reflected,'повтор возвращает отражение');
+const data=app.files.snapshot(),svg=await app.files.worker.run('svg',data),restored=await app.files.worker.run('native',svg);
+assert(restored.objects[0].shape.frame.d===-1,'SVG хранит отражение как преобразование');
+app.doc.replace(restored.objects);app.history.clear();app.selection.show([...app.doc.values()][0]);
+// Равные амплитуды по разные стороны оси должны менять направление даже без промежуточного отсчёта.
+pointer('pointerdown',handle());pointer('pointermove',start);pointer('pointerup',start);await test.idle();
+assert(app.selection.selected.shape.frame.d===1,'ручка повторно отражает открытую из SVG волну');
+// Отдельный жест из точно нулевой амплитуды остаётся обратимым.
+pointer('pointerdown',handle());pointer('pointermove',zero);pointer('pointerup',zero);
+pointer('pointerdown',handle());pointer('pointermove',opposite);pointer('pointerup',opposite);
+assert(app.selection.selected.shape.frame.d===-1&&near(app.selection.selected.shape.amplitude,amplitude),'из прямой можно снова вытянуть отражённую волну');
+app.selection.rotate(45);
+app.view.zoomAt(500,350,1.25);app.view.rotate(1);await test.idle();
+const transformed=app.selection.selected,target=localScreen(transformed,transformed.shape.period/4,amplitude);
+pointer('pointerdown',handle());pointer('pointermove',target);pointer('pointerup',target);await test.idle();
+const f=app.selection.selected.shape.frame,old=transformed.shape.frame;
+assert(near(f.c,-old.c)&&near(f.d,-old.d),'отражение в локальной оси повёрнутой фигуры при изменённом виде');
+const saved=app.selection.selected;
+pointer('pointerdown',handle());pointer('pointermove',zero);test.key('Escape');pointer('pointerup',zero);
+assert([...app.doc.values()][0]===saved,'Esc возвращает исходную геометрию');
+app.selection.show(saved);await test.idle();await test.shot('transformed');
+return {ok:true,amplitude,period:initial.shape.period,reflection:true,zero:true,undo:true,svg:true,transformed:true};

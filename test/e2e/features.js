@@ -50,7 +50,7 @@ assert(app.selection.objects[0].pts[2]===4,'толщина сохраняетс�
 assert(Math.sign(app.selection.objects[0].pts[3])!==Math.sign(oldPts[3]),'перетаскивание через угол отражает');
 await test.shot('selection');test.key('Escape');assert(app.selection.objects.length===0,'Esc снимает выделение');
 // Синусоида растёт до пера, неполный период сохраняется; M меняет амплитуду.
-await reset();tool('sine');await drag([200,300],[450,300]);assert(Math.abs(last().shape.cycles-250/144)<1e-8,'неполный второй период');
+await reset();tool('sine');await drag([200,300],[450,300]);assert(Math.abs(last().shape.cycles-250/app.settings.sine.period)<1e-8,'неполный второй период');
 tool('select');app.selection.show(last());const ah=app.selection.handles().find(h=>h.name==='amplitude');
 await drag([ah.point.x,ah.point.y],[ah.point.x,ah.point.y-50]);assert(app.selection.selected.shape.amplitude>70,'M меняет амплитуду');
 tool('parabola');await drag([600,400],[1000,500]);assert(app.tool.pending&&app.doc.size===1,'парабола ждёт второго жеста');

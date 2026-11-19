@@ -194,7 +194,7 @@ export function brushPanel(app:App):Panel {
     p.note('Ctrl — прямая. Один проход не темнеет на пересечениях.');
   });
   p.section('Синусоида',()=>active('sine'),()=>{
-    p.slider('Амплитуда',1,240,1,()=>selected('sine')?.shape?.amplitude??app.settings.sine.amplitude,v=>app.changeSine('amplitude',v),v=>String(Math.round(v)));
+    p.slider('Амплитуда',0,240,1,()=>selected('sine')?.shape?.amplitude??app.settings.sine.amplitude,v=>app.changeSine('amplitude',v),v=>String(Math.round(v)));
     p.slider('Период',12,600,1,()=>selected('sine')?.shape?.period??app.settings.sine.period,v=>app.changeSine('period',v),v=>String(Math.round(v)));
     p.note('M: оранжевые ручки — амплитуда, период и число волн.');
   });

@@ -1,5 +1,5 @@
 // Главный процесс Electron: независимые окна, меню активного окна, общий профиль и нативный модуль.
-// Dock возвращает рисунок или создаёт холст при активном окне; Cmd+Q закрывает документы по очереди.
+// Dock всегда возвращает рисунок, Cmd+T создаёт окно со сдвигом; Cmd+Q закрывает документы по очереди.
 //
 // Режим проверки (для разработки, окно на экране не появляется):
 //   electron . --smoke-test            встроенная самопроверка window.__phaint.selfTest()
@@ -17,7 +17,7 @@ import { installFiles } from './files.ts';
 import { installClipboard } from './clipboard.ts';
 import { WindowSettings } from './settings.ts';
 import { recoverySlots } from './recovery.ts';
-import { WindowActivation } from './activation.ts';
+import { cascadeBounds } from './window-position.ts';
 import { menuAccelerator, validCombo } from '../src/core/actions.ts';
 
 /** native/phaint_native.m */
@@ -63,9 +63,6 @@ const [winW, winH] = (arg('size') || '1280x820').split('x').map(Number);
 if (testing) app.setPath('userData', resolve(arg('test-data') || join(tmpdir(), `phaint-test-${process.pid}`)));
 const singleInstance = testing || app.requestSingleInstanceLock();
 if (!singleInstance) app.quit();
-const activation = new WindowActivation();
-app.on('did-become-active', () => activation.becameActive());
-app.on('did-resign-active', () => activation.resignedActive());
 app.on('second-instance', () => reopenWindow());
 app.on('activate', () => reopenWindow());
 let files: ReturnType<typeof installFiles>;
@@ -90,9 +87,7 @@ function reopenWindow(): BrowserWindow | undefined {
   const focused = BrowserWindow.getFocusedWindow();
   const focusedDocument = focused && documentWindows.has(focused) ? focused : null;
   const win = focusedDocument ?? menuWindow ?? [...documentWindows].at(-1);
-  const hasFocusedWindow = !!focusedDocument && app.isActive() &&
-    focusedDocument.isVisible() && !focusedDocument.isMinimized();
-  if (activation.opensNewWindow(hasFocusedWindow) || !win) return createWindow();
+  if (!win) return;
   if (!testing || visible) {
     if (app.isHidden()) app.show();
     if (win.isMinimized()) win.restore();
@@ -242,9 +237,13 @@ function syncFullscreen(win: BrowserWindow): void {
 
 function createWindow(recoverySlot?: string): BrowserWindow {
   const offscreen = testing && !visible;
+  const previous=menuWindow??[...documentWindows].at(-1);
+  const bounds=previous?.getNormalBounds();
+  const position=bounds?cascadeBounds(bounds,screen.getDisplayMatching(bounds).workArea,winW||1280,winH||820):{};
   const win = new BrowserWindow({
     width: winW || 1280,
     height: winH || 820,
+    ...position,
     minWidth: 480,
     minHeight: 320,
     show: false,
@@ -333,7 +332,7 @@ async function windowReady(win: BrowserWindow): Promise<void> {
 // Только тестовый режим: сценарий одного окна может проверить настоящий второй рендерер.
 ipcMain.handle('test:windows', async (event, action: string, data: { id?: number; code?: string } = {}) => {
   if (!testing) return null;
-  if (action==='list') return [...documentWindows].map(win=>({id:win.id,title:win.getTitle(),focused:win.isFocused(),minimized:win.isMinimized(),visible:win.isVisible()}));
+  if (action==='list') return [...documentWindows].map(win=>({id:win.id,title:win.getTitle(),focused:win.isFocused(),minimized:win.isMinimized(),visible:win.isVisible(),bounds:win.getBounds()}));
   if (action==='new' || action==='activate' || action==='second-instance') {
     const before=new Set(documentWindows);
     if(action==='new')openWindow();else app.emit(action);

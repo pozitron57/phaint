@@ -31,15 +31,20 @@ export const PALETTE=['#315ca8','#79ad65','#c9514e','#000000','#ffffff','#cf914d
 export const CYCLE=PALETTE.slice(0,3);
 const ink=():InkSettings=>({width:2.6,color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
 export function defaultSettings():Settings {
-  return {version:9,pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+  return {version:10,pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
     line:ink(),arrow:{...ink(),headLength:5,headWidth:3,headRound:.4,headType:'open',both:false},ellipse:ink(),
-    sine:{...ink(),amplitude:24,period:144},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
+    sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
     grid:{enabled:true,step:24,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
 }
 export function mergeSettings(raw:unknown):Settings {
   const base=defaultSettings();merge(base as unknown as Record<string,unknown>,raw);
-  base.version=9;
+  base.version=10;
+  // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
+  if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
+    const step=base.grid.step>0?base.grid.step:24;
+    base.sine.amplitude=3*step;base.sine.period=8*step;
+  }
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<9)base.grid.save=true;
   if(!/^#[\da-f]{6}$/i.test(base.customColor))base.customColor='#ffffff';
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<8)base.input.predict=false;base.palette=[...PALETTE];
@@ -51,7 +56,7 @@ export function mergeSettings(raw:unknown):Settings {
     b.dotSpacing=Math.min(20,Math.max(1.25,b.dotSpacing));
   }
   base.marker.opacity=Math.min(1,Math.max(.05,base.marker.opacity));
-  base.sine.period=Math.min(2000,Math.max(12,base.sine.period));base.sine.amplitude=Math.min(1000,Math.max(1,base.sine.amplitude));
+  base.sine.period=Math.min(2000,Math.max(12,base.sine.period));base.sine.amplitude=Math.min(1000,Math.max(0,base.sine.amplitude));
   base.hyperbola.gamma=Math.min(MAX_GAMMA,Math.max(MIN_GAMMA,base.hyperbola.gamma));
   base.arrow.headLength=Math.min(30,Math.max(1,base.arrow.headLength));base.arrow.headWidth=Math.min(30,Math.max(1,base.arrow.headWidth));
   base.arrow.headRound=Math.min(1,Math.max(0,base.arrow.headRound));

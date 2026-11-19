@@ -23,9 +23,17 @@ await windows('reopen-native');await wait(async()=> (await state()).focused,'в�
 await test.sleep(100);
 assert((await list()).length===1,'запуск из фона только показывает рисунок');
 assert(app.doc.size===1&&app.history.state===history,'возврат сохраняет рисунок и историю');
-await windows('reopen-native');await wait(async()=> (await list()).length===2,'второй запуск при активном холсте');
-const second=(await list()).find(win=>win.id!==first).id;
+for(let i=0;i<3;i++){
+  await windows('reopen-native');await test.sleep(650);
+  assert((await list()).length===1&&(await state()).focused,'повторный запуск при активном холсте возвращает его');
+}
+const second=await windows('new');
+const secondBounds=(await list()).find(win=>win.id===second).bounds,firstBounds=(await state()).bounds;
+assert(secondBounds.x!==firstBounds.x||secondBounds.y!==firstBounds.y,'второе окно сдвинуто');
 assert(await windows('eval',{id:second,code:'return window.__phaint.app.doc.size===0;'}),'новый холст пуст');
+await windows('focus',{id:second});
+await windows('reopen-native');await test.sleep(650);
+assert((await list()).length===2&&(await list()).find(win=>win.id===second).focused,'повторный запуск сохраняет второе активное окно');
 await windows('focus',{id:first});
 await windows('background');await wait(async()=> !(await state()).focused,'первое из двух окон ушло в фон');
 await windows('reopen-native');await wait(async()=> (await state()).focused,'возврат к последнему активному окну');
@@ -55,4 +63,4 @@ await app.applyShortcuts({});
 assert(app.doc.size===1&&app.history.state===history,'исходный рисунок и история не изменились');
 await windows('focus',{id:first});
 await test.idle();await test.shot('restored');
-return {ok:true,background:true,active:true,lastWindow:true,minimized:true,hidden:true,shortcut:true,remapping:true};
+return {ok:true,background:true,active:true,lastWindow:true,minimized:true,hidden:true,shortcut:true,remapping:true,firstBounds,secondBounds};
