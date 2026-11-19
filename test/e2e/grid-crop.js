@@ -70,7 +70,8 @@ svg=await read('выделение.svg');let restored=await app.files.worker.run
 assert(restored.objects.length===2&&restored.objects.every(o=>!o.clip),'только целые выбранные объекты');
 assert(restored.objects.some(o=>o.id===arrow.id&&o.shape.kind==='arrow')&&restored.objects.some(o=>o.id===ink.id),'параметры стрелки и пера сохранены');
 assert((await read('полный.svg'))===full,'исходный файл не изменён');
-test.key('Escape');await drag([250,225],[650,255]);assert(!app.selection.objects.length&&!app.selection.exportArea,'пустая рамка исчезла');
+// Начало рамки дальше расширенного допуска клика по тонкой линии.
+test.key('Escape');await drag([250,215],[650,265]);assert(!app.selection.objects.length&&!app.selection.exportArea,'пустая рамка исчезла');
 assert(await app.files.save()&&!app.files.dirty,'без выбранных объектов обычное сохранение');
 restored=await app.files.worker.run('native',await read('полный.svg'));assert(restored.objects.length===3,'сохранены все объекты');
 app.selection.show(arrow);test.key('KeyA',{metaKey:true});assert(app.selection.objects.length===3,'Cmd+A выбирает всё');

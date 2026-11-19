@@ -7,8 +7,8 @@
 //
 // Плитка рисуется в back и по готовности становится front. Пока плитка перерисовывается,
 // на экране остаётся прежний front — без мигания.
-// У редактируемой линии/стрелки отдельно кэшируются нижние и верхние слои.
-// Движение Безье не перерисовывает соседей и не обнуляет очередь подготовки кэша.
+// У редактируемой фигуры отдельно кэшируются нижние и верхние слои.
+// Движение не перерисовывает соседей и не обнуляет очередь подготовки кэша.
 import type { GridSettings } from '../core/settings.ts';
 import { drawBackground } from './grid.ts';
 import type { Doc, DocChange } from '../core/doc.ts';
@@ -276,7 +276,7 @@ export class TileCache {
       return;
     }
     const added=c.added.length===1?c.added[0]:null,removed=c.removed.length===1?c.removed[0]:null;
-    const shape=added?.kind==='stroke'&&!added.marker&&(added.shape?.kind==='line'||added.shape?.kind==='arrow');
+    const shape=added?.kind==='stroke'&&!added.marker&&!!added.shape;
     const replacement=shape&&removed?.id===added.id&&removed.z===added.z;
     if(replacement&&added.id===this.edited?.id&&added.z===this.edited.z){
       this.edited=added;

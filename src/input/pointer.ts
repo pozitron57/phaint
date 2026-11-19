@@ -51,7 +51,7 @@ export class PointerInput {
     window.addEventListener('pointercancel', this.up, true);
     el.addEventListener('lostpointercapture', this.up);
     el.addEventListener('wheel', this.wheel, { passive: false });
-    el.addEventListener('contextmenu', (e) => e.preventDefault());
+    el.addEventListener('contextmenu', this.contextMenu);
     window.addEventListener('keydown', (e) => {
       this.pressed.add(e.code);
       if(e.code.startsWith('Control'))this.ctrlDown=true;if(e.code.startsWith('Shift'))this.shift=true;
@@ -135,6 +135,16 @@ export class PointerInput {
     const sample=this.sample(e,r.left,r.top);
     if(startingSelection)this.app.selection!.begin(sample,false);else this.app.tool.begin(sample);
     this.app.onDrawing(true);
+  };
+
+  private contextMenu = (e: PointerEvent): void => {
+    e.preventDefault();
+    // Вторичный тап может прислать только contextmenu. Обрабатываем его ровно один раз;
+    // Control-click macOS остаётся жестом постановки/движения точки Безье.
+    if(this.blocked||this.active!==-1||this.panReady||e.ctrlKey||this.ctrlDown)return;
+    const r=this.el.getBoundingClientRect(),s=this.sample(e,r.left,r.top);
+    if(this.held('gesture.bezier',s)||this.held('gesture.select',s))return;
+    this.app.tool.secondary?.(s);
   };
 
   private move = (e: PointerEvent): void => {

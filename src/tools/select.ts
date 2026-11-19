@@ -8,7 +8,7 @@ import { identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
 import { drawObj, inheritImage, objPath, vectorPath } from '../view/draw.ts';
 import type { DocChange } from '../core/doc.ts';
 import type { PenSample, Tool } from './tool.ts';
-import { bendable, nextControlIndex, drawBezierControls } from './bezier.ts';
+import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from './bezier.ts';
 import { insideClip } from '../core/clip.ts';
 import type { KeyLike } from '../core/actions.ts';
 
@@ -45,7 +45,8 @@ export class SelectTool implements Tool {
   private set(objects:Obj[],resetPivot=true):void{
     if(resetPivot)this.finishNudge();
     objects=objects.filter(o=>!isLocked(o));this.objects=objects;if(resetPivot){this.pivot=null;this.pivotSnap=null;this.pivotSnapped=false;}
-    this.app.renderer.prepareEdit(objects.length===1&&bendable(objects[0])?objects[0]:null);
+    const o=objects.length===1?objects[0]:null;
+    this.app.renderer.prepareEdit(o?.kind==='stroke'&&o.shape&&!o.marker?o:null);
     this.app.renderer.setLive(objects.length||this.mode==='box'?this.draw:null);this.app.toolbar.update();
     this.app.panels.brush.sync();
   }
@@ -109,7 +110,7 @@ export class SelectTool implements Tool {
     const handle=this.handles().filter(h=>(!additive||(h.name==='resize'&&this.app.input.held('gesture.resizeFree',s)))&&distance(h)<(h.name==='pivot'?5:9)).sort((a,b)=>distance(a)-distance(b))[0];
     if(handle){
       this.mode=handle.name;this.corner=handle.corner??0;
-      if(['control1','control2','endpoint'].includes(handle.name))this.app.renderer.busy=true;
+      if(handle.name!=='pivot'&&this.editingShape())this.app.renderer.busy=true;
       if(handle.name==='pivot'){
         this.pivotOffset={x:s.x-handle.anchor!.x,y:s.y-handle.anchor!.y};this.pivotSnap=null;this.pivotSnapped=false;
       }
@@ -123,13 +124,17 @@ export class SelectTool implements Tool {
     }
     const b=this.box;
     if(!additive&&b&&s.x>=b.minX&&s.x<=b.maxX&&s.y>=b.minY&&s.y<=b.maxY){this.mode='move';return;}
-    const p=this.app.view.toWorld(s.x,s.y),pad=4/this.app.view.scale;
+    const p=this.app.view.toWorld(s.x,s.y),pad=14/this.app.view.scale;
     const candidates=this.app.doc.query({minX:p.x-pad,minY:p.y-pad,maxX:p.x+pad,maxY:p.y+pad}).sort((a,b)=>b.z-a.z);
     const found=candidates.find(o=>this.hits(o,p,pad))??null;
     if(found){
       if(additive){this.set(this.objects.some(o=>o.id===found.id)?this.objects.filter(o=>o.id!==found.id):[...this.objects,found]);this.mode='none';}
       else{this.set([found]);this.mode='move';this.originals=[found];this.box=this.screenBox();this.initialPivot=this.center();}
     }else{this.mode='box';if(!additive)this.set([]);this.app.renderer.setLive(this.draw);}
+  }
+  secondary(s:PenSample):void {
+    if(this.mode!=='none'||this.objects.length!==1||!bendable(this.selected))return;
+    const next=withoutControlAt(this.app,this.selected,s);if(next)this.replace([next]);
   }
   private hits(o:Obj,p:Pt,pad:number):boolean {
     if(isLocked(o)||(o.kind==='vector'&&o.background))return false;
@@ -171,7 +176,7 @@ export class SelectTool implements Tool {
     // Порог экранный, поэтому одинаков при любом масштабе и на Retina.
     if(this.mode==='move'&&!this.moveStarted){
       if(Math.hypot(s.x-this.start.x,s.y-this.start.y)<5)return;
-      this.moveStarted=true;
+      this.moveStarted=true;if(this.editingShape())this.app.renderer.busy=true;
     }
     const view=this.app.view,p=view.toWorld(s.x,s.y),a=view.toWorld(this.start.x,this.start.y);
     if(this.mode==='pivot'){
@@ -235,6 +240,9 @@ export class SelectTool implements Tool {
     this.replace(next,this.group);
   }
   modifiersChanged():void{if(this.mode!=='none')this.move([{...this.last,pressure:.5,t:performance.now(),ctrl:this.app.input.ctrl,shift:this.app.input.shift,alt:this.app.input.alt,meta:this.app.input.meta}]);}
+  private editingShape():boolean {
+    return this.objects.length===1&&this.selected?.kind==='stroke'&&!!this.selected.shape&&!this.selected.marker;
+  }
   private snapPivot(p:Pt,free:boolean):Pt {
     this.pivotSnapped=false;
     if(free||!this.box){this.pivotSnap=null;return p;}

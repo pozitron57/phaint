@@ -2,12 +2,22 @@
 import type { App } from '../app.ts';
 import { matApply, type Pt } from '../core/geom.ts';
 import type { Obj, StrokeObj } from '../core/types.ts';
+import { rebuildShape } from '../core/shapes.ts';
 
 export function bendable(o:Obj|undefined|null):o is StrokeObj {
   return o?.kind==='stroke'&&(o.shape?.kind==='line'||o.shape?.kind==='arrow');
 }
 export function controlScreen(app:App,o:StrokeObj,p:Pt):Pt {
   const q=matApply(o.shape!.frame,p.x,p.y);return app.view.toScreen(o.ox+q.x,o.oy+q.y);
+}
+/** Удаляем только ближайшую видимую ручку; концы кривой остаются на месте. */
+export function withoutControlAt(app:App,o:StrokeObj,point:Pt):StrokeObj|null {
+  const controls=o.shape?.controls;if(!controls?.length)return null;
+  let index=-1,best=9;
+  controls.forEach((p,i)=>{const q=controlScreen(app,o,p),distance=Math.hypot(q.x-point.x,q.y-point.y);if(distance<=best){best=distance;index=i;}});
+  if(index<0)return null;
+  const remaining=controls.filter((_,i)=>i!==index);
+  return rebuildShape(o,{...o.shape!,controls:remaining.length?remaining:undefined});
 }
 /** Пока точек меньше двух, добавляем следующую; затем перемещаем ближайшую. */
 export function nextControlIndex(app:App,o:StrokeObj,point:Pt):number {

@@ -94,7 +94,7 @@ export class Renderer {
     this.settleAt = 0;
   }
 
-  /** Готовить неизменные слои вокруг выбранной линии до начала движения ручки. */
+  /** Готовить неизменные слои вокруг выбранной фигуры до начала движения. */
   prepareEdit(o:Obj|null):void {
     if(this.tiles.prepareEdit(o))this.request();
   }

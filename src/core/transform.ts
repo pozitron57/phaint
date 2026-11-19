@@ -11,6 +11,9 @@ export function localBounds(o: Exclude<Obj,{kind:'stroke'}>): BBox {
   return o.kind==='vector'?o.bounds:{minX:0,minY:0,maxX:o.width,maxY:o.height};
 }
 export function transformObject(o:Obj,m:Mat,keepWidth:boolean):Obj {
+  // Перенос сохраняет локальную геометрию и её кэш, даже у очень длинной синусоиды.
+  if(m.a===1&&m.b===0&&m.c===0&&m.d===1)return {...o,ox:o.ox+m.e,oy:o.oy+m.f,
+    bbox:{minX:o.bbox.minX+m.e,minY:o.bbox.minY+m.f,maxX:o.bbox.maxX+m.e,maxY:o.bbox.maxY+m.f}};
   const origin=matApply(m,o.ox,o.oy),linear={...m,e:0,f:0};
   if(o.kind==='stroke') {
     if(o.marker)return withShapeBounds({...o,ox:origin.x,oy:origin.y,matrix:matMul(linear,o.matrix??identity())});

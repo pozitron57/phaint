@@ -18,6 +18,8 @@ export interface Tool {
   modifiersChanged?():void;
   /** Перо коснулось холста. */
   begin(s: PenSample): void;
+  /** Правый щелчок или вторичный тап трекпада по холсту. */
+  secondary?(s: PenSample): void;
   /** Перо движется: все отсчёты с прошлого кадра и предсказанные браузером точки. */
   move(samples: PenSample[], predicted: PenSample[]): void;
   /** Перо оторвалось. */

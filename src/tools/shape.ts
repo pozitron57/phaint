@@ -6,7 +6,7 @@ import { makeStroke, type StrokeObj } from '../core/types.ts';
 import { objPath } from '../view/draw.ts';
 import { matApply, matInvert, type Pt } from '../core/geom.ts';
 import type { DocChange } from '../core/doc.ts';
-import { bendable, nextControlIndex, drawBezierControls } from './bezier.ts';
+import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from './bezier.ts';
 import type { PenSample, Tool } from './tool.ts';
 import { gridSnap, snapPoint, snapSegment } from '../core/snap.ts';
 
@@ -64,6 +64,11 @@ export class ShapeTool implements Tool {
     this.alt=this.app.input.held('gesture.grid',s);
   }
   modifiersChanged():void{this.readModifiers();this.update();}
+  secondary(s:PenSample):void {
+    if(!this.showControls||this.start||this.curveOriginal||this.lastId===null)return;
+    const o=this.app.doc.get(this.lastId);if(!bendable(o))return;
+    const next=withoutControlAt(this.app,o,s);if(next)this.app.history.commit({added:[next],removed:[o]});
+  }
   settingsChanged():void{this.update();}
   private update():void {
     if(!this.start||!this.tip)return;
