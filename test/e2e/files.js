@@ -66,7 +66,7 @@ await app.files.backup();
 const backup = await app.platform.files.recoveryRead();
 assert(backup && backup.data.includes('svg'), 'резервная копия содержит импортированный вектор');
 await choose({ unsaved: ['cancel'] });
-assert(!await app.files.newDocument() && app.doc.size === 2, 'отмена нового документа');
+assert(!await app.files.newDocument() && app.doc.size === 3, 'отмена нового документа сохраняет градиент, текст и штрих');
 await choose({ unsaved: ['discard'] });
 assert(await app.files.newDocument() && app.doc.size === 0 && !app.files.dirty, 'новый пустой документ');
 assert(await app.platform.files.recoveryRead() === null, 'после отказа от изменений копия удалена');

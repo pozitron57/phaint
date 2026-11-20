@@ -152,7 +152,8 @@ export function brushPanel(app:App):Panel {
     p.number('Показатель γ',MIN_GAMMA,MAX_GAMMA,gamma,v=>app.changeGamma(v));
     p.choice('Быстрый выбор',{'1.4':'7/5',[String(DEFAULT_GAMMA)]:'5/3'},()=>String(gamma()),v=>app.changeGamma(Number(v)));
   },()=>active('adiabat'));
-  p.section('Толщина',()=>app.tool.id!=='eraser'&&!active('marker'),()=>widthControls(60));
+  p.section('Раздвижение',()=>app.tool.id==='space',()=>p.note('Тяните вверх или вниз: перемещаются объекты целиком ниже касания. Прокрутка продолжает жест. Esc отменяет перенос.'));
+  p.section('Толщина',()=>app.tool.id!=='eraser'&&app.tool.id!=='space'&&!active('marker'),()=>widthControls(60));
   p.section('Толщина маркера',()=>active('marker'),()=>widthControls(240));
   p.section('Ручка',()=>app.tool.id==='pen',()=>{
     const pen=app.settings.pen;
@@ -163,7 +164,7 @@ export function brushPanel(app:App):Panel {
     p.slider('Быстрый штрих тоньше',0,1,.01,()=>pen.speed,v=>{pen.speed=v;changed();},percent);
     p.checkbox('Предсказывать кончик штриха',()=>app.settings.input.predict,v=>{app.settings.input.predict=v;changed();});
   });
-  p.section('Линия',()=>!['eraser','marker'].includes(app.tool.id)&&!active('marker'),()=>{
+  p.section('Линия',()=>!['eraser','marker','space'].includes(app.tool.id)&&!active('marker'),()=>{
     const dash=()=>app.selectedStroke?.dash,width=()=>app.selectedStroke?.pts[2]??app.ink.width;
     const length=()=>dash()&&!dash()!.dots?dash()!.length/width():app.ink.dashLength;
     const gap=()=>dash()&&!dash()!.dots?dash()!.gap/width():app.ink.dashGap;

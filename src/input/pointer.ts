@@ -109,7 +109,7 @@ export class PointerInput {
     e.preventDefault();
     // Переход в M запоминает инструмент для возврата повторным M.
     // Отпускание модификатора не меняет инструмент и не прерывает перетаскивание.
-    const startingSelection=!this.panReady&&controlSelect&&this.app.tool.id!=='select';
+    const startingSelection=!this.panReady&&controlSelect&&this.app.tool.id!=='select'&&this.app.tool.id!=='space';
     if(startingSelection)this.app.selectTool('select',false);
     this.contactMask=e.button===2?2:1;
     this.position={x:e.clientX,y:e.clientY};
@@ -242,12 +242,14 @@ export class PointerInput {
 
   private wheel = (e: WheelEvent): void => {
     e.preventDefault();
-    if (this.blocked || this.active !== -1) return;
+    if (this.blocked || (this.active !== -1&&!this.app.tool.scrollDuringDrag)) return;
     const { view, renderer } = this.app;
     const unit = e.deltaMode === 1 ? 16 : 1;
     const pinch=e.ctrlKey&&!this.ctrlDown;
     const zoom=this.held('gesture.zoom',{ctrl:e.ctrlKey&&this.ctrlDown,alt:e.altKey,shift:e.shiftKey,meta:e.metaKey});
     if (pinch||zoom) {
+      // Во время раздвижения разрешена только прокрутка, без изменения масштаба/оси жеста.
+      if(this.active!==-1)return;
       const r = this.el.getBoundingClientRect();
       const k = pinch ? ZOOM_PINCH : ZOOM_WHEEL;
       const d = Math.max(-60, Math.min(60, e.deltaY * unit));

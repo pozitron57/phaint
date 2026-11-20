@@ -30,6 +30,7 @@ export class Toolbar {
       this.button('tool.eraser','eraser','Ластик'),
       this.button('eraser.original','original','Стирать также исходный SVG'),
       this.button('tool.select', 'select', 'Выбор объекта'),
+      this.button('tool.space','space','Раздвижение'),
       this.button('edit.pasteImage', 'image', 'Вставить картинку'),
       this.button('color.menu', 'color', 'Цвет'),
       h('div', { class: 'tb-sep' }),

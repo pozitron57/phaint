@@ -27,7 +27,7 @@ export interface StrokeObj {
   readonly bbox: BBox;
 }
 
-/** SVG из другого редактора: сохраняем векторный оригинал целиком, включая группы и эффекты. */
+/** SVG из другого редактора или его отдельный фрагмент: сохраняем вектор, группы и эффекты. */
 export interface SvgObj {
   readonly pdfPage?: PdfPageRef;
   readonly clip?: readonly Pt[];

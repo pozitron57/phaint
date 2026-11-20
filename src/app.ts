@@ -12,6 +12,7 @@ import { ShapeTool } from './tools/shape.ts';
 import { inkDash, rebuildShape, MIN_GAMMA, MAX_GAMMA } from './core/shapes.ts';
 import type { StrokeObj } from './core/types.ts';
 import { SelectTool } from './tools/select.ts';
+import { SpaceTool } from './tools/space.ts';
 import { makeImage } from './core/types.ts';
 import { prepareObjects } from './view/draw.ts';
 import { EraserTool } from './tools/eraser.ts';
@@ -66,7 +67,7 @@ export class App {
   private toolbarInFullscreen = false;
   private saveTimer = 0;
   private pasting=false;
-  private previousTool:DrawingTool|'eraser'|'select'='pen';
+  private previousTool:DrawingTool|'eraser'|'select'|'space'='pen';
   private lastDrawing:DrawingTool='pen';
   editGroup:object|undefined;
 
@@ -84,6 +85,7 @@ export class App {
     this.renderer = new Renderer(scene, this.live, this.doc, this.view, settings.grid);
     this.tool = new PenTool(this);
     this.input = new PointerInput(this, this.live);
+    this.view.onChange=()=>{this.tool.viewChanged?.();this.renderer.request();};
 
     registerActions(this);
     settings.keys=this.actions.preserveCustomBindings(settings.keys);
@@ -187,22 +189,23 @@ export class App {
       return rgb?'#'+rgb.slice(1).map(n=>Number(n).toString(16).padStart(2,'0')).join(''):color;
     }return this.ink.color;
   }
-  selectTool(id: DrawingTool | 'eraser' | 'select', toggle=true): void {
+  selectTool(id: DrawingTool | 'eraser' | 'select' | 'space', toggle=true): void {
     if(this.input.blocked)return;
     if(this.tool.id===id){if(!toggle||id==='pen')return;id=this.previousTool;}
     this.input.finishCurrent();this.renderer.setLive(null);
     if(this.tool.id==='select')this.renderer.prepareEdit(null);
     this.selection?.finishNudge();
     this.previousTool=this.tool.id as typeof id;
-    if(id!=='eraser'&&id!=='select')this.lastDrawing=id;
+    if(id!=='eraser'&&id!=='select'&&id!=='space')this.lastDrawing=id;
     if(id==='arrow'||id==='coordinates')this.arrowMode=id;
     if(id==='hyperbola'||id==='adiabat')this.hyperbolaMode=id;
-    this.tool=id==='pen'||id==='marker'?new PenTool(this,id):id==='eraser'?new EraserTool(this):id==='select'?new SelectTool(this):new ShapeTool(this,id);
+    this.tool=id==='pen'||id==='marker'?new PenTool(this,id):id==='eraser'?new EraserTool(this):id==='select'?new SelectTool(this):id==='space'?new SpaceTool(this):new ShapeTool(this,id);
     this.palette.hide();this.panels.brush.sync();this.toolbar.update();this.updateCursor();
     const hint=(action:string,text:string)=>this.actions.hint(action)?` · ${this.actions.hint(action)} — ${text}`:'';
     const snap=hint('gesture.grid',this.settings.snapToGrid?'без привязки':'сетка');
     const names:Record<string,string>={pen:'Ручка',line:`Прямая${snap}`,arrow:`${this.settings.arrow.both?'Двусторонняя стрелка':'Стрелка'}${snap}`,coordinates:`Координаты · тяните между наконечниками${snap}`,ellipse:`Окружность${hint('gesture.ellipse','эллипс')}${snap}`,sine:`Синусоида${snap}`,parabola:`Парабола · задайте концы${snap}`,hyperbola:`Гипербола · направление жеста — четверть${snap}`,adiabat:`Адиабата · направление жеста — четверть${hint('ui.brush','γ')}${snap}`,marker:`Маркер${hint('gesture.marker','прямая')}`,eraser:'Ластик',select:'Выбор · углы — размер · ручка — поворот'};
-    if(id==='eraser'||id==='select')this.hud.toast(names[id]);else this.hud.drawingTool(names[id]);
+    names.space='Раздвижение · тяните вверх или вниз · прокрутка доступна';
+    if(id==='eraser'||id==='select'||id==='space')this.hud.toast(names[id]);else this.hud.drawingTool(names[id]);
   }
   /** Число наконечников задаётся явно; смена режима сохраняет последнюю стрелку для Безье. */
   selectArrow(both:boolean):void {
@@ -321,7 +324,7 @@ export class App {
   }
 
   scroll(dx: number, dy: number,key?:KeyLike): void {
-    if (this.input.drawing||this.input.blocked) return;
+    if ((this.input.drawing&&!this.tool.scrollDuringDrag)||this.input.blocked) return;
     if(this.selection?.objects.length){this.moveSelection(-dx,-dy,key);return;}
     this.view.panBy(dx * SCROLL_STEP, dy * SCROLL_STEP);
   }
@@ -393,6 +396,7 @@ export class App {
       style.cursor = this.input.panning ? 'grabbing' : 'grab';
       return;
     }
+    if(this.tool.id==='space'){style.cursor='ns-resize';return;}
     if(this.input?.held('gesture.select')&&!this.input.drawing&&this.tool.id!=='select'){style.cursor='pointer';return;}
     if(this.tool.id==='select') {style.cursor='default';return;}
     const eraser = this.tool.id === 'eraser';

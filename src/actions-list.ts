@@ -26,6 +26,7 @@ export function registerActions(app: App): void {
   add('style.previous','Предыдущий вид линии',['Shift+Digit2'],()=>app.cycleLinePattern(-1));
   add('style.dots','Линия из точек',['Digit5'],()=>app.toggleDash('dots'));
   add('tool.select', 'Выбор объекта', ['KeyM'], () => app.selectTool('select'));
+  add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
   add('edit.pasteImage', 'Вставить картинку', ['KeyV'], () => {void app.pasteImage();});
   add('edit.copy','Скопировать выделение',['Cmd+KeyC'],()=>{void app.clipboard.copy();});
   add('edit.cut','Вырезать выделение',['Cmd+KeyX'],()=>{void app.clipboard.copy(true);});

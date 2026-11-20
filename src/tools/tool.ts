@@ -16,6 +16,9 @@ export interface Tool {
   readonly pending?:boolean;
   finishPending?():void;
   modifiersChanged?():void;
+  /** Прокрутка разрешена при контакте; начало жеста хранится в координатах документа. */
+  readonly scrollDuringDrag?:boolean;
+  viewChanged?():void;
   /** Перо коснулось холста. */
   begin(s: PenSample): void;
   /** Правый щелчок или вторичный тап трекпада по холсту. */

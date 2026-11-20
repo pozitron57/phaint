@@ -44,6 +44,7 @@ const ICONS: Record<string, string> = {
   line: '<path d="M4 20L20 4"/>',
   original: '<path d="M5 3h10l4 4v14H5zM9 11h6M9 15h6"/><path d="M15 3v5h4"/>',
   select: '<path d="M5 3l14 10-7 1-3 7z"/>',
+  space:'<path d="M4 12h16M12 8V3m-3 3 3-3 3 3M12 16v5m-3-3 3 3 3-3"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="M3 18l6-6 4 4 4-5 4 5"/>',
   eraser: '<path d="M4 14l9-10a2 2 0 013 0l5 5a2 2 0 010 3l-8 9H9l-5-5a1.4 1.4 0 010-2zM9 9l8 8M13 21h8"/>',
   color: '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/>',

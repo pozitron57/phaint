@@ -150,5 +150,21 @@ if(app.view.version!==viewVersion||app.selection.objects.some((o,i)=>o.kind==='s
 out.nudgeUndoMs=await timed(async()=>{test.key('KeyZ',{metaKey:true});await test.idle();});
 if(app.selection.objects.some((o,i)=>o!==selectedBefore[i]))throw new Error('Отмена переноса не вернула всю группу');
 test.key('Escape');test.key('KeyD');await test.idle();
+// 13. Раздвижение всей нижней части документа, с прокруткой и одной отменой.
+const beforeSpace=[...app.doc.values()];test.key('KeyV',{metaKey:true,shiftKey:true});
+const cut=app.view.toWorld(300,250).y;
+stop=meter();test.pointer('pointerdown',300,250,.5);
+for(let i=0;i<40;i++){
+  test.pointer('pointermove',300,250+i*3,.5);
+  if(i===20)test.wheel(900,700,0,70);
+  await test.frames(1);
+}
+test.pointer('pointerup',300,367,0);out.space=stop();
+out.spaceSettleMs=await timed(()=>test.idle());
+const shift=app.view.toWorld(300,367).y-cut;
+for(const o of beforeSpace){const n=app.doc.get(o.id),dy=o.bbox.minY>=cut?shift:0;if(Math.abs(n.oy-o.oy-dy)>1e-6||n.pts!==o.pts)throw new Error('Раздвижение изменило геометрию или состав объектов');}
+out.spaceUndoMs=await timed(async()=>{test.key('KeyZ',{metaKey:true});await test.idle();});
+if(beforeSpace.some(o=>app.doc.get(o.id)!==o))throw new Error('Раздвижение не отменилось одним шагом');
+test.key('KeyD');
 out.heapMB = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : null;
 return { ...out, ...stats() };
