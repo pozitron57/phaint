@@ -91,7 +91,9 @@ export class PointerInput {
     return {
       x: e.clientX - left,
       y: e.clientY - top,
-      pressure: e.pointerType === 'pen' ? e.pressure : 0.5,
+      // После записи экрана Chromium/macOS иногда называют Wacom мышью, сохраняя
+      // настоящий pressure. У обычной мыши PointerEvent сам даёт 0.5 при контакте.
+      pressure: e.pressure,
       t: e.timeStamp, ctrl:e.ctrlKey||this.ctrl, shift:e.shiftKey||this.shift, alt:e.altKey||this.alt, meta:e.metaKey||this.meta,
     };
   }
@@ -201,7 +203,7 @@ export class PointerInput {
         const r = this.el.getBoundingClientRect();
         const sample = this.sample(e, r.left, r.top);
         // У pointerup pressure уже равен нулю. Положение учитываем, толщину сохраняем.
-        sample.pressure = e.pointerType === 'pen' ? this.lastPressure : 0.5;
+        sample.pressure = this.lastPressure;
         this.app.tool.move([sample], []);
       }
     }
