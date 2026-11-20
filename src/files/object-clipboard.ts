@@ -38,7 +38,7 @@ export class ObjectClipboard {
     try{
       const svg=await app.platform.readClipboardSvg();
       if(!svg){await app.pasteImage();return;}
-      const data=await openSvg(svg,app.files.worker,app.settings.grid,app.view.width/app.view.dpr,app.view.height/app.view.dpr);
+      const data=await openSvg(svg,app.files.worker,app.settings.grid,app.view.width/app.view.dpr,app.view.height/app.view.dpr,{fitToWidth:false});
       if(!data.objects.length)return;
       await prepareObjects(data.objects);
       if(generation!==app.files.generation||app.input.blocked)return;

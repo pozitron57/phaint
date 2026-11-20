@@ -91,6 +91,8 @@ await native.testFiles('edit',{name:'copy'});await wait(()=>textCommand==='copy'
 // Чужой SVG с градиентом не растеризуется при копировании и остаётся обычным SVG.
 await app.platform.writeClipboardSvg('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><defs><linearGradient id="g"><stop stop-color="#315ca8"/><stop offset="1" stop-color="#79ad65"/></linearGradient></defs><rect width="120" height="80" fill="url(#g)"/></svg>');
 await app.clipboard.paste();const external=app.selection.selected;assert(external.kind==='svg','вставлен сторонний SVG');
+// Рамка фрагмента включает прежний запас по 1 px на сглаживание.
+assert(near(external.bbox.maxX-external.bbox.minX,122)&&near(external.bbox.maxY-external.bbox.minY,82),'SVG из буфера сохраняет исходный размер, без вписывания страницы');
 await native.testFiles('edit',{name:'copy'});await wait(()=>!app.clipboard.busy);await test.sleep(20);
 const n=app.doc.size;app.input.position={x:750,y:400};await app.clipboard.paste();
 assert(app.doc.size===n+1&&app.selection.selected.kind==='svg'&&app.selection.selected.source===external.source,'исходный вектор сохранён при копировании');

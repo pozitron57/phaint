@@ -288,7 +288,7 @@ export class DocumentSession {
         const data=file.type==='pdf'
           ?await (await import('./pdf-render.ts')).openPdf(file.bytes,file.name,settings.grid,w,h,text=>op.update(text),op.signal)
           :file.type==='image'?await openImage(file.bytes,file.mime,settings.grid,w,h,op.signal)
-          :await openSvg(file.text,op.worker,settings.grid,w,h,op.signal);
+          :await openSvg(file.text,op.worker,settings.grid,w,h,{signal:op.signal});
         await prepareObjects(data.objects,op.signal);
         return data;
       });

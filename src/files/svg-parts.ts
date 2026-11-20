@@ -13,7 +13,9 @@ export function svgParts(source:string,ox:number,oy:number):Obj[]|null {
   if(parsed.querySelector('style'))return null;
   const root=document.importNode(parsed,true) as unknown as SVGSVGElement;
   const host=document.createElement('div');
-  host.style.cssText='position:fixed;left:0;top:0;opacity:0;pointer-events:none;z-index:-1';
+  // SVG не должен стоять на текстовой базовой линии: у маленьких страниц это даёт
+  // лишний сдвиг в getScreenCTM, который затем увеличивается вместе с рисунком.
+  host.style.cssText='position:fixed;left:0;top:0;display:grid;opacity:0;pointer-events:none;z-index:-1';
   host.append(root);document.body.append(host);
   try{
     // Смешивание с соседями и фильтры могут зависеть от всего рисунка и выходить за рамку.

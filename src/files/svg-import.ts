@@ -2,7 +2,9 @@
 // Текст, градиенты и встроенные картинки сохраняются отдельными векторными фрагментами.
 // Зависимые эффекты и неподдерживаемые стили остаются в едином исходном SVG.
 // Изменённый во внешнем редакторе SVG никогда не заменяется устаревшими данными пера.
+// Внешняя страница вписывается по ширине при масштабе холста 1: клетки и перо как на пустом.
 import { cancellationPoint } from '../core/cancel.ts';
+import { transformObject } from '../core/transform.ts';
 import { svgParts } from './svg-parts.ts';
 import { makeSvg } from '../core/types.ts';
 import type { DocumentData } from './codec.ts';
@@ -64,7 +66,8 @@ function checkCss(value: string): void {
   }
 }
 
-export async function openSvg(text: string, worker: DocumentWorker, grid: GridSettings, screenWidth: number, screenHeight: number, signal?: AbortSignal): Promise<DocumentData> {
+export async function openSvg(text: string, worker: DocumentWorker, grid: GridSettings, screenWidth: number, screenHeight: number, options:{signal?:AbortSignal;fitToWidth?:boolean}={}): Promise<DocumentData> {
+  const {signal,fitToWidth=true}=options;
   const own = await worker.run<DocumentData | null>('native', text, signal);
   if (own) {
     // Даже данные metadata считаем входным файлом, а не доверенным кодом.
@@ -79,12 +82,18 @@ export async function openSvg(text: string, worker: DocumentWorker, grid: GridSe
   await cancellationPoint(signal);
   const svg = sanitizeSvg(text);
   await cancellationPoint(signal);
-  const baseScale=Math.max(0.05, Math.min(1, (screenWidth - 60) / svg.width, (screenHeight - 60) / svg.height));
+  // По 10% ширины окна с каждой стороны; высота не уменьшает длинную страницу.
+  // Масштабируем объекты матрицей, сохраняя исходные пути и обычный шаг сетки.
+  const width=screenWidth*.8,scale=width/svg.width;
+  const matrix={a:scale,b:0,c:0,d:scale,e:-svg.x*scale,f:-svg.y*scale};
+  const objects=svgParts(svg.source,svg.x,svg.y) ?? [makeSvg(1,1,svg.x,svg.y,svg.width,svg.height,svg.source)];
   return {
-    baseScale,
-    objects: svgParts(svg.source,svg.x,svg.y) ?? [makeSvg(1, 1, svg.x, svg.y, svg.width, svg.height, svg.source)],
+    baseScale:1,
+    // Буфер объектов использует тот же разбор, но сохраняет исходный размер вставки.
+    objects:fitToWidth?objects.map(o=>transformObject(o,matrix,false)):objects,
     grid: { ...grid },
-    view: { scale: baseScale,
-      rotSteps: 0, x: svg.x + svg.width / 2, y: svg.y + svg.height / 2 },
+    // Начало страницы — в 30 px от верха, продолжение доступно прокруткой.
+    view:fitToWidth?{scale:1,rotSteps:0,x:width/2,y:screenHeight/2-30}
+      :{scale:1,rotSteps:0,x:svg.x+svg.width/2,y:svg.y+svg.height/2},
   };
 }

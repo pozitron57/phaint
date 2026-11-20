@@ -73,18 +73,20 @@ const imported=[...app.doc.values()];
 assert(imported.length===9,'SVG разобран на 9 объектов: '+imported.length);
 assert(imported.filter(o=>o.kind==='svg').length===6,'текст, use, градиент, штрихи и прозрачная группа — отдельные SVG');
 assert(imported[0].background,'белая страница распознана как фон');
-assert(imported.slice(3).every(o=>o.bbox.minY>480&&o.bbox.maxY-o.bbox.minY<100),'фрагменты имеют собственные рамки');
+const importedScale=app.view.width/app.view.dpr*.8/800;
+assert(imported.slice(3).every(o=>o.bbox.minY>(480-200)*importedScale&&o.bbox.maxY-o.bbox.minY<100*importedScale),'фрагменты имеют собственные рамки');
 // Пиксельное сравнение исходного SVG и разделённого рисунка, включая групповые перекрытия.
 const img=new Image(),url=URL.createObjectURL(new Blob([source],{type:'image/svg+xml'}));img.src=url;await img.decode();
 const scene=document.getElementById('scene'),expected=document.createElement('canvas');expected.width=scene.width;expected.height=scene.height;
 const ctx=expected.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,expected.width,expected.height);
-const m=app.view.matrix();ctx.setTransform(m.a,m.b,m.c,m.d,m.e,m.f);ctx.drawImage(img,100,200,800,600);URL.revokeObjectURL(url);
+const m=app.view.matrix();ctx.setTransform(m.a,m.b,m.c,m.d,m.e,m.f);ctx.drawImage(img,0,0,800*importedScale,600*importedScale);URL.revokeObjectURL(url);
 const actual=scene.getContext('2d').getImageData(0,0,scene.width,scene.height).data,reference=ctx.getImageData(0,0,scene.width,scene.height).data;
 let different=0,ink=0;for(let i=0;i<actual.length;i+=4){if(reference[i]<240||reference[i+1]<240||reference[i+2]<240)ink++;if(Math.max(...[0,1,2].map(k=>Math.abs(actual[i+k]-reference[i+k])))>45)different++;}
 assert(different/Math.max(ink,1)<.05,`импорт сохраняет внешний вид: ${different}/${ink}`);
 await test.shot('import');
-app.selectTool('space',false);p=world(200,400);point('pointerdown',p);point('pointerup',world(300,480));await test.idle();
-for(const o of imported){const n=app.doc.get(o.id),dy=o.bbox.minY>=400&&!o.background?80:0;assert(near(n.ox,o.ox)&&near(n.oy,o.oy+dy),'правило переноса для SVG '+o.id);}
+const importedWorld=(x,y)=>world((x-100)*importedScale,(y-200)*importedScale);
+app.selectTool('space',false);p=importedWorld(200,400);point('pointerdown',p);point('pointerup',importedWorld(300,480));await test.idle();
+for(const o of imported){const n=app.doc.get(o.id),dy=o.bbox.minY>=200*importedScale&&!o.background?80*importedScale:0;assert(near(n.ox,o.ox)&&near(n.oy,o.oy+dy),'правило переноса для SVG '+o.id);}
 const restored=await app.files.worker.run('native',await app.files.worker.run('svg',app.files.snapshot()));
 assert(restored.objects.length===9&&restored.objects.every(o=>near(o.oy,app.doc.get(o.id).oy)),'SVG сохраняет отдельность и перенос');
 await test.shot('svg-moved');

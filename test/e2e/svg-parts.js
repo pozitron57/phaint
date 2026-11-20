@@ -12,7 +12,8 @@ const cases=[
   {name:'фильтр',count:1,body:'<defs><filter id="blur"><feGaussianBlur stdDeviation="5"/></filter></defs><rect x="40" y="40" width="100" height="60" fill="#315ca8" filter="url(#blur)"/><rect x="40" y="180" width="100" height="60" fill="#c9514e"/>'},
   {name:'обводка-use',count:1,body:'<defs><path id="line" d="M0 0h100" fill="none" stroke="#315ca8" stroke-width="30"/></defs><use href="#line" x="50" y="60"/><use href="#line" x="50" y="200"/>'},
 ];
-const compare=async(source,bounds=[0,0,400,300])=>{
+const pageWidth=app.view.width/app.view.dpr*.8;
+const compare=async(source,bounds=[0,0,pageWidth,pageWidth*300/400])=>{
   await test.idle();const img=new Image(),url=URL.createObjectURL(new Blob([source],{type:'image/svg+xml'}));img.src=url;await img.decode();
   const scene=document.getElementById('scene'),c=document.createElement('canvas');c.width=scene.width;c.height=scene.height;
   const g=c.getContext('2d');g.fillStyle='white';g.fillRect(0,0,c.width,c.height);const m=app.view.matrix();g.setTransform(m.a,m.b,m.c,m.d,m.e,m.f);g.drawImage(img,...bounds);URL.revokeObjectURL(url);
