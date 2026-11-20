@@ -151,7 +151,7 @@ export class SelectTool implements Tool {
       const target=this.snapPivot({x:s.x-this.pivotOffset.x,y:s.y-this.pivotOffset.y},this.app.input.held('gesture.pivotFree',s));
       this.pivot=view.toWorld(target.x,target.y);this.app.renderer.invalidateLive();return;
     }
-    let m=identity();
+    let m=identity(),unchanged=Math.abs(s.x-this.start.x)+Math.abs(s.y-this.start.y)<.01;
     if(this.mode==='move'){m.e=p.x-a.x;m.f=p.y-a.y;}
     else if(this.mode==='rotate'){
       const c=this.initialPivot!;let angle=Math.atan2(p.y-c.y,p.x-c.x)-Math.atan2(a.y-c.y,a.x-c.x);
@@ -162,8 +162,11 @@ export class SelectTool implements Tool {
       const cx=centerResize?(b.minX+b.maxX)/2:left?b.maxX:b.minX,cy=centerResize?(b.minY+b.maxY)/2:top?b.maxY:b.minY;
       const bx=left?b.minX:b.maxX,by=top?b.minY:b.maxY;
       let sx=(s.x-cx)/(bx-cx||1),sy=(s.y-cy)/(by-cy||1);
-      if(!this.app.input.held('gesture.resizeFree',s)){const size=Math.max(Math.abs(sx),Math.abs(sy));sx=Math.sign(sx||1)*size;sy=Math.sign(sy||1)*size;}
+      // Размер ведёт горизонтальная координата угла: короткая высота не усиливает движение пера.
+      // Знак по Y сохраняет отражение при переходе через противоположную сторону.
+      if(!this.app.input.held('gesture.resizeFree',s))sy=Math.sign(sy||1)*Math.abs(sx);
       sx=Math.abs(sx)<.0001?(sx<0?-.0001:.0001):sx;sy=Math.abs(sy)<.0001?(sy<0?-.0001:.0001):sy;
+      unchanged ||= sx===1&&sy===1;
       const v={...view.matrix()};for(const k of ['a','b','c','d','e','f'] as const)v[k]/=view.dpr;
       m=matMul(matInvert(v),matMul(around({x:cx,y:cy},{a:sx,b:0,c:0,d:sy,e:0,f:0}),v));
     }else{
@@ -200,7 +203,7 @@ export class SelectTool implements Tool {
       if(current&&(['amplitude','period','cycles','bend','length','height'] as const).every(key=>shape[key]===current[key])&&JSON.stringify(shape.frame)===JSON.stringify(current.frame)&&JSON.stringify(shape.controls)===JSON.stringify(current.controls))return;
       this.replace([rebuildShape(o,shape)],this.group);return;
     }
-    if(Math.abs(s.x-this.start.x)+Math.abs(s.y-this.start.y)<.01){
+    if(unchanged){
       this.pivot=this.initialManualPivot?this.initialPivot:null;this.replace(this.originals,this.group);return;
     }
     const next=this.originals.map(o=>{const n=transformObject(o,m,this.app.settings.selection.keepWidth);inheritImage(o,n);return n;});
