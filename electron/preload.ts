@@ -2,6 +2,7 @@
 // (см. src/platform.ts) и не имеет доступа к Node.
 import { contextBridge, ipcRenderer } from 'electron';
 import type { FileApi } from '../src/files/api.ts';
+import type { ImageTextSource } from '../src/platform.ts';
 
 const files: FileApi = {
   open: () => ipcRenderer.invoke('files:open'),
@@ -38,11 +39,14 @@ contextBridge.exposeInMainWorld('phaintNative', {
   readClipboardSvg:()=>ipcRenderer.invoke('clipboard:svg-read'),
   writeClipboardSvg:(svg:string)=>ipcRenderer.invoke('clipboard:svg-write',svg),
   clipboardCopy:(pending:boolean)=>ipcRenderer.send('clipboard:copy',pending),
+  copyImageText:(job:number,image:ImageTextSource)=>ipcRenderer.invoke('clipboard:image-text',job,image),
+  cancelImageText:(job:number)=>ipcRenderer.send('clipboard:image-text-cancel',job),
   onEdit:(cb:(command:'copy'|'paste'|'cut')=>void)=>{ipcRenderer.on('edit:command',(_event,command)=>cb(command));},
   editText:(command:'copy'|'paste'|'cut')=>{ipcRenderer.send('edit:text',command);},
   files,
   clipboardImage: () => ipcRenderer.invoke('clipboard:image'),
   testKeys:(action:string,data:unknown={}):Promise<unknown>=>ipcRenderer.invoke('test:keys',action,data),
+  testClipboard:():Promise<unknown>=>ipcRenderer.invoke('test:clipboard'),
   testWindows:(action:string,data:unknown={}):Promise<unknown>=>ipcRenderer.invoke('test:windows',action,data),
   testFiles: (action: string, data: unknown = {}): Promise<unknown> => ipcRenderer.invoke('test:files', action, data),
   loadSettings: (): Promise<unknown> => ipcRenderer.invoke('settings:load'),

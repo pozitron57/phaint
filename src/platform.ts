@@ -3,8 +3,12 @@
 // в любом браузере без Electron.
 import type { FileApi } from './files/api.ts';
 import { browserFiles } from './files/browser.ts';
+import { abortable, checkCancelled } from './core/cancel.ts';
 
 export interface ClipboardImage { dataURL: string; width: number; height: number }
+/** Обрезка в долях исходного изображения, пары x/y с началом сверху слева. */
+export interface ImageTextSource { source:string; clip?:number[] }
+export type ImageTextResult = 'copied'|'empty'|'superseded'|'cancelled';
 
 export interface Platform {
   appAction(command:string):void;
@@ -16,6 +20,7 @@ export interface Platform {
   onEdit(cb:(command:'copy'|'paste'|'cut')=>void):void;
   editText(command:'copy'|'paste'|'cut'):void;
   clipboardImage(): Promise<ClipboardImage | null>;
+  copyImageText(image:ImageTextSource,signal:AbortSignal):Promise<ImageTextResult>;
   readonly files: FileApi;
   tabletStats(): Promise<Record<string, number> | null>;
   /** true — работаем внутри Electron. */
@@ -39,6 +44,8 @@ interface NativeApi {
   onEdit(cb:(command:'copy'|'paste'|'cut')=>void):void;
   editText(command:'copy'|'paste'|'cut'):void;
   clipboardImage(): Promise<ClipboardImage | null>;
+  copyImageText(job:number,image:ImageTextSource):Promise<ImageTextResult>;
+  cancelImageText(job:number):void;
   files: FileApi;
   tabletStats(): Promise<Record<string, number> | null>;
   loadSettings(): Promise<unknown>;
@@ -52,6 +59,7 @@ interface NativeApi {
 const STORAGE_KEY = 'phaint.settings';
 
 export function getPlatform(): Platform {
+  let textJob=0;
   const native = (window as unknown as { phaintNative?: NativeApi }).phaintNative;
   if (native) {
     return {
@@ -63,6 +71,13 @@ export function getPlatform(): Platform {
       onEdit:cb=>native.onEdit(cb),
       editText:command=>native.editText(command),
       clipboardImage: () => native.clipboardImage(),
+      copyImageText:async(image,signal)=>{
+        checkCancelled(signal);const job=++textJob;
+        const cancel=()=>native.cancelImageText(job);
+        signal.addEventListener('abort',cancel,{once:true});
+        try{return await abortable(native.copyImageText(job,image),signal);}
+        finally{signal.removeEventListener('abort',cancel);}
+      },
       files: native.files,
       tabletStats: () => native.tabletStats(),
       loadSettings: () => native.loadSettings(),
@@ -81,6 +96,7 @@ export function getPlatform(): Platform {
     readClipboardSvg:async()=>{const text=await navigator.clipboard.readText();return /^\s*(<\?xml[^>]*>\s*)?<svg[\s>]/i.test(text)?text:null;},
     writeClipboardSvg:svg=>navigator.clipboard.writeText(svg),
     clipboardCopy:()=>{},
+    copyImageText:async()=>{throw new Error('Распознавание текста доступно в приложении Phaint для macOS.');},
     onEdit:()=>{},
     editText:command=>{document.execCommand(command);},
     clipboardImage: async () => {

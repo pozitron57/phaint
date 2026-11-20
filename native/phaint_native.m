@@ -16,6 +16,8 @@
 #include <node_api.h>
 #include <string.h>
 
+void InstallTextRecognition(napi_env env,napi_value exports);
+
 static id gMonitor = nil;
 
 static struct {
@@ -207,6 +209,7 @@ static void Export(napi_env env, napi_value exports, const char *name, napi_call
 }
 
 NAPI_MODULE_INIT() {
+  InstallTextRecognition(env,exports);
   Export(env, exports, "syncWindowTitlebar", SyncWindowTitlebar);
   Export(env, exports, "windowStyleMask", WindowStyleMask);
   Export(env, exports, "setPresentation", SetPresentation);

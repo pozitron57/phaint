@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const SRC = 'native/phaint_native.m';
+const SOURCES = ['native/phaint_native.m','native/text_recognition.m'];
 const OUT = 'native/build/phaint_native.node';
 
 function includeDir() {
@@ -19,7 +19,7 @@ function includeDir() {
 
 /** Возвращает путь к собранному модулю или null. */
 export function buildNative() {
-  if (existsSync(OUT) && statSync(OUT).mtimeMs >= statSync(SRC).mtimeMs) return OUT;
+  if (existsSync(OUT) && [...SOURCES,'scripts/build-native.mjs'].every(path=>statSync(OUT).mtimeMs>=statSync(path).mtimeMs)) return OUT;
   const include = includeDir();
   if (!include) {
     console.warn('Нативный модуль не собран: не найден node_api.h (нужны заголовки Node).');
@@ -29,7 +29,7 @@ export function buildNative() {
   execFileSync(
     'clang',
     ['-fobjc-arc', '-O2', '-bundle', '-undefined', 'dynamic_lookup', '-arch', 'arm64', '-mmacosx-version-min=12.0',
-      '-I', include, '-framework', 'AppKit', '-o', OUT, SRC],
+      '-I', include, '-framework', 'AppKit', '-framework', 'Vision', '-framework', 'ImageIO', '-o', OUT, ...SOURCES],
     { stdio: 'inherit' },
   );
   return OUT;

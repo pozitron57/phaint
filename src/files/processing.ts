@@ -12,9 +12,9 @@ export class FileProcessing {
   private timer: number;
   private sealed = false;
 
-  constructor(label: string) {
+  constructor(label: string,description='Обработка файла') {
     this.panel.className = 'file-progress';
-    this.panel.setAttribute('aria-label', 'Обработка файла');
+    this.panel.setAttribute('aria-label', description);
     this.text.setAttribute('role', 'status'); this.text.textContent = label;
     this.button.className = 'btn'; this.button.textContent = 'Отмена';
     this.button.onclick = () => this.cancel();

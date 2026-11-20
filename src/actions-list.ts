@@ -29,6 +29,7 @@ export function registerActions(app: App): void {
   add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
   add('edit.pasteImage', 'Вставить картинку', ['KeyV'], () => {void app.pasteImage();});
   add('edit.copy','Скопировать выделение',['Cmd+KeyC'],()=>{void app.clipboard.copy();});
+  add('edit.copyImageText','Распознать и скопировать текст',['Ctrl+KeyC'],()=>{void app.imageText.copy();});
   add('edit.cut','Вырезать выделение',['Cmd+KeyX'],()=>{void app.clipboard.copy(true);});
   add('edit.paste','Вставить объекты',['Cmd+KeyV'],()=>{void app.clipboard.paste();});
   add('edit.delete', 'Удалить выбранное', ['Backspace','Delete'], () => app.deleteSelection());
@@ -78,7 +79,7 @@ export function registerActions(app: App): void {
   add('ui.background', 'Фон и сетка', ['F5'], () => app.togglePanel('background'));
   add('ui.shortcuts','Настройки клавиш…',['Cmd+Comma'],()=>app.shortcuts.show());
   for(const [key,degrees] of [['BracketLeft',-90],['BracketRight',90],['Comma',-15],['Period',15],['Shift+Comma',-1],['Shift+Period',1]] as const) add(`selection.rotate.${key}`,`Повернуть на ${Math.abs(degrees)}° ${degrees>0?'по часовой':'против часовой'}`,[key],()=>app.selection?.rotate(degrees),true);
-  add('ui.escape', 'Закрыть панели и отменить текущее действие', ['Escape'], () => { if(app.files?.processingFile){app.files.cancelProcessing();return;} app.input.cancelCurrent(); app.closePanels(); });
+  add('ui.escape', 'Закрыть панели и отменить текущее действие', ['Escape'], () => { if(app.files?.processingFile){app.files.cancelProcessing();return;} if(app.imageText.cancel())return; app.input.cancelCurrent(); app.closePanels(); });
   add('ui.debug', 'Отладочная панель', ['F12'], () => app.toggleDebug());
 
   add('debug.generate', 'Отладка: добавить 10 000 штрихов', [], () => generateStrokes(app, 10000));

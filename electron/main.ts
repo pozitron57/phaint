@@ -14,14 +14,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { installFiles } from './files.ts';
-import { installClipboard } from './clipboard.ts';
+import { installClipboard, type TextRecognitionNative } from './clipboard.ts';
 import { WindowSettings } from './settings.ts';
 import { recoverySlots } from './recovery.ts';
 import { cascadeBounds } from './window-position.ts';
 import { menuAccelerator, validCombo } from '../src/core/actions.ts';
 
 /** native/phaint_native.m */
-interface Native {
+interface Native extends TextRecognitionNative {
   syncWindowTitlebar(handle:Buffer):boolean;
   windowStyleMask(handle:Buffer):number|null;
   prepareFileDialogs():number;
@@ -160,6 +160,7 @@ function buildMenu(shortcuts:Record<string,string[]>={}): void {
         { type:'separator' },
         { id:'edit.cut',label:'Вырезать',accelerator:'Cmd+X',click:()=>edit('cut') },
         { id:'edit.copy',label:'Скопировать',accelerator:'Cmd+C',click:()=>edit('copy') },
+        { id:'edit.copyImageText',label:'Распознать и скопировать текст',accelerator:'Ctrl+C',click:()=>action('edit.copyImageText') },
         { id:'edit.paste',label:'Вставить',accelerator:'Cmd+V',click:()=>edit('paste') },
         { id:'edit.selectAll',label:'Выделить всё',accelerator:'Cmd+A',click:selectAll },
         { type:'separator' },
@@ -420,7 +421,7 @@ app.on('window-all-closed', () => { if (!quitting) app.quit(); });
 void app.whenReady().then(async () => {
   if (!singleInstance) return;
   files = installFiles(testing, arg('recover') !== undefined);
-  installClipboard(testing);
+  installClipboard(testing,native);
   buildMenu();
   if (native) {
     // Все отсчёты планшета, а не один на кадр.

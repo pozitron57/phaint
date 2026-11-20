@@ -27,6 +27,7 @@ import { Renderer } from './view/renderer.ts';
 import { Viewport } from './view/viewport.ts';
 import { DocumentSession } from './files/session.ts';
 import { ObjectClipboard } from './files/object-clipboard.ts';
+import { ImageText } from './files/image-text.ts';
 
 const SAVE_DELAY = 400;
 /** Шаг прокрутки стрелками, экранные px. */
@@ -40,6 +41,7 @@ function byId<T extends HTMLElement>(id: string): T {
 
 export class App {
   readonly clipboard=new ObjectClipboard(this);
+  readonly imageText=new ImageText(this);
   readonly platform: Platform;
   readonly settings: Settings;
   readonly doc: Doc;
@@ -104,6 +106,7 @@ export class App {
     this.shortcuts=new ShortcutSettings(this);
 
     this.doc.onChange(change => {
+      this.imageText.documentChanged();
       this.toolbar.update();
       if(this.tool instanceof SelectTool)this.tool.changed(change);
       if(this.tool instanceof ShapeTool)this.tool.changed(change);
