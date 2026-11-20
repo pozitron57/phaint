@@ -162,6 +162,13 @@ function buildMenu(shortcuts:Record<string,string[]>={}): void {
         { id:'edit.copy',label:'Скопировать',accelerator:'Cmd+C',click:()=>edit('copy') },
         { id:'edit.paste',label:'Вставить',accelerator:'Cmd+V',click:()=>edit('paste') },
         { id:'edit.selectAll',label:'Выделить всё',accelerator:'Cmd+A',click:selectAll },
+        { type:'separator' },
+        { label:'Порядок объектов',submenu:[
+          { id:'selection.order.front',label:'На передний план',accelerator:'Ctrl+F',click:()=>action('selection.order.front') },
+          { id:'selection.order.back',label:'На задний план',accelerator:'Ctrl+B',click:()=>action('selection.order.back') },
+          { id:'selection.order.forward',label:'На один шаг вперёд',accelerator:'Ctrl+Shift+F',click:()=>action('selection.order.forward') },
+          { id:'selection.order.backward',label:'На один шаг назад',accelerator:'Ctrl+Shift+B',click:()=>action('selection.order.backward') },
+        ] },
       ],
     },
     {

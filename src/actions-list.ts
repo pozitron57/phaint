@@ -33,6 +33,10 @@ export function registerActions(app: App): void {
   add('edit.paste','Вставить объекты',['Cmd+KeyV'],()=>{void app.clipboard.paste();});
   add('edit.delete', 'Удалить выбранное', ['Backspace','Delete'], () => app.deleteSelection());
   add('edit.selectAll', 'Выделить всё', ['Cmd+KeyA'], () => app.selectAll());
+  add('selection.order.front','На передний план',['Ctrl+KeyF'],()=>app.selection?.reorder('front'));
+  add('selection.order.back','На задний план',['Ctrl+KeyB'],()=>app.selection?.reorder('back'));
+  add('selection.order.forward','На один шаг вперёд',['Ctrl+Shift+KeyF'],()=>app.selection?.reorder('forward'));
+  add('selection.order.backward','На один шаг назад',['Ctrl+Shift+KeyB'],()=>app.selection?.reorder('backward'));
   add('eraser.original', 'Стирать также исходный SVG', [], () => app.toggleOriginalEraser());
   add('color.menu','Все цвета',['Shift+Tab'],()=>app.palette.toggle());
   add('color.palette', 'Следующий цвет', ['Tab'], () => app.palette.advance());

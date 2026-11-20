@@ -1,4 +1,4 @@
-// M: временная группа, рамка, перенос, размер с отражением, поворот и ручки параметров фигур.
+// M: временная группа, рамка, перенос, размер, отражение, поворот, порядок и ручки фигур.
 import type { App } from '../app.ts';
 import type { Obj, StrokeObj } from '../core/types.ts';
 import { makeStroke, isLocked } from '../core/types.ts';
@@ -11,6 +11,7 @@ import type { DocChange } from '../core/doc.ts';
 import type { PenSample, Tool } from './tool.ts';
 import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from './bezier.ts';
 import type { KeyLike } from '../core/actions.ts';
+import { reorderObjects, type ObjectOrder } from '../core/order.ts';
 
 type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
 type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt};
@@ -264,6 +265,17 @@ export class SelectTool implements Tool {
   finishNudge(code?:string):void {
     if(!this.keyMove||(code!==undefined&&code!==this.keyMove.code))return;
     this.app.history.endGroup(this.keyMove.group);this.keyMove=null;
+  }
+  reorder(direction:ObjectOrder):void {
+    if(!this.objects.length||this.app.input.drawing||this.app.input.blocked)return;
+    this.finishNudge();
+    const edit=reorderObjects(this.app.doc.values(),new Set(this.objects.map(o=>o.id)),direction);
+    if(!edit.added.length)return;
+    const previous=new Map(edit.removed.map(o=>[o.id,o]));
+    for(const o of edit.added)inheritImage(previous.get(o.id)!,o);
+    // Правка затрагивает также соседей, но состав выделения и центр вращения сохраняются.
+    this.replacing=true;
+    try{this.app.history.commit(edit);}finally{this.replacing=false;}
   }
   rotate(degrees:number):void {
     if(!this.objects.length||this.app.input.drawing)return;
