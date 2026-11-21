@@ -2,6 +2,7 @@
 // Автотесты используют свой буфер, не подменяя содержимое буфера пользователя.
 import { clipboard, ClipboardItem, ipcMain } from 'electron';
 import { MAX_FILE_BYTES } from '../src/files/codec.ts';
+import { stripProblemHeader } from './problem-text.ts';
 import { WriteQueue } from './storage.ts';
 import type { ImageTextResult, ImageTextSource } from '../src/platform.ts';
 
@@ -88,7 +89,8 @@ export function installClipboard(testing:boolean,native:TextRecognitionNative|nu
     const task={job:job as number,id:++latestCopy,cancelled:false};recognizing.set(sender,task);
     const changeCount=testing?testChangeCount:native.clipboardChangeCount();
     try{
-      const text=(await native.recognizeText(Buffer.from(image.source.slice(comma+1),'base64'),task.id,image.clip)).trim();
+      const recognized=await native.recognizeText(Buffer.from(image.source.slice(comma+1),'base64'),task.id,image.clip);
+      const text=stripProblemHeader(recognized);
       return await writes.run(async()=>{
         if(task.cancelled || sender.isDestroyed())return 'cancelled';
         if(task.id!==latestCopy || (testing?testChangeCount:native.clipboardChangeCount())!==changeCount)return 'superseded';

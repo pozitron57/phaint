@@ -11,7 +11,7 @@ app.settings.grid.enabled=false;app.renderer.invalidateScene();
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
 const canvas=document.createElement('canvas');canvas.width=1600;canvas.height=480;
 const g=canvas.getContext('2d');g.fillStyle='white';g.fillRect(0,0,1600,480);g.fillStyle='black';g.font='48px Arial';
-g.fillText('Условие задачи',60,100);g.fillText('Найдите расстояние.',60,220);g.fillText('Distance is 120 meters.',60,340);
+g.fillText('10.3.5 [Механика] Условие задачи',60,100);g.fillText('Найдите расстояние.',60,220);g.fillText('Distance is 120 meters.',60,340);
 const source=canvas.toDataURL(),originalClipboard=app.platform.clipboardImage;
 const insert=async(dataURL)=>{
   app.platform.clipboardImage=async()=>({dataURL,width:800,height:240});
@@ -30,7 +30,7 @@ await native.testKeys('input',{input:{type:'keyDown',keyCode:'C',modifiers:['con
 await native.testKeys('input',{input:{type:'keyUp',keyCode:'C',modifiers:['control']}});
 await wait(async()=>!app.imageText.busy&&(await state()).text!==sentinel);
 const recognized=(await state()).text;
-assert(recognized.includes('Условие задачи')&&recognized.includes('Найдите расстояние.')&&recognized.includes('Distance is 120 meters.'),'русский и английский текст: '+recognized);
+assert(recognized.startsWith('Условие задачи')&&recognized.includes('Найдите расстояние.')&&recognized.includes('Distance is 120 meters.'),'условие без номера и уточнения: '+recognized);
 assert(recognized.indexOf('Условие')<recognized.indexOf('Найдите')&&recognized.indexOf('Найдите')<recognized.indexOf('Distance'),'строки идут сверху вниз');
 assert((await state()).svg===null,'в буфере только текст, прежний SVG удалён');
 assert(app.doc.get(image.id)===image&&app.doc.size===1&&app.history.state===history&&app.files.dirty===dirty,'OCR сохраняет картинку, историю и признак изменений');
@@ -49,6 +49,10 @@ g.fillStyle='white';g.fillRect(0,0,1600,480);
 const blank=await insert(canvas.toDataURL()),beforeBlank=(await state()).text;
 await copy();assert((await state()).text===beforeBlank&&toast().includes('не найден'),'пустая картинка не меняет буфер');
 app.selection.showObjects([image,blank]);key();assert(!app.imageText.busy&&toast().includes('одну картинку'),'группа не распознаётся случайно');
+g.fillStyle='black';g.fillText('Задача #1869',60,100);
+const headerOnly=await insert(canvas.toDataURL());
+assert(await copy()===beforeBlank&&toast().includes('не найден'),'один заголовок без условия сохраняет прежний буфер');
+app.doc.apply([],[headerOnly]);
 app.selection.show(image);
 const invalid={...image,source:'data:image/png;base64,AAAA'};app.doc.apply([invalid],[image]);app.selection.show(invalid);
 await copy();assert((await state()).text===beforeBlank,'ошибка декодирования сохраняет буфер');
