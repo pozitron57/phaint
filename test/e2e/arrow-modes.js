@@ -5,7 +5,7 @@ const up=code=>window.dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true
 const key=(both)=>{test.key('Digit3',{shiftKey:both});up('Digit3');up('ShiftLeft');};
 const cursor=()=>document.querySelector('#live').style.cursor;
 const last=()=>[...app.doc.values()].at(-1);
-const button=document.querySelector('[data-action="tool.arrow"]');
+const button=document.querySelector('[data-action="tool.line"]');
 app.settings.snapToGrid=false;app.settings.grid.enabled=false;
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
 Object.assign(app.settings.arrow,{width:6,color:'#315ca8',both:true,headType:'open'});
@@ -20,7 +20,10 @@ const double=cursor();key(false);assert(app.tool.id==='arrow'&&!app.settings.arr
 key(false);assert(app.tool.id==='pen','повтор того же режима возвращает прежний инструмент');
 key(true);assert(app.tool.id==='arrow'&&cursor()===double,'Shift+3 из ручки возвращает два конца');
 test.key('KeyC');assert(app.tool.id==='coordinates'&&cursor()!==double,'координаты имеют отдельный курсор');
-test.key('KeyD');button.click();assert(app.tool.id==='coordinates','общая кнопка помнит координаты');
+test.key('KeyD');button.click();assert(app.tool.id==='arrow'&&button.dataset.mode==='arrowBoth','общая кнопка помнит последнюю стрелку');
+button.click();assert(app.tool.id==='line'&&button.dataset.mode==='line','повторный щелчок выбирает прямую');
+button.click();assert(app.tool.id==='arrow'&&cursor()===double,'из прямой снова доступна стрелка');
+document.querySelector('[data-action="tool.coordinates"]').click();assert(app.tool.id==='coordinates','отдельная кнопка координат');
 key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both,'3 из координат выбирает одну стрелку');
 app.changeArrow('both',true);assert(cursor()===double&&button.dataset.mode==='arrowBoth','галочка в настройках тоже обновляет курсор и кнопку');
 key(true);assert(app.tool.id==='coordinates','повтор двустороннего режима возвращает предыдущий инструмент');

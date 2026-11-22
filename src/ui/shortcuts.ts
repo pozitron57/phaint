@@ -1,6 +1,6 @@
 // Настройки клавиш: черновик до сохранения, запись нажатием, явное разрешение конфликтов.
 import type { App } from '../app.ts';
-import { comboLabel, comboOf, modifierCombo, modifierName, normalizeCombo, validCombo, type ActionDef } from '../core/actions.ts';
+import { comboLabel, comboOf, modifierCombo, modifierName, normalizeCombo, shortcutSearchBindings, validCombo, type ActionDef } from '../core/actions.ts';
 import { SHORTCUT_GROUPS } from '../core/shortcut-info.ts';
 import { h, icon } from './dom.ts';
 
@@ -61,25 +61,26 @@ export class ShortcutSettings {
   }
   private renderRows():void {
     const scroll=this.rows.scrollTop;
-    const query=this.filter.toLocaleLowerCase().trim(),list=this.app.actions.list().filter(def=>{
-      const haystack=[def.title,def.description,SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS],...this.keys(def).flatMap(k=>[k,k.replace(/\b(Key|Digit)/g,''),comboLabel(k)])].join(' ').toLocaleLowerCase();
-      return (this.group==='all'||def.group===this.group)&&(!this.changedOnly||this.changed(def))&&query.split(/\s+/).every(word=>haystack.includes(word));
-    });
     this.rows.replaceChildren();
-    for(const def of list){
-      const keys=this.keys(def),bindings=h('div',{class:'shortcut-bindings'});
-      keys.forEach((key,index)=>{
+    for(const def of this.app.actions.list()){
+      if((this.group!=='all'&&def.group!==this.group)||(this.changedOnly&&!this.changed(def)))continue;
+      const keys=this.keys(def),description=[def.title,def.description,SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS]].join(' ');
+      const visible=shortcutSearchBindings(keys,description,this.filter);
+      if(visible===null)continue;
+      const bindings=h('div',{class:'shortcut-bindings'});
+      for(const key of visible){
+        const index=keys.indexOf(key);
         const edit=h('button',{class:'shortcut-key','aria-label':`Изменить: ${def.title} — ${comboLabel(key)}`,onclick:()=>this.record(def,index)},comboLabel(key));
         const remove=h('button',{class:'shortcut-key-remove',title:'Убрать сочетание','aria-label':`Убрать ${comboLabel(key)} у «${def.title}»`,onclick:()=>{this.put(def,keys.filter((_,i)=>i!==index));this.renderRows();}},'×');
         bindings.append(h('span',{class:'shortcut-chip'},edit,remove));
-      });
+      }
       if(!keys.length)bindings.append(h('span',{class:'shortcut-unassigned'},'Не назначено'));
       bindings.append(h('button',{class:'shortcut-add',title:'Добавить сочетание','aria-label':`Добавить: ${def.title}`,onclick:()=>this.record(def,-1)},icon('plus')));
       if(this.changed(def))bindings.append(h('button',{class:'shortcut-default',title:'Вернуть стандартные для этого действия','aria-label':`Сбросить: ${def.title}`,onclick:()=>this.resetOne(def)},icon('undo')));
       const title=h('div',{class:'shortcut-title'},def.title,this.changed(def)?h('span',{class:'shortcut-changed',title:'Изменено'},'•'):null);
       this.rows.append(h('div',{class:'shortcut-row','data-shortcut-id':def.id},h('div',{},title,h('p',{},def.description||SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS])),bindings));
     }
-    if(!list.length)this.rows.append(h('p',{class:'shortcut-empty'},'Ничего не найдено. Попробуйте другое название или сочетание.'));
+    if(!this.rows.childElementCount)this.rows.append(h('p',{class:'shortcut-empty'},'Ничего не найдено. Попробуйте другое название или сочетание.'));
     this.rows.scrollTop=scroll;
     const count=this.app.actions.list().filter(d=>this.changed(d)).length;
     this.status.textContent=count?`Изменено действий: ${count}`:'Нажмите сочетание, чтобы изменить его.';

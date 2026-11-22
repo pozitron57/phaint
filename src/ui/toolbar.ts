@@ -20,7 +20,7 @@ export class Toolbar {
       { class: 'toolbar' },
       this.button('tool.pen', 'pen', 'Ручка'),
       this.button('tool.line', 'line', 'Прямая'),
-      this.button('tool.arrow','arrow','Стрелка'),
+      this.button('tool.coordinates','coordinates','Координаты'),
       this.button('tool.marker','marker','Маркер'),
       this.button('tool.ellipse','ellipse','Окружность / эллипс'),
       this.button('tool.sine','sine','Синусоида'),
@@ -56,10 +56,10 @@ export class Toolbar {
       let hintAction=b.action,title=b.title;
       let active = false;
       let disabled = false;
-      if(b.action==='tool.arrow'){
-        active=app.tool.id==='arrow'||app.tool.id==='coordinates';
-        const mode=app.arrowMode==='coordinates'?'coordinates':app.settings.arrow.both?'arrowBoth':'arrow';
-        hintAction=`tool.${mode}`;title=mode==='coordinates'?'Координаты':mode==='arrowBoth'?'Двусторонняя стрелка':'Стрелка';
+      if(b.action==='tool.line'){
+        active=app.tool.id==='line'||app.tool.id==='arrow';
+        const mode=app.lineMode==='line'?'line':app.settings.arrow.both?'arrowBoth':'arrow';
+        hintAction=`tool.${mode}`;title=mode==='line'?'Прямая':mode==='arrowBoth'?'Двусторонняя стрелка':'Стрелка';
         if(b.el.dataset.mode!==mode){
           b.el.dataset.mode=mode;b.el.replaceChildren(icon(mode));
         }
@@ -75,10 +75,7 @@ export class Toolbar {
         }
       }
       else if (b.action.startsWith('tool.')) active=app.tool.id===b.action.slice(5);
-      else if (b.action === 'tool.line') active = app.tool.id === 'line';
-      else if (b.action === 'tool.eraser') active = app.tool.id === 'eraser';
       else if (b.action === 'eraser.original') { active=app.settings.eraser.original;disabled=app.tool.id!=='eraser';b.el.classList.toggle('reserved',disabled);b.el.setAttribute('aria-pressed',String(active)); }
-      else if (b.action === 'tool.select') active=app.tool.id==='select';
       else if (b.action === 'color.menu') b.el.style.color = app.currentColor;
       else if (b.action === 'style.dash') {
         active=app.linePattern!=='solid';
@@ -94,7 +91,8 @@ export class Toolbar {
       b.el.classList.toggle('active', active);
       b.el.disabled = disabled;
       const hint=app.actions.hint(hintAction);b.el.title=title+(hint?` (${hint})`:'');
-      if(['tool.line','tool.arrow','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+перетаскивание — Безье`;
+      if(b.action==='tool.line'&&active)b.el.title+=app.lineMode==='line'?' · ещё один щелчок — стрелка':' · ещё один щелчок — прямая';
+      if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+перетаскивание — Безье`;
     }
   }
 
@@ -107,8 +105,10 @@ export class Toolbar {
         'data-action':action,
         title: hint ? `${title} (${hint})` : title,
         onclick: () => {
-          if(action==='tool.arrow')this.app.selectTool(this.app.arrowMode);
-          else if(action==='tool.line')this.app.selectTool('line');
+          if(action==='tool.line'){
+            const current=this.app.tool.id;
+            this.app.selectTool(current==='line'?'arrow':current==='arrow'?'line':this.app.lineMode,false);
+          }
           else if(action==='tool.hyperbola')this.app.selectTool(this.app.hyperbolaMode);
           else if(action==='style.dash')this.app.cycleLinePattern();
           else this.app.actions.run(action);

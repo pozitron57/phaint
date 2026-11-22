@@ -141,8 +141,8 @@ export function brushPanel(app:App):Panel {
       changed();
     },v=>String(Math.round(v*100)/100));
   };
-  p.section('Режим стрелки',()=>app.tool.id==='arrow'||app.tool.id==='coordinates',()=>{
-    p.choice('Рисовать',{arrow:'Стрелка',coordinates:'Координаты'},()=>app.tool.id,v=>app.selectTool(v as 'arrow'|'coordinates',false));
+  p.section('Прямая и стрелка',()=>app.tool.id==='line'||app.tool.id==='arrow',()=>{
+    p.choice('Рисовать',{line:'Прямая',arrow:'Стрелка'},()=>app.tool.id,v=>app.selectTool(v as 'line'|'arrow',false));
   });
   p.section('Кривая',()=>app.tool.id==='hyperbola'||app.tool.id==='adiabat',()=>{
     p.choice('Рисовать',{hyperbola:'Гипербола',adiabat:'Адиабата'},()=>app.tool.id,v=>app.selectTool(v as 'hyperbola'|'adiabat',false));

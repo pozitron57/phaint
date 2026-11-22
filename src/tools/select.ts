@@ -4,7 +4,7 @@ import type { Obj, StrokeObj } from '../core/types.ts';
 import { makeStroke, isLocked, strokeBBox } from '../core/types.ts';
 import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Pt } from '../core/geom.ts';
 import { around, rotation, transformObject } from '../core/transform.ts';
-import { identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
+import { arrowHeads, coordinateAxes, identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
 import { inheritImage } from '../view/draw.ts';
 import { ObjectPicker, PICK_RADIUS } from '../view/pick.ts';
 import type { DocChange } from '../core/doc.ts';
@@ -13,7 +13,7 @@ import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from
 import type { KeyLike } from '../core/actions.ts';
 import { reorderObjects, type ObjectOrder } from '../core/order.ts';
 
-type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
+type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'startpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
 type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt};
 export class SelectTool implements Tool {
   readonly id='select';
@@ -81,9 +81,24 @@ export class SelectTool implements Tool {
       {name:'rotate',point:{x:(b.minX+b.maxX)/2,y:b.minY-25}}];
     if(this.objects.length===1&&this.selected?.kind==='stroke'&&this.selected.shape){
       const o=this.selected,s=o.shape!;
-      const add=(name:Mode,x:number,y:number)=>{const p=matApply(s.frame,x,y);out.unshift({name,point:this.app.view.toScreen(o.ox+p.x,o.oy+p.y)});};
-      if(s.kind==='arrow'||(s.kind==='line'&&s.controls?.length))add('endpoint',s.length,s.height);
-      if(s.kind==='coordinates'){add('axisX',s.length,0);add('axisY',0,s.height);}
+      const addPoint=(name:Mode,p:Pt)=>{
+        const handle={name,point:this.app.view.toScreen(o.ox+p.x,o.oy+p.y)};
+        out.unshift(handle);return handle;
+      };
+      const add=(name:Mode,x:number,y:number)=>addPoint(name,matApply(s.frame,x,y));
+      const heads:Handle[]=[];
+      const addHead=(name:Mode,head:Float32Array|undefined,pts:Float32Array,atStart=false)=>{
+        const tip=atStart?0:pts.length-3;
+        const base=head?{x:(head[0]+head[6])/2,y:(head[1]+head[7])/2}:{x:pts[tip],y:pts[tip+1]};
+        heads.push(addPoint(name,base));
+      };
+      if(s.kind==='arrow'){
+        const [first,second]=arrowHeads(o);
+        if(s.both||!s.headAtStart)addHead('endpoint',first,o.pts);
+        if(s.both||s.headAtStart)addHead('startpoint',s.both?second:first,o.pts,true);
+      }
+      if(s.kind==='line'&&s.controls?.length)add('endpoint',s.length,s.height);
+      if(s.kind==='coordinates')coordinateAxes(o).forEach((axis,i)=>addHead(i===0?'axisX':'axisY',arrowHeads(axis)[0],axis.pts));
       s.controls?.forEach((p,i)=>add(i===0?'control1':'control2',p.x,p.y));
       if(s.kind==='sine'){
         add('amplitude',s.period/4,-s.amplitude);add('period',s.period,0);add('length',s.period*s.cycles,0);
@@ -91,6 +106,12 @@ export class SelectTool implements Tool {
         out[0].point.y+=18;
       }
       if(s.kind==='parabola')add('bend',s.length/2,s.height/2+s.bend);
+      // На малом масштабе головка бывает меньше ручки. Выносим накрывший её угол рамки наружу.
+      for(const h of out){
+        if(h.corner===undefined||!heads.some(e=>Math.abs(e.point.x-h.point.x)<9&&Math.abs(e.point.y-h.point.y)<9))continue;
+        h.anchor=h.point;
+        h.point={x:h.point.x+(h.corner===0||h.corner===3?-18:18),y:h.point.y+(h.corner<2?-18:18)};
+      }
     }
     const anchor=this.app.view.toScreen(this.center().x,this.center().y);
     let point=anchor;
@@ -162,7 +183,7 @@ export class SelectTool implements Tool {
       const centerResize=this.app.input.held('gesture.resizeCenter',s);
       const cx=centerResize?(b.minX+b.maxX)/2:left?b.maxX:b.minX,cy=centerResize?(b.minY+b.maxY)/2:top?b.maxY:b.minY;
       const bx=left?b.minX:b.maxX,by=top?b.minY:b.maxY;
-      let sx=(s.x-cx)/(bx-cx||1),sy=(s.y-cy)/(by-cy||1);
+      let sx=1+(s.x-this.start.x)/(bx-cx||1),sy=1+(s.y-this.start.y)/(by-cy||1);
       // Размер ведёт горизонтальная координата угла: короткая высота не усиливает движение пера.
       // Знак по Y сохраняет отражение при переходе через противоположную сторону.
       if(!this.app.input.held('gesture.resizeFree',s))sy=Math.sign(sy||1)*Math.abs(sx);
@@ -193,12 +214,19 @@ export class SelectTool implements Tool {
         const index=this.mode==='control1'?0:1,controls=[...shape.controls!],old=matApply(shape.frame,controls[index].x,controls[index].y);
         controls[index]=matApply(matInvert(shape.frame),old.x+p.x-a.x,old.y+p.y-a.y);shape.controls=controls;
       }
-      if(this.mode==='endpoint'){
-        // Смещение от точки захвата сохраняет начало и не даёт скачка при касании края ручки.
-        const n=o.pts.length;let dx=o.pts[n-3]-o.pts[0]+p.x-a.x,dy=o.pts[n-2]-o.pts[1]+p.y-a.y;
+      if(this.mode==='endpoint'||this.mode==='startpoint'){
+        if(unchanged){this.replace(this.originals,this.group);return;}
+        const fromStart=this.mode==='startpoint';
+        const start={x:shape.frame.e,y:shape.frame.f},end=matApply(shape.frame,shape.length,shape.height);
+        const fixed=fromStart?end:start, moving=fromStart?start:end;
+        let dx=moving.x-fixed.x+p.x-a.x,dy=moving.y-fixed.y+p.y-a.y;
         if(this.app.input.held('gesture.angle',s)){const angle=Math.round(Math.atan2(dy,dx)/(Math.PI/12))*Math.PI/12,len=Math.hypot(dx,dy);dx=Math.cos(angle)*len;dy=Math.sin(angle)*len;}
-        const end=matApply(matInvert(shape.frame),o.pts[0]+dx,o.pts[1]+dy);
-        shape.length=end.x;shape.height=end.y;
+        const x=fixed.x+dx,y=fixed.y+dy,tip=matApply(matInvert(shape.frame),x,y);
+        if(fromStart){
+          // Перенос начала локальной системы сохраняет дальний конец и обе ручки Безье на холсте.
+          shape.frame={...shape.frame,e:x,f:y};shape.length-=tip.x;shape.height-=tip.y;
+          if(shape.controls)shape.controls=shape.controls.map(c=>({x:c.x-tip.x,y:c.y-tip.y}));
+        }else{shape.length=tip.x;shape.height=tip.y;}
       }
       const current=this.selected?.kind==='stroke'?this.selected.shape:undefined;
       if(current&&(['amplitude','period','cycles','bend','length','height'] as const).every(key=>shape[key]===current[key])&&JSON.stringify(shape.frame)===JSON.stringify(current.frame)&&JSON.stringify(shape.controls)===JSON.stringify(current.controls))return;
@@ -294,21 +322,26 @@ export class SelectTool implements Tool {
     this.replace(this.objects.map(o=>o.kind==='stroke'?edit(o):o),group);
   }
   /** В M команды инструментов меняют одну выбранную фигуру, сохраняя порядок концов. */
-  setLineHeads(mode:'line'|'end'|'both'|'reverse'):boolean {
+  setLineHeads(mode:'line'|'next'|'previous'|'reverse'):boolean {
     const o=this.selected;
     if(this.objects.length!==1||!bendable(o))return false;
     const shape=o.shape!;
-    if(mode==='line'&&shape.kind==='line')return false;
     if(this.app.input.blocked||this.app.input.drawing)return true;
-    if(mode==='reverse'&&shape.kind==='arrow'&&shape.both)return true;
+    const states=['line','end','start','both'] as const;
+    const current=shape.kind==='line'?'line':shape.both?'both':shape.headAtStart?'start':'end';
+    let state:typeof states[number];
+    if(mode==='line')state='line';
+    else if(mode==='reverse')state=current==='both'?'both':current==='start'?'end':'start';
+    else state=states[(states.indexOf(current)+(mode==='next'?1:states.length-1))%states.length];
+    if(state===current)return true;
 
-    const kind=mode==='line'?'line':'arrow', both=mode==='both';
-    const atStart=mode==='reverse'&&!shape.headAtStart;
-    if(shape.kind===kind&&shape.both===both&&!!shape.headAtStart===atStart)return true;
-    const next:typeof shape={...shape,kind,both};
-    if(atStart)next.headAtStart=true;
+    const kind=state==='line'?'line':'arrow';
+    const next:typeof shape={...shape,kind,both:state==='both'};
+    if(state==='start')next.headAtStart=true;
     else delete next.headAtStart;
-    if(shape.kind==='line'){
+    if(kind==='line'&&mode!=='line')next.savedHeadStyle=true;
+    else delete next.savedHeadStyle;
+    if(shape.kind==='line'&&!shape.savedHeadStyle){
       const {headLength,headWidth,headType,headRound}=this.app.settings.arrow;
       Object.assign(next,{headLength,headWidth,headType,headRound});
     }
@@ -324,7 +357,10 @@ export class SelectTool implements Tool {
     if(this.mode==='box')return;
     ctx.beginPath();ctx.moveTo((b.minX+b.maxX)/2,b.minY);ctx.lineTo((b.minX+b.maxX)/2,b.minY-25);ctx.stroke();
     for(const h of this.handles()){
-      ctx.fillStyle=['amplitude','period','length','bend','endpoint','control1','control2','axisX','axisY'].includes(h.name)?'#cf914d':'white';
+      ctx.fillStyle=['amplitude','period','length','bend','endpoint','startpoint','control1','control2','axisX','axisY'].includes(h.name)?'#cf914d':'white';
+      if(h.name==='resize'&&h.anchor){
+        ctx.beginPath();ctx.moveTo(h.anchor.x,h.anchor.y);ctx.lineTo(h.point.x,h.point.y);ctx.stroke();
+      }
       if(h.name==='pivot'){
         ctx.save();if(this.pivotSnapped)ctx.strokeStyle='#cf914d';
         if(h.anchor&&(h.anchor.x!==h.point.x||h.anchor.y!==h.point.y)){

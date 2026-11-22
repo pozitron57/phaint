@@ -58,8 +58,8 @@ export class App {
   readonly shortcuts:ShortcutSettings;
   tool: Tool;
   fullscreen = false;
-  /** Последний режим общей кнопки стрелки; 3/Shift+3 и C выбирают свой режим напрямую. */
-  arrowMode:'arrow'|'coordinates'='arrow';
+  /** Панель запоминает последний выбор между прямой и стрелкой. */
+  lineMode:'line'|'arrow'='line';
   /** Общая кнопка гиперболы/адиабаты; степень хранится в общих настройках. */
   hyperbolaMode:'hyperbola'|'adiabat'='hyperbola';
 
@@ -204,7 +204,7 @@ export class App {
     this.selection?.finishNudge();
     this.previousTool=this.tool.id as typeof id;
     if(id!=='eraser'&&id!=='select'&&id!=='space')this.lastDrawing=id;
-    if(id==='arrow'||id==='coordinates')this.arrowMode=id;
+    if(id==='line'||id==='arrow')this.lineMode=id;
     if(id==='hyperbola'||id==='adiabat')this.hyperbolaMode=id;
     this.tool=id==='pen'||id==='marker'?new PenTool(this,id):id==='eraser'?new EraserTool(this):id==='select'?new SelectTool(this):id==='space'?new SpaceTool(this):new ShapeTool(this,id);
     this.palette.hide();this.panels.brush.sync();this.toolbar.update();this.updateCursor();

@@ -1,10 +1,21 @@
 // Нормализация, конфликты и сопоставление клавиш не зависят от DOM и раскладки.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Actions,comboLabel,heldCombo,normalizeCombo,validCombo,menuAccelerator} from '../src/core/actions.ts';
+import {Actions,comboLabel,heldCombo,shortcutSearchBindings,normalizeCombo,validCombo,menuAccelerator} from '../src/core/actions.ts';
 import {GESTURES} from '../src/core/shortcut-info.ts';
 import {mergeSettings} from '../src/core/settings.ts';
 const key=(code:string,mods={})=>({code,ctrlKey:false,altKey:false,shiftKey:false,metaKey:false,...mods});
+test('поиск клавиши плюс учитывает основной и цифровой блоки и текущие назначения',()=>{
+  const match=(keys:string[],query:string)=>shortcutSearchBindings(keys,'Увеличить + масштаб',query)!==null;
+  for(const keys of [[],['Ctrl+KeyK'],['Ctrl+Shift','Equal','NumpadEqual']])assert.equal(match(keys,'+'),false);
+  for(const key of ['NumpadAdd','Alt+NumpadAdd','Shift+Equal','Ctrl+Shift+Equal'])assert.ok(match([key],'масштаб +'));
+  assert.ok(match(['Ctrl+NumpadAdd'],'Ctrl++'));assert.ok(match(['Ctrl+Shift+Equal'],'⌃+'));
+  assert.equal(match(['Shift+Equal','Ctrl+KeyA'],'Ctrl++'),false);
+  const keys=['Equal','Shift+Equal','Ctrl+Equal','Ctrl+Shift+Equal','Ctrl+NumpadAdd'];
+  assert.deepEqual(shortcutSearchBindings(keys,'Увеличить','+'),['Shift+Equal','Ctrl+Shift+Equal','Ctrl+NumpadAdd']);
+  assert.deepEqual(shortcutSearchBindings(keys,'Увеличить','Ctrl++'),['Ctrl+Shift+Equal','Ctrl+NumpadAdd']);
+  assert.ok(match(['Ctrl+F1'],'ctrl+f1'));assert.ok(match(['Shift+Cmd+KeyK'],'⇧⌘K'));assert.ok(match([],'  '));
+});
 test('клавиши: модификаторы, физические знаки, Num и безопасная загрузка назначений',()=>{
   assert.equal(normalizeCombo('Cmd+Alt+Shift'),'Alt+Shift+Cmd');assert.equal(comboLabel('Ctrl+Shift'),'⌃⇧');
   assert.equal(comboLabel('BracketLeft'),'[');assert.notEqual(comboLabel('Numpad0'),comboLabel('Digit0'));

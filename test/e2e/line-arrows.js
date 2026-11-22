@@ -3,6 +3,7 @@ const {app,test}=window.__phaint;
 const assert=(ok,message)=>{if(!ok)throw Error(message);};
 const selected=()=>app.selection?.selected;
 const flip=()=>test.key('Digit3',{ctrlKey:true});
+const mode=()=>{const s=selected().shape;return s.kind==='line'?'line':s.both?'both':s.headAtStart?'start':'end';};
 const draw=async(kind,from,to,controls)=>{
   app.selectTool(kind,false);
   await test.pen([[...from,.5],[...to,.5]],1);
@@ -21,20 +22,46 @@ const original=await draw('arrow',[754,63],[94,609],[[597,804]]);
 assert(original.shape.controls.length===1,'нарисована изогнутая стрелка');
 flip();assert(selected().shape.headAtStart&&selected().pts===original.pts,'Ctrl+3 разворачивает исходную стрелку');
 test.key('KeyZ');assert(selected()===original,'отмена возвращает исходную стрелку');
+app.settings.arrow.headLength=4;
+for(const shiftKey of [false,true]){
+  const order=shiftKey?['line','both','start','end']:['start','both','line','end'];
+  for(const expected of order){
+    const before=selected();
+    test.key('Digit3',{shiftKey});
+    assert(mode()===expected&&selected().pts===original.pts&&selected().shape.controls===original.shape.controls,'цикл сохраняет кривую: '+expected);
+    const after=selected();test.key('KeyZ');assert(selected()===before,'отмена одного шага цикла');
+    test.key('KeyY');assert(selected()===after,'повтор одного шага цикла');
+    if(expected==='line'){
+      const svg=await app.files.worker.run('svg',app.files.snapshot());
+      const copy=(await app.files.worker.run('native',svg)).objects[0];
+      assert(copy.shape.savedHeadStyle&&copy.shape.headLength===8,'в SVG сохраняется размер скрытых головок');
+    }else assert(after.shape.headLength===8,'цикл возвращает исходный размер головки');
+  }
+}
+const beforeL=selected();
 test.key('KeyL');
 const line=selected();
 assert(line.shape.kind==='line'&&line.id===original.id&&line.pts===original.pts,'L сохранила ось и выбор');
 assert(line.shape.controls===original.shape.controls,'L сохранила ручку');
-test.key('KeyZ');assert(selected()===original,'L отменяется за один шаг');
+test.key('KeyL');assert(selected()===line,'повтор L сохраняет выделение');
+test.key('KeyZ');assert(selected()===beforeL,'L отменяется за один шаг');
 test.key('KeyY');assert(selected()===line,'повтор возвращает линию');
 flip();
 assert(selected().shape.kind==='arrow'&&selected().shape.headAtStart,'Ctrl+3 у линии ставит головку в начале');
+assert(selected().shape.headLength===4,'после явного L берутся настройки новой головки');
+const startGrip=app.selection.handles().find(h=>h.name==='startpoint').point,old=selected();
+const worldControl=o=>{const f=o.shape.frame,p=o.shape.controls[0];return [o.ox+f.a*p.x+f.c*p.y+f.e,o.oy+f.b*p.x+f.d*p.y+f.f];};
+test.pointer('pointerdown',startGrip.x,startGrip.y,.5);test.pointer('pointermove',startGrip.x-37,startGrip.y+15,.5);test.pointer('pointerup',startGrip.x-37,startGrip.y+15,0);
+const moved=selected();assert(moved.pts[0]===old.pts[0]-37&&moved.pts[1]===old.pts[1]+15,'двигается начало изогнутой стрелки');
+assert(moved.pts.at(-3)===old.pts.at(-3)&&moved.pts.at(-2)===old.pts.at(-2)&&JSON.stringify(worldControl(moved))===JSON.stringify(worldControl(old)),'дальний конец и контрольная точка остаются на холсте');
+test.key('KeyZ');assert(selected()===old,'перенос за основание отменяется одним действием');
 flip();assert(!selected().shape.headAtStart&&selected().pts===original.pts,'Ctrl+3 поменяла только конец');
 app.history.undo();assert(selected().shape.headAtStart,'отмена возвращает прежнюю сторону');
-test.key('Digit3',{shiftKey:true});
-const both=selected();assert(both.shape.both,'Shift+3 ставит обе головки');
+test.key('Digit3');
+const both=selected();assert(both.shape.both,'3 после головки в начале ставит обе');
 const state=app.history.state;flip();assert(selected()===both&&app.history.state===state,'у двух головок перестановка пуста');
-test.key('Digit3');assert(!selected().shape.both&&!selected().shape.headAtStart,'3 возвращает одну головку в точке отрыва');
+test.key('Digit3');assert(mode()==='line','3 после двух головок снимает обе');
+test.key('Digit3');assert(mode()==='end','3 на линии ставит головку в точке отрыва');
 await test.idle();await test.shot('curve');
 
 Object.assign(app.settings.line,{width:9,color:'#79ad65',dashed:true,dotted:false});
@@ -47,7 +74,7 @@ await app.applyShortcuts({'selection.flipArrowHead':['KeyU'],'tool.line':['KeyI'
 flip();assert(selected()===arrow,'прежнее сочетание отключено');
 test.key('KeyI');assert(selected().shape.kind==='line'&&selected().shape.controls===cubic.shape.controls,'переназначенная L сохраняет обе ручки');
 test.key('KeyK');assert(selected().shape.both,'переназначенная Shift+3');
-test.key('KeyJ');test.key('KeyU');
+test.key('KeyJ');test.key('KeyJ');test.key('KeyU');
 const reversed=selected();assert(reversed.shape.headAtStart&&!reversed.shape.both,'переназначенные 3 и Ctrl+3');
 const svg=await app.files.worker.run('svg',app.files.snapshot());
 const copy=(await app.files.worker.run('native',svg)).objects.find(o=>o.id===cubic.id);

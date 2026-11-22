@@ -19,10 +19,10 @@ export function registerActions(app: App): void {
   });
   add('tool.eraser', 'Ластик', ['KeyE', 'Cmd+Shift+KeyE'], () => app.selectTool('eraser'));
   add('tool.arrow','Стрелка',['Digit3'],()=>{
-    if(!app.selection?.setLineHeads('end'))app.selectArrow(false);
+    if(!app.selection?.setLineHeads('next'))app.selectArrow(false);
   });
   add('tool.arrowBoth','Двусторонняя стрелка',['Shift+Digit3'],()=>{
-    if(!app.selection?.setLineHeads('both'))app.selectArrow(true);
+    if(!app.selection?.setLineHeads('previous'))app.selectArrow(true);
   });
   add('selection.flipArrowHead','Перенести наконечник на другой конец',['Ctrl+Digit3'],()=>app.selection?.setLineHeads('reverse'));
   add('tool.coordinates','Координаты',['KeyC'],()=>app.selectTool('coordinates'));

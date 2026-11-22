@@ -1,4 +1,4 @@
-// Жест между наконечниками, Alt, общий режим стрелки, ручки M, ластик, SVG и палитра.
+// Жест между наконечниками, Alt, кнопки инструментов, ручки M, ластик, SVG и палитра.
 const {app,test}=window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
 app.settings.snapToGrid=false;
@@ -15,12 +15,13 @@ origin();app.settings.grid.enabled=false;
 Object.assign(app.settings.arrow,{width:5,color:'#315ca8',headType:'filled',headLength:6,headWidth:4,both:true,dashed:false});
 test.key('KeyC');assert(app.tool.id==='coordinates','C включает координаты');test.key('KeyC');assert(app.tool.id==='pen','повтор C возвращает ручку');
 test.key('Digit3',{shiftKey:true});up('ShiftLeft');test.key('KeyC');test.key('KeyC');assert(app.tool.id==='arrow','повтор C возвращает стрелку');test.key('KeyC');
-const button=document.querySelector('[data-action="tool.arrow"]');
-assert(button.classList.contains('active')&&button.dataset.mode==='coordinates','общая кнопка показывает режим координат');
-assert(!document.querySelector('[data-action="tool.coordinates"]'),'у координат нет отдельной кнопки на панели');
-test.key('KeyB');const panel=app.panels.brush.el;
+const button=document.querySelector('[data-action="tool.line"]'),axesButton=document.querySelector('[data-action="tool.coordinates"]');
+assert(axesButton.classList.contains('active')&&!button.classList.contains('active')&&button.dataset.mode==='arrowBoth','кнопка координат независима от линии и стрелки');
+button.click();test.key('KeyB');const panel=app.panels.brush.el;
+panel.querySelector('[data-value="line"]').click();assert(app.tool.id==='line','режим прямой в настройках');
 panel.querySelector('[data-value="arrow"]').click();assert(app.tool.id==='arrow','режим обычной стрелки в настройках');
-panel.querySelector('[data-value="coordinates"]').click();assert(app.tool.id==='coordinates','режим координат в настройках');
+axesButton.click();assert(app.tool.id==='coordinates','координаты включаются с панели');
+if(!app.panels.brush.open)test.key('KeyB');
 const both=[...panel.querySelectorAll('label')].find(e=>e.textContent==='На обоих концах').querySelector('input');
 assert(both.disabled&&!both.checked&&app.settings.arrow.both,'общий ноль без головок, настройка обычной стрелки сохранена');
 await test.idle();await test.frames(2);await test.shot('menu');app.closePanels();
@@ -53,11 +54,18 @@ tool('select');app.selection.show([...app.doc.values()][0]);let o=app.selection.
 let center=app.selection.center();assert(close(center.x,zero.x)&&close(center.y,zero.y),'центр вращения в начале координат');
 test.key('Period');o=app.selection.selected;assert(close(world(o,0,0).x,zero.x)&&close(world(o,0,0).y,zero.y),'поворот не сдвигает ноль');
 const height=o.shape.height,length=o.shape.length,w=o.pts[2];
-let h=app.selection.handles().find(h=>h.name==='axisX').point,target=world(o,length+60,35),screen=app.view.toScreen(target.x,target.y);
-await drag([h.x+2,h.y+1],[screen.x+2,screen.y+1]);o=app.selection.selected;
+const screen=(o,x,y)=>{const p=world(o,x,y);return app.view.toScreen(p.x,p.y);};
+const axisHandle=(o,name,x,y)=>{
+  const h=app.selection.handles().find(h=>h.name===name).point,base=screen(o,x,y);
+  assert(close(h.x,base.x)&&close(h.y,base.y),'ручка находится в середине основания '+name);
+  return h;
+};
+let h=axisHandle(o,'axisX',length-Math.sign(length)*w*o.shape.headLength,0);
+let tip=screen(o,length,0),target=screen(o,length+60,35);
+await drag([h.x+2,h.y+1],[h.x+2+target.x-tip.x,h.y+1+target.y-tip.y]);o=app.selection.selected;
 assert(close(o.shape.length,length+60)&&o.shape.height===height&&o.pts[2]===w,'ручка X меняет только длину X без скачка и утолщения');
-const oldX=o.shape.length;h=app.selection.handles().find(h=>h.name==='axisY').point;target=world(o,30,height-50);screen=app.view.toScreen(target.x,target.y);
-await drag([h.x,h.y],[screen.x,screen.y]);o=app.selection.selected;
+const oldX=o.shape.length;h=axisHandle(o,'axisY',0,height-Math.sign(height)*w*o.shape.headLength);tip=screen(o,0,height);target=screen(o,30,height-50);
+await drag([h.x,h.y],[h.x+target.x-tip.x,h.y+target.y-tip.y]);o=app.selection.selected;
 assert(o.shape.length===oldX&&close(o.shape.height,height-50),'ручка Y меняет только длину Y');
 await test.shot('selection');
 const data=app.files.snapshot(),svg=await app.files.worker.run('svg',data),restored=await app.files.worker.run('native',svg);

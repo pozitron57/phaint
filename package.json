@@ -1,7 +1,7 @@
 {
   "name": "phaint",
   "productName": "Phaint",
-  "version": "0.6.50",
+  "version": "0.6.51",
   "description": "Векторная рисовалка для онлайн-уроков на графическом планшете",
   "private": true,
   "type": "module",

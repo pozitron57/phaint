@@ -81,6 +81,29 @@ export function comboLabel(combo: string): string {
   return mods + key+(code.startsWith('Numpad')?' (Num)':'');
 }
 
+/** В запросе «+» обозначает клавишу: Shift с «=» или отдельный плюс цифрового блока. */
+export function shortcutSearchBindings(keys:readonly string[],description:string,query:string):readonly string[]|null {
+  const words=query.toLocaleLowerCase().trim().split(/\s+/);
+  if(!words[0])return keys;
+  const labels=keys.flatMap(k=>[k,k.replace(/\b(Key|Digit)/g,''),comboLabel(k)]);
+  const text=[description,...labels].join(' ').toLocaleLowerCase();
+  let visible=keys;
+  for(const word of words){
+    if(word!=='+'&&!word.endsWith('++')&&!/^[⌃⌥⇧⌘]+\+$/.test(word)){
+      if(!text.includes(word))return null;
+      continue;
+    }
+    const names:Record<string,string>={'⌃':'ctrl+','⌥':'alt+','⇧':'shift+','⌘':'cmd+'};
+    const mods=word.slice(0,-1).replace(/[⌃⌥⇧⌘]/g,s=>names[s]).split('+').filter(Boolean);
+    visible=visible.filter(k=>{
+      const parts=k.toLowerCase().split('+'),code=parts.pop();
+      return (code==='numpadadd'||(code==='equal'&&parts.includes('shift')))&&mods.every(m=>parts.includes(m));
+    });
+    if(!visible.length)return null;
+  }
+  return visible;
+}
+
 /** Подпись в меню Electron; обработка клавиш всё равно идёт по физическим code. */
 export function menuAccelerator(combo:string):string|undefined {
   const parts=normalizeCombo(combo).split('+'),code=parts.pop()??'';

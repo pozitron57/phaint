@@ -17,6 +17,12 @@ const bind=async(id,code,mods={},index=0)=>{
 test.key('Comma',{metaKey:true});assert(app.shortcuts.open,'Cmd+, открывает настройки');
 assert(document.querySelectorAll('.shortcut-row').length===app.actions.list().length,'все действия включены');
 assert(row('gesture.pan')&&row('gesture.bezier')&&row('app.quit')&&row('file.export'),'включены удержание, модификаторы и системные команды');
+search('+');assert(document.querySelectorAll('.shortcut-row').length===1&&row('view.zoomIn'),'поиск плюса находит увеличение масштаба');
+const zoomKeys=()=>Array.from(row('view.zoomIn').querySelectorAll('.shortcut-key'),b=>b.textContent);
+assert(zoomKeys().join('|')==='⇧=|⌃⇧=|⌃+ (Num)','показаны только сочетания с клавишей плюс');
+row('view.zoomIn').querySelector('.shortcut-key-remove').click();search('');
+assert(zoomKeys().includes('=')&&!zoomKeys().includes('⇧='),'снимается именно выбранное назначение из полного списка');
+row('view.zoomIn').querySelector('.shortcut-default').click();
 await test.frames(2);await test.shot('all');
 // Запись настоящего Cmd+Q не должна завершить приложение через меню macOS.
 row('width.thicker').querySelector('.shortcut-key').click();
@@ -30,6 +36,8 @@ assert(editor().textContent.includes('Прямая')&&editor().textContent.inclu
 assert(row('tool.line').textContent.includes('Не назначено'),'прежнее назначение снято');
 await bind('tool.line','KeyU',{},-1);await bind('width.thinner','KeyJ');await bind('color.palette','KeyT');
 await bind('gesture.angle','ControlLeft',{ctrlKey:true});await bind('gesture.pan','Backquote');
+await bind('tool.line','NumpadAdd',{altKey:true},-1);
+search('+');assert(row('tool.line')&&row('view.zoomIn')&&document.querySelectorAll('.shortcut-row').length===2,'поиск учитывает новое назначение в черновике');
 await bind('gesture.select','AltLeft',{altKey:true});await bind('gesture.bezier','ShiftLeft',{shiftKey:true},-1);
 await bind('edit.copy','KeyC',{metaKey:true,shiftKey:true});await bind('file.save','KeyK',{metaKey:true,shiftKey:true});
 // Не сохраняем при отмене, включая присвоенные конфликтующие клавиши.

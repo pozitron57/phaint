@@ -109,6 +109,7 @@ export function decodeData(text: string): DocumentData {
         extra.shape={kind:s.kind as ShapeData['kind'],frame:matrix(s.frame),length:finite(s.length),height:finite(s.height),bend:finite(s.bend),amplitude:finite(s.amplitude,0,1e9),period:finite(s.period,.01,1e9),cycles:finite(s.cycles,0,1000),headLength:finite(s.headLength,.1,100),headWidth:finite(s.headWidth,.1,100),headType:s.headType==='filled'?'filled':'open',both:s.both===true};
         if(s.headRound!==undefined)extra.shape.headRound=finite(s.headRound,0,1);
         if(s.kind==='arrow'&&s.headAtStart===true)extra.shape.headAtStart=true;
+        if(s.kind==='line'&&s.savedHeadStyle===true)extra.shape.savedHeadStyle=true;
         if(s.kind==='adiabat')extra.shape.gamma=finite(s.gamma,MIN_GAMMA,MAX_GAMMA);
         if(s.controls!==undefined){
           if(!['line','arrow'].includes(String(s.kind))||!Array.isArray(s.controls)||s.controls.length<1||s.controls.length>2)throw new Error('Неверные точки Безье.');
