@@ -4,6 +4,7 @@ export const SHORTCUT_GROUPS={tools:'Инструменты',drawing:'Цвет �
 export function shortcutInfo(id:string):Pick<ActionDef,'group'|'description'> {
   const prefix=id.split('.')[0];
   let group=({tool:'tools',style:'drawing',color:'drawing',width:'drawing',eraser:'drawing',selection:'selection',view:'view',file:'files',edit:'files',ui:'ui',app:'app',debug:'debug'} as Record<string,string>)[prefix]??'ui';
+  if(prefix==='arrowHead')return {group:'drawing',description:'Для одной выбранной или только что нарисованной стрелки либо системы координат. Шаг — четверть толщины линии.'};
   if(id==='edit.delete'||id==='edit.selectAll')group='selection';
   if(/^view\.(left|right|up|down)$/.test(id))return {group:'selection',description:'Сдвинуть выделение на ⅕ клетки; модификаторы задают точный или ускоренный шаг. Без выделения — прокрутить вид холста. Удержание — одна отмена.'};
   if(id.startsWith('selection.move'))return {group:'selection',description:'Сдвинуть выбранные объекты на 2 клетки в экранном направлении. Шаг не зависит от масштаба; вид холста неподвижен.'};

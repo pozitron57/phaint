@@ -72,6 +72,7 @@ export class App {
   private previousTool:DrawingTool|'eraser'|'select'|'space'='pen';
   private lastDrawing:DrawingTool='pen';
   editGroup:object|undefined;
+  recentArrow?:StrokeObj;
 
   constructor(platform: Platform, settings: Settings) {
     this.platform = platform;
@@ -87,7 +88,7 @@ export class App {
     this.renderer = new Renderer(scene, this.live, this.doc, this.view, settings.grid);
     this.tool = new PenTool(this);
     this.input = new PointerInput(this, this.live);
-    this.view.onChange=()=>{this.tool.viewChanged?.();this.renderer.request();};
+    this.view.onChange=()=>{this.recentArrow=undefined;this.tool.viewChanged?.();this.renderer.request();};
 
     registerActions(this);
     settings.keys=this.actions.preserveCustomBindings(settings.keys);
@@ -106,11 +107,13 @@ export class App {
     this.shortcuts=new ShortcutSettings(this);
 
     this.doc.onChange(change => {
+      this.recentArrow=undefined;
       this.imageText.documentChanged();
       this.toolbar.update();
       if(this.tool instanceof SelectTool)this.tool.changed(change);
       if(this.tool instanceof ShapeTool)this.tool.changed(change);
     });
+    window.addEventListener('pointerdown',()=>{this.recentArrow=undefined;},true);
     window.addEventListener('keydown', this.onKey, true);
     window.addEventListener('keyup',e=>this.selection?.finishNudge(e.code));
     window.addEventListener('blur',()=>this.selection?.finishNudge());
@@ -141,6 +144,7 @@ export class App {
 
   /** Настройки изменились: сохранить (с задержкой) и обновить зависящее от них. */
   settingsChanged(): void {
+    this.recentArrow=undefined;
     window.clearTimeout(this.saveTimer);
     this.saveTimer = window.setTimeout(() => { void this.flushSettings().catch(error => console.error(error)); }, SAVE_DELAY);
     this.updateCursor();
@@ -195,7 +199,7 @@ export class App {
   selectTool(id: DrawingTool | 'eraser' | 'select' | 'space', toggle=true): void {
     if(this.input.blocked)return;
     if(this.tool.id===id){if(!toggle||id==='pen')return;id=this.previousTool;}
-    this.input.finishCurrent();this.renderer.setLive(null);
+    this.input.finishCurrent();this.recentArrow=undefined;this.renderer.setLive(null);
     if(this.tool.id==='select')this.renderer.prepareEdit(null);
     this.selection?.finishNudge();
     this.previousTool=this.tool.id as typeof id;
@@ -242,6 +246,25 @@ export class App {
     Object.assign(this.settings.arrow,{[key]:value});
     this.selection?.editShapes(o=>o.shape?.kind==='arrow'||(o.shape?.kind==='coordinates'&&key!=='both')?rebuildShape(o,{...o.shape,[key]:value}):o,this.editGroup);
     this.settingsChanged();this.toolbar.update();
+  }
+  stepArrowHead(key:'headWidth'|'headLength',direction:1|-1):void {
+    if(this.input.drawing||this.input.blocked)return;
+    const selection=this.selection;
+    const target=selection?(selection.objects.length===1?selection.selected:null):this.recentArrow;
+    if(target?.kind!=='stroke')return;
+    const shape=target.shape;
+    if(shape?.kind!=='arrow'&&shape?.kind!=='coordinates')return;
+    // Старые рисунки со значением выше предела ползунка уменьшаются по одному шагу.
+    const value=Math.max(1,Math.min(Math.max(20,shape[key]),shape[key]+direction*.25));
+    if(value===shape[key])return;
+    const updated=rebuildShape(target,{...shape,[key]:value});
+    if(selection)selection.editShapes(()=>updated);
+    else{
+      this.history.commit({removed:[target],added:[updated]});
+      this.recentArrow=updated;
+    }
+    this.panels.brush.sync();
+    this.hud.toast(`${key==='headWidth'?'Ширина':'Длина'} головки × ${Number(value.toFixed(2))}`);
   }
   changeSine(key:'period'|'amplitude',value:number):void {
     this.settings.sine[key]=value;
@@ -447,7 +470,7 @@ export class App {
     // сохраняется. Явно переназначенное пользователем сочетание всегда приоритетно.
     const defaultRotation=exact?.startsWith('view.rotate')&&!Object.hasOwn(this.settings.keys,exact);
     let handled=selectedDirection&&(!exact||direction(exact)||defaultRotation)
-      ?this.actions.handle(e,direction,true):this.actions.handle(e);
+      ?this.actions.handle(e,direction,true):this.actions.handle(e,id=>!this.input.drawing||!id.startsWith('arrowHead.'));
     // Настраиваемые клавиши цвета/толщины работают и с удерживаемыми модификаторами
     // геометрии. Более точное сочетание (например, вся палитра) имеет приоритет.
     if(!handled&&(this.input.drawing||this.tool.id==='select'||this.tool.pending)){

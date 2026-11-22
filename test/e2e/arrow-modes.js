@@ -32,6 +32,26 @@ await app.applyShortcuts({'tool.arrowBoth':['KeyU']});
 app.selectTool('pen',false);key(true);assert(app.tool.id==='pen','прежнее сочетание после переназначения не действует');
 test.key('KeyU');assert(app.tool.id==='arrow'&&app.settings.arrow.both,'новое сочетание выбирает два конца');
 await app.applyShortcuts({});
+// Клавиши головок применяются к готовой фигуре и к одному объекту в M.
+for(const kind of ['arrow','coordinates']){
+  app.selectTool(kind,false);
+  await test.pen([[200,140,.5],[620,450,.5]],1);
+  const drawn=last(),w=drawn.shape.headWidth,l=drawn.shape.headLength;
+  test.key('F2',{shiftKey:true});test.key('F1',{ctrlKey:true});
+  assert(last().shape.headWidth===w+.25&&last().shape.headLength===l-.25,'ширина и длина сразу после отрыва');
+  test.key('KeyG');
+  const edited=last();
+  test.key('F1',{shiftKey:true});assert(last()===edited,'другая команда завершает правку последней фигуры');
+  app.selectTool('select',false);app.selection.show(edited);
+  test.key('F1',{shiftKey:true});test.key('F2',{ctrlKey:true});
+  assert(last().shape.headWidth===w&&last().shape.headLength===l,'размеры выделенной фигуры восстановлены');
+  test.key('KeyZ');assert(last().shape.headLength===l-.25,'отмена длины');test.key('KeyY');
+  await app.applyShortcuts({'arrowHead.wider':['KeyU']});
+  test.key('KeyU');assert(last().shape.headWidth===w+.25,'новая клавиша ширины');
+  await app.applyShortcuts({});
+}
+await test.idle();await test.shot('head-shortcuts');
+app.selectTool('arrow',false);
 // Реальные PNG курсора: две головки при любых ободках, размерах и плотности экрана.
 const board=document.createElement('canvas');board.width=1440;board.height=600;
 board.style.cssText='position:fixed;left:100px;top:80px;width:720px;height:300px;z-index:99999;background:white';

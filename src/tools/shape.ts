@@ -117,6 +117,7 @@ export class ShapeTool implements Tool {
   finishPending():void {
     if(!this.start)return;
     const {doc,history}=this.app,o=this.object(doc.nextId(),doc.topZ());history.commit({added:[o],removed:[]});this.cancel();this.lastId=o.id;
+    if(this.id==='arrow'||this.id==='coordinates')this.app.recentArrow=o;
   }
   cancel():void{
     if(this.curveOriginal)this.app.history.cancelGroup(this.curveGroup);

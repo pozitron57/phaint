@@ -7,7 +7,10 @@ import type { KeyLike } from './core/actions.ts';
 
 export function registerActions(app: App): void {
   const add = (id: string, title: string, keys: string[], run: (key?:KeyLike) => void, repeat = false): void => {
-    app.actions.register({ id, title, keys, run, repeat,...shortcutInfo(id) });
+    app.actions.register({ id, title, keys, repeat,...shortcutInfo(id),run:key=>{
+      if(!id.startsWith('arrowHead.'))app.recentArrow=undefined;
+      run(key);
+    } });
   };
 
   add('tool.pen', 'Ручка', ['KeyD', 'Digit1', 'Cmd+Shift+KeyD'], () => app.selectTool('pen'));
@@ -60,6 +63,11 @@ export function registerActions(app: App): void {
 
   add('width.thinner', 'Линия тоньше', ['F1'], () => app.changeWidth(-1), true);
   add('width.thicker', 'Линия толще', ['F2'], () => app.changeWidth(1), true);
+
+  add('arrowHead.narrower','Уменьшить ширину головки',['Shift+F1'],()=>app.stepArrowHead('headWidth',-1),true);
+  add('arrowHead.wider','Увеличить ширину головки',['Shift+F2'],()=>app.stepArrowHead('headWidth',1),true);
+  add('arrowHead.shorter','Уменьшить длину головки',['Ctrl+F1'],()=>app.stepArrowHead('headLength',-1),true);
+  add('arrowHead.longer','Увеличить длину головки',['Ctrl+F2'],()=>app.stepArrowHead('headLength',1),true);
 
   add('view.zoomIn', 'Увеличить', ['Equal','Shift+Equal','Ctrl+Equal', 'Ctrl+Shift+Equal', 'Ctrl+NumpadAdd'], () => app.zoomStep(1), true);
   add('view.zoomOut', 'Уменьшить', ['Minus','Ctrl+Minus', 'Ctrl+Shift+Minus', 'Ctrl+NumpadSubtract'], () => app.zoomStep(-1), true);

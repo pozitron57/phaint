@@ -3,6 +3,11 @@ import { matApply, type Mat, type Pt } from './geom.ts';
 
 export function bezierPoints(end:Pt,controls:readonly Pt[],frame:Mat,width:number):Float32Array {
   const curve=[{x:0,y:0},...controls,end].map(p=>matApply(frame,p.x,p.y));
+  return flattenBezier(curve,width);
+}
+
+/** Контрольный многоугольник уже задан в координатах штриха. */
+export function flattenBezier(curve:Pt[],width:number):Float32Array {
   const out=[curve[0].x,curve[0].y,width];
   const middle=(a:Pt,b:Pt):Pt=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
   const flat=(p:Pt,a:Pt,b:Pt):boolean=>{

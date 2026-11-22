@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { shapeData, shapePoints, rebuildShape, arrowHeads, strokeLoops } from '../src/core/shapes.ts';
 import { makeStroke } from '../src/core/types.ts';
 import { transformObject } from '../src/core/transform.ts';
+import { strokeIntersectsSweep } from '../src/core/hit.ts';
 import { matApply } from '../src/core/geom.ts';
 import { encodeSvg, nativeSvgData } from '../src/files/codec.ts';
 
@@ -49,5 +50,24 @@ test('Безье: поворот, отражение, штрихи и точны
     assert.equal(changed.kind,'stroke');if(changed.kind==='stroke'){assert.deepEqual(changed.shape?.controls,shape.controls);assert.equal(changed.pts[2],4);}
     const data={objects:[changed],grid:{enabled:false,step:24},view:{x:0,y:0,scale:1,rotSteps:0}};
     const svg=await encodeSvg(data);assert.ok(svg.includes('<path '));assert.deepEqual(await nativeSvgData(svg),data);
+  }
+});
+
+
+test('длинный заполненный наконечник плавно соединяется со стержнем Безье',()=>{
+  // Пропорции стрелки с рисунка. Проверяем тот же стык на конце и в начале.
+  const width=27;
+  for(const reverse of [false,true]){
+    const shape={...shapeData('arrow'),length:reverse?793:-793,height:reverse?-1057:1057,
+      controls:[reverse?{x:592,y:-152}:{x:-201,y:905}],both:reverse,
+      headType:'filled' as const,headLength:8,headWidth:4.5,headRound:.6};
+    const o=rebuildShape({...makeStroke(1,1,0,0,shapePoints(shape,width),'#315ca8'),shape});
+    const h=arrowHeads(o)[reverse?1:0],x=(h[0]+h[6])/2,y=(h[1]+h[7])/2;
+    const len=Math.hypot(x-h[3],y-h[4]),ux=(x-h[3])/len,uy=(y-h[4])/len;
+    for(const along of [2,6,10,15,20,25])for(const across of [-.4,0,.4]){
+      const p={x:x+along*ux-across*width*uy,y:y+along*uy+across*width*ux};
+      assert.ok(strokeIntersectsSweep(o,p,p,0),'просвет в стержне сразу за основанием');
+    }
+    assert.equal(strokeLoops(o).length,reverse?3:2,'на плавной дуге нет острых изломов с дополнительными дисками');
   }
 });

@@ -1,7 +1,7 @@
 // Параметрические фигуры и штриховой рисунок. Геометрия общая для Canvas, SVG и ластика.
 import { bboxUnion, matApply, matBBox, type Mat, type Pt } from './geom.ts';
 import { curveOutline, segmentOutline, strokeOutline, type Loops } from './outline.ts';
-import { bezierPoints, bezierTangent, pathLength, trimPath } from './bezier.ts';
+import { bezierPoints, bezierTangent, flattenBezier, pathLength, trimPath } from './bezier.ts';
 import { makeStroke, strokeBBox, type StrokeObj } from './types.ts';
 import { withClipBounds } from './clip.ts';
 
@@ -72,7 +72,10 @@ export function rebuildShape(o: StrokeObj, shape=o.shape!): StrokeObj {
 }
 export function withShapeBounds(o:StrokeObj):StrokeObj {
   if(o.shape?.kind!=='arrow'&&o.shape?.kind!=='coordinates'&&!o.matrix)return withClipBounds(o);
-  const b=arrowHeads(o).reduce((b,p)=>bboxUnion(b,strokeBBox(0,0,p)),strokeBBox(0,0,o.pts));
+  const heads=arrowHeads(o);
+  const axes=[o.pts,...heads];
+  if(heads.length&&o.shape?.controls?.length&&o.shape.headType==='filled')axes.push(curvedShaft(o.pts,heads));
+  const b=axes.map(p=>strokeBBox(0,0,p)).reduce(bboxUnion);
   const m=o.matrix??identity();
   return withClipBounds({...o,bbox:matBBox({...m,e:m.e+o.ox,f:m.f+o.oy},b)});
 }
@@ -173,18 +176,38 @@ export function coordinateFrame(m:Mat):Mat {
   if(x<1e-12)return m;
   return {...m,c:-m.b/x*y*sign,d:m.a/x*y*sign};
 }
-/** Короткий касательный участок соединяет кривую с плоским основанием головки. */
+/** Сохраняем середину исходной дуги. У каждой головки кубическая Безье
+ * сопрягает её касательную с осью головки, заканчиваясь в центре основания. */
 function curvedShaft(p:Float32Array,heads:Float32Array[]):Float32Array {
-  const base=(h:Float32Array)=>({x:(h[0]+h[6])/2,y:(h[1]+h[7])/2});
-  const length=(h:Float32Array)=>Math.hypot(h[3]-base(h).x,h[4]-base(h).y);
-  const end=length(heads[0]),start=heads[1]?length(heads[1]):0;
-  const margin=Math.min(p[2]*.5,Math.max(0,pathLength(p)-start-end)*.1),out:number[]=[];
-  const join=(h:Float32Array,reverse:boolean)=>{
-    const b=base(h),len=length(h)||1,x=b.x+(b.x-h[3])*margin/len,y=b.y+(b.y-h[4])*margin/len;
-    out.push(...(reverse?[x,y,p[2],b.x,b.y,p[2]]:[b.x,b.y,p[2],x,y,p[2]]));
+  const headLength=(h:Float32Array)=>Math.hypot(h[3]-(h[0]+h[6])/2,h[4]-(h[1]+h[7])/2);
+  const end=headLength(heads[0]),start=heads[1]?headLength(heads[1]):0;
+  const available=pathLength(p)-start-end;
+  const middle=trimPath(p,start+Math.min(start,available/3),end+Math.min(end,available/3));
+  if(middle.length<6)return middle;
+  const out:number[]=[];
+  const join=(head:Float32Array,first:boolean)=>{
+    const i=first?0:middle.length-3,j=first?3:i-3;
+    const a={x:middle[i],y:middle[i+1]},base={x:(head[0]+head[6])/2,y:(head[1]+head[7])/2};
+    const dx=head[3]-base.x,dy=head[4]-base.y,len=Math.hypot(dx,dy)||1;
+    const ux=dx/len,uy=dy/len;
+    const distance=Math.hypot(base.x-a.x,base.y-a.y);
+    const flat=Math.min(p[2]/2,distance/8);
+    const b={x:base.x-flat*ux,y:base.y-flat*uy};
+    const arm=Math.hypot(b.x-a.x,b.y-a.y)/3;
+    const vx=a.x-middle[j],vy=a.y-middle[j+1],vlen=Math.hypot(vx,vy)||1;
+    const curve=flattenBezier([a,{x:a.x+arm*vx/vlen,y:a.y+arm*vy/vlen},
+      {x:b.x-arm*ux,y:b.y-arm*uy},b],p[2]);
+    // Точку a уже содержит середина. Короткий прямой конец даёт точный плоский торец.
+    if(first)out.push(base.x,base.y,p[2]);
+    for(let k=3;k<curve.length;k+=3){
+      const index=first?curve.length-k:k;
+      out.push(curve[index],curve[index+1],p[2]);
+    }
+    if(!first)out.push(base.x,base.y,p[2]);
   };
-  if(heads[1])join(heads[1],false);
-  out.push(...trimPath(p,start+(heads[1]?margin:0),end+margin));join(heads[0],true);
+  if(heads[1])join(heads[1],true);
+  for(const value of middle)out.push(value);
+  join(heads[0],false);
   return Float32Array.from(out);
 }
 /** Короткие участки у вершин задают небольшое скругление, одинаковое в Canvas и SVG. */
