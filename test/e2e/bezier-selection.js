@@ -4,6 +4,7 @@ const assert=(v,m)=>{if(!v)throw new Error(m);};
 const pointer=(type,x,y,ctrl=false)=>test.pointer(type,x,y,type==='pointerup'?0:.5,'pen',{ctrlKey:ctrl});
 const last=()=>[...app.doc.values()].at(-1);
 const origin=()=>app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;origin();generate(5000);
 const strokes=[...app.doc.values()].map(o=>{
   const ox=180+o.ox%720,oy=120+o.oy%480,dx=ox-o.ox,dy=oy-o.oy;

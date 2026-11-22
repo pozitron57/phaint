@@ -3,6 +3,7 @@ const {app,test}=window.__phaint,native=window.phaintNative;
 const assert=(v,m)=>{if(!v)throw new Error(m);};
 app.settings.snapToGrid=false;app.settings.grid.enabled=app.settings.grid.save=true;
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
+app.setStylePerTool(true);
 app.selectTool('line',false);app.settings.line.color='#000000';await test.pen([[180,240,.5],[600,240,.5]],1);
 app.selectTool('marker',false);await test.pen([[200,240,.5],[400,240,.5],[300,210,.5],[400,240,.5]],1);
 app.selectTool('pen',false);await test.pen(Array.from({length:90},(_,i)=>[180+i*4,340+30*Math.sin(i*.2),.5]),1);

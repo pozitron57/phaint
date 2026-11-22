@@ -4,7 +4,7 @@ import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
 import { Doc } from './core/doc.ts';
 import { History } from './core/history.ts';
-import type { Settings, DrawingTool, InkSettings } from './core/settings.ts';
+import type { Settings, DrawingTool, InkSettings, InkStyle } from './core/settings.ts';
 import { PointerInput } from './input/pointer.ts';
 import type { Platform } from './platform.ts';
 import { PenTool } from './tools/pen.ts';
@@ -171,7 +171,7 @@ export class App {
   /** Сделать линию тоньше (-1) или толще (+1). */
   changeWidth(dir: 1 | -1): void {
     if(this.tool instanceof SelectTool && this.tool.objects.length){this.tool.width(dir>0?1.1:1/1.1);return;}
-    const brush = this.tool.id === 'eraser' ? this.settings.eraser : this.ink;
+    const brush = this.tool.id === 'eraser' ? this.settings.eraser : this.widthSettings;
     brush.width = this.tool.id === 'eraser'
       ? Math.max(2,Math.min(120,Math.round(brush.width*(dir>0 ? 1.1 : 1/1.1)*10)/10)) : this.tool.id==='marker'?Math.max(2,Math.min(240,Math.round(brush.width*(dir>0?1.1:1/1.1)*10)/10)):stepWidth(brush.width,dir);
     this.hud.toast(`${this.tool.id === 'eraser' ? 'Ластик' : 'Толщина'} ${brush.width}`);
@@ -179,11 +179,22 @@ export class App {
     this.settingsChanged();
   }
 
-  /** Цвет и толщина активного рисующего инструмента. */
-  get ink():InkSettings {
+  private get inkTool():DrawingTool {
     const selected=this.selectedStroke;
-    const id=selected?(selected.marker?'marker':selected.shape?.kind??'pen'):this.lastDrawing;
+    return selected?(selected.marker?'marker':selected.shape?.kind??'pen'):this.lastDrawing;
+  }
+  get widthSettings():Pick<InkSettings,'width'> {
+    const id=this.inkTool;
     return this.settings[id==='coordinates'?'arrow':id==='adiabat'?'hyperbola':id];
+  }
+  private get inkStyle():InkStyle {return this.settings.stylePerTool?this.settings[this.inkTool]:this.settings.sharedStyle;}
+  /** Снимок для нового штриха или кадра предпросмотра. Толщина всегда берётся у инструмента. */
+  get ink():InkSettings {return {...this.inkStyle,width:this.widthSettings.width};}
+  setStylePerTool(on:boolean):void {
+    if(on===this.settings.stylePerTool)return;
+    this.settings.stylePerTool=on;this.settingsChanged();
+    this.panels.brush.sync();this.toolbar.update();if(this.palette.open)this.palette.sync();
+    this.hud.toast(on?'ВКЛ · У каждого инструмента свой штрих и цвет':'ВЫКЛ · Штрих и цвет общие для всех инструментов',1800);
   }
   get selection():SelectTool|null {return this.tool instanceof SelectTool?this.tool:null;}
   get selectedStroke():StrokeObj|undefined {return this.selection?.objects.find((o):o is StrokeObj=>o.kind==='stroke');}
@@ -194,7 +205,7 @@ export class App {
       const color=vector.fill==='none'?vector.stroke:vector.fill;
       const rgb=/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(color);
       return rgb?'#'+rgb.slice(1).map(n=>Number(n).toString(16).padStart(2,'0')).join(''):color;
-    }return this.ink.color;
+    }return this.inkStyle.color;
   }
   selectTool(id: DrawingTool | 'eraser' | 'select' | 'space', toggle=true): void {
     if(this.input.blocked)return;
@@ -228,18 +239,24 @@ export class App {
   }
   get linePattern():'solid'|'dash'|'dots' {
     const dash=this.selectedStroke?.dash;
-    return this.selectedStroke?(dash?(dash.dots?'dots':'dash'):'solid'):this.ink.dashed?(this.ink.dotted?'dots':'dash'):'solid';
+    return this.selectedStroke?(dash?(dash.dots?'dots':'dash'):'solid'):this.inkStyle.dashed?(this.inkStyle.dotted?'dots':'dash'):'solid';
   }
   toggleDash(mode:'dash'|'dots'='dash'):void {this.setLinePattern(this.linePattern===mode?'solid':mode);this.hud.linePattern(this.linePattern);}
   cycleLinePattern(direction=1):void {
-    if(this.tool.id==='marker'||this.tool.id==='eraser'||this.selectedStroke?.marker)return;
+    if(this.tool.id==='eraser'||this.tool.id==='space')return;
     const modes=['solid','dash','dots'] as const,mode=modes[(modes.indexOf(this.linePattern)+direction+3)%3];
     this.setLinePattern(mode);this.hud.linePattern(mode);
   }
   setLinePattern(mode:'solid'|'dash'|'dots'):void {
-    if(this.tool.id==='marker'||this.tool.id==='eraser'||this.selectedStroke?.marker)return;
-    this.ink.dashed=mode!=='solid';if(mode!=='solid')this.ink.dotted=mode==='dots';
-    this.selection?.editShapes(o=>o.marker?o:{...o,dash:inkDash(this.ink,o.pts[2])});
+    this.setLineStyle({dashed:mode!=='solid',dotted:mode==='dots'});
+  }
+  setLineStyle(change:Partial<Omit<InkStyle,'color'>>,group?:object):void {
+    if(this.tool.id==='eraser'||this.tool.id==='space')return;
+    const {dashed,dotted,dotSpacing,dashLength,dashGap,round}=this.inkStyle;
+    const pattern={dashed,dotted,dotSpacing,dashLength,dashGap,round,...change};
+    Object.assign(this.settings.sharedStyle,pattern);
+    if(this.settings.stylePerTool)Object.assign(this.settings[this.inkTool],pattern);
+    this.selection?.editShapes(o=>({...o,dash:inkDash(pattern,o.pts[2])}),group);
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
   }
   changeArrow(key:'headLength'|'headWidth'|'headRound'|'headType'|'both',value:number|string|boolean):void {
@@ -317,7 +334,9 @@ export class App {
   }
 
   chooseColor(color:string):void {
-    if(this.selection?.objects.length)this.selection.recolor(color);else this.ink.color=color;
+    this.settings.sharedStyle.color=color;
+    if(this.settings.stylePerTool)this.settings[this.inkTool].color=color;
+    if(this.selection?.objects.length)this.selection.recolor(color);
     this.settingsChanged();this.toolbar.update();
   }
 
@@ -426,9 +445,9 @@ export class App {
     if(this.input?.held('gesture.select')&&!this.input.drawing&&this.tool.id!=='select'){style.cursor='pointer';return;}
     if(this.tool.id==='select') {style.cursor='default';return;}
     const eraser = this.tool.id === 'eraser';
-    const width = eraser ? this.settings.eraser.width : this.ink.width;
-    style.cursor = brushCursor(width * this.view.scale, this.view.dpr, eraser ? undefined : this.ink.color, {
-      pattern: eraser || this.tool.id === 'marker' ? 'solid' : this.linePattern,
+    const width = eraser ? this.settings.eraser.width : this.widthSettings.width;
+    style.cursor = brushCursor(width * this.view.scale, this.view.dpr, eraser ? undefined : this.inkStyle.color, {
+      pattern: eraser ? 'solid' : this.linePattern,
       mark: this.tool.id === 'arrow' && this.settings.arrow.both ? 'arrowBoth'
         : this.tool.id === 'line' || this.tool.id === 'arrow' || this.tool.id === 'coordinates' ? this.tool.id : 'none',
     });

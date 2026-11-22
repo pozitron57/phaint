@@ -56,13 +56,13 @@ export class Hud {
     root.append(this.toastEl, this.debugEl);
   }
 
-  toast(text: string): void {
+  toast(text: string, duration=TOAST_MS): void {
     this.toolText=null;
     this.toastEl.textContent = text;
     this.toastEl.removeAttribute('aria-label');
     this.toastEl.classList.add('show');
     window.clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => this.toastEl.classList.remove('show'), TOAST_MS);
+    this.toastTimer = window.setTimeout(() => this.toastEl.classList.remove('show'), duration);
   }
 
   clearToast(): void {
@@ -82,7 +82,7 @@ export class Hud {
   /** Цвет можно сменить, пока подсказка ещё видна; таймер от этого не продлевается. */
   refreshInk():void {
     if(this.toolText===null||!this.toastEl.classList.contains('show'))return;
-    const ink=this.app.ink,mode=this.app.tool.id==='marker'?'solid':this.app.linePattern;
+    const ink=this.app.ink,mode=this.app.linePattern;
     const swatch=h('span',{class:'toast-color','aria-hidden':'true'});swatch.style.backgroundColor=ink.color;
     this.toastEl.replaceChildren(h('div',{class:'toast-tool'},swatch,
       h('div',{class:'toast-tool-detail'},h('span',null,this.toolText),lineSample(mode,ink))));

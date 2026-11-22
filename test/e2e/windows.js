@@ -26,7 +26,7 @@ const third=await windows('new');
 assert((await list()).length===3,'можно открыть ещё одно независимое окно');
 assert(await windows('close',{id:third}),'пустое третье окно закрывается отдельно');
 app.settings.snapToGrid=false;app.view.reset();
-app.selectTool('arrow',false);app.settings.arrow.width=4;app.settings.arrow.color='#c9514e';app.setLinePattern('dots');
+app.selectTool('arrow',false);app.settings.arrow.width=4;app.chooseColor('#c9514e');app.setLinePattern('dots');
 test.pointer('pointerdown',180,190,.5);test.pointer('pointermove',460,290,.5);test.pointer('pointerup',460,290,0);
 app.selectTool('marker',false);await test.pen([[180,350,.5],[460,350,.5]],4);
 app.selectTool('pen',false);await test.pen([[180,430,.2],[260,410,.8],[360,440,.5]],4);

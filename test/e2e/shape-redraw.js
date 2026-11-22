@@ -17,14 +17,14 @@ const results=[];
 for(const kind of ['sine','hyperbola','adiabat','parabola','ellipse','coordinates']){
   app.selectTool('pen',false);app.doc.replace([]);app.history.clear();generate(500);
   app.doc.replace([...app.doc.values()].map(o=>({...o,color:'#bbbbbb'})));app.history.clear();await test.idle();
-  app.selectTool(kind,false);Object.assign(app.settings[kind==='coordinates'?'arrow':kind==='adiabat'?'hyperbola':kind],{width:3,color:'#e02020',dashed:false});
+  app.selectTool(kind,false);app.widthSettings.width=3;app.chooseColor('#e02020');
   if(kind==='sine')Object.assign(app.settings.sine,{period:16,amplitude:62});
   const start=kind==='ellipse'?[500,370]:[190,310],end=kind==='sine'?[958,310]:kind==='ellipse'?[690,370]:kind==='hyperbola'||kind==='adiabat'?[520,490]:[760,490];
   await test.pen([[...start,.5],[...end,.5]],1);
   if(kind==='parabola')await test.pen([[480,230,.5],[480,230,.5]],1);
   const original=[...app.doc.values()].at(-1);
-  app.selectTool('marker',false);Object.assign(app.settings.marker,{width:70,color:'#79ad65',opacity:.4});await test.pen([[260,390,.5],[930,390,.5]],1);
-  app.selectTool('line',false);Object.assign(app.settings.line,{color:'#315ca8',width:4});await test.pen([[700,180,.5],[800,650,.5]],1);
+  app.selectTool('marker',false);app.chooseColor('#79ad65');Object.assign(app.settings.marker,{width:70,opacity:.4});await test.pen([[260,390,.5],[930,390,.5]],1);
+  app.selectTool('line',false);app.chooseColor('#315ca8');app.settings.line.width=4;await test.pen([[700,180,.5],[800,650,.5]],1);
   app.selectTool('select',false);app.selection.show(original);await test.idle();
   // Точка внутри рамки, вдали от всех ручек, начинает именно перенос.
   const b=app.selection.screenBox(),x=b.minX+(b.maxX-b.minX)*.61,y=b.minY+(b.maxY-b.minY)*.58;

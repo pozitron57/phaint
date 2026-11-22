@@ -22,7 +22,7 @@ export class PenTool implements Tool {
   begin(s:PenSample):void {
     this.ctrl=this.app.input.held('gesture.marker',s);
     const {settings,view,renderer}=this.app;
-    this.style={...settings[this.id]};this.opacity=this.id==='marker'?settings.marker.opacity:1;
+    this.style=this.app.ink;this.opacity=this.id==='marker'?settings.marker.opacity:1;
     const pen=this.id==='marker'?{...settings.pen,...this.style,pressure:0,speed:0,taper:0}:settings.pen;
     this.builder=new StrokeBuilder({...pen},(x,y)=>view.toWorld(x,y),view.scale,s.x,s.y);
     this.builder.add(s.x,s.y,s.pressure,s.t);this.samples=[s];this.predicted=[];
@@ -39,11 +39,11 @@ export class PenTool implements Tool {
     this.app.renderer.invalidateLive();
   }
   modifiersChanged():void {this.ctrl=this.app.input.held('gesture.marker');if(this.builder)this.app.renderer.invalidateLive();}
-  settingsChanged():void {if(this.id==='marker'&&this.builder){this.style={...this.app.settings.marker};this.opacity=this.app.settings.marker.opacity;this.app.renderer.invalidateLive();}}
+  settingsChanged():void {if(this.id==='marker'&&this.builder){this.style=this.app.ink;this.opacity=this.app.settings.marker.opacity;this.app.renderer.invalidateLive();}}
   private object(pts:Float32Array,id=0,z=0):StrokeObj {
     const b=this.builder!,s=this.style!;
     if(this.id==='marker'){pts=pts.slice();for(let i=2;i<pts.length;i+=3)pts[i]=s.width;}
-    return {...makeStroke(id,z,b.ox,b.oy,pts,s.color),...(s.dashed&&this.id!=='marker'?{dash:inkDash(s,s.width)}:{}),
+    return {...makeStroke(id,z,b.ox,b.oy,pts,s.color),...(s.dashed?{dash:inkDash(s,s.width)}:{}),
       ...(this.id==='marker'?{marker:true,opacity:this.opacity}:{})};
   }
   private straight():Float32Array|null {

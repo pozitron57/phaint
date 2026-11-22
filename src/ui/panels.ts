@@ -2,7 +2,7 @@
 // Панель не закрывается при рисовании: можно крутить ползунок и сразу пробовать штрих.
 import type { App } from '../app.ts';
 import { makeStroke } from '../core/types.ts';
-import { inkDash, rebuildShape, withShapeBounds, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA } from '../core/shapes.ts';
+import { rebuildShape, withShapeBounds, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA } from '../core/shapes.ts';
 import { h, icon } from './dom.ts';
 
 export class Panel {
@@ -137,7 +137,7 @@ export function brushPanel(app:App):Panel {
   p.el.addEventListener('change',()=>app.finishSlider());
   const widthControls=(max:number)=>{
     p.slider('Толщина',.3,max,.05,()=>app.selectedStroke?.pts[2]??app.ink.width,v=>{
-      if(app.selection?.objects.length){const old=app.selectedStroke?.pts[2]??v;app.selection.editShapes(o=>{const pts=o.pts.slice();for(let i=2;i<pts.length;i+=3)pts[i]*=v/old;const next={...o,...makeStroke(o.id,o.z,o.ox,o.oy,pts,o.color),...(o.dash?{dash:{...o.dash,length:o.dash.length*v/old,gap:o.dash.gap*v/old}}:{})};return o.shape?rebuildShape(next):withShapeBounds(next);},app.editGroup);}else app.ink.width=v;
+      if(app.selection?.objects.length){const old=app.selectedStroke?.pts[2]??v;app.selection.editShapes(o=>{const pts=o.pts.slice();for(let i=2;i<pts.length;i+=3)pts[i]*=v/old;const next={...o,...makeStroke(o.id,o.z,o.ox,o.oy,pts,o.color),...(o.dash?{dash:{...o.dash,length:o.dash.length*v/old,gap:o.dash.gap*v/old}}:{})};return o.shape?rebuildShape(next):withShapeBounds(next);},app.editGroup);}else app.widthSettings.width=v;
       changed();
     },v=>String(Math.round(v*100)/100));
   };
@@ -164,15 +164,15 @@ export function brushPanel(app:App):Panel {
     p.slider('Быстрый штрих тоньше',0,1,.01,()=>pen.speed,v=>{pen.speed=v;changed();},percent);
     p.checkbox('Предсказывать кончик штриха',()=>app.settings.input.predict,v=>{app.settings.input.predict=v;changed();});
   });
-  p.section('Линия',()=>!['eraser','marker','space'].includes(app.tool.id)&&!active('marker'),()=>{
+  p.section('Линия',()=>app.tool.id!=='eraser'&&app.tool.id!=='space',()=>{
+    p.checkbox('Штрих и цвет привязаны к инструменту',()=>app.settings.stylePerTool,v=>app.setStylePerTool(v));
     const dash=()=>app.selectedStroke?.dash,width=()=>app.selectedStroke?.pts[2]??app.ink.width;
     const length=()=>dash()&&!dash()!.dots?dash()!.length/width():app.ink.dashLength;
     const gap=()=>dash()&&!dash()!.dots?dash()!.gap/width():app.ink.dashGap;
     const spacing=()=>dash()?.dots?dash()!.gap/width():app.ink.dotSpacing;
     const round=()=>dash()&&!dash()!.dots?dash()!.round:app.ink.round;
     const update=(key:'dashLength'|'dashGap'|'dotSpacing'|'round',value:number|boolean)=>{
-      Object.assign(app.ink,{dashLength:length(),dashGap:gap(),dotSpacing:spacing(),round:round(),dashed:app.linePattern!=='solid',dotted:app.linePattern==='dots',[key]:value});
-      app.selection?.editShapes(o=>o.marker?o:{...o,dash:inkDash(app.ink,o.pts[2])},app.editGroup);changed();
+      app.setLineStyle({dashLength:length(),dashGap:gap(),dotSpacing:spacing(),round:round(),dashed:app.linePattern!=='solid',dotted:app.linePattern==='dots',[key]:value},app.editGroup);
     };
     p.choice('Рисунок линии',{solid:'Сплошная',dash:'Штрихи (2)',dots:'Точки (5)'},()=>app.linePattern,v=>app.setLinePattern(v as 'solid'|'dash'|'dots'));
     p.checkbox('Круглые концы',round,v=>update('round',v),()=>app.linePattern!=='dash');

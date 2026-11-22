@@ -27,7 +27,7 @@ export class Palette {
     this.app.chooseColor(CYCLE[next]);this.full=false;this.el.hidden=false;this.sync();
     window.clearTimeout(this.timer);this.timer=window.setTimeout(()=>this.hide(),1000);
   }
-  private sync():void {
+  sync():void {
     const at=this.app.settings.palette.indexOf(this.app.currentColor);
     (this.el.querySelector('.palette-label') as HTMLElement).hidden=!this.full;
     this.buttons.forEach((b,i)=>{b.hidden=!this.full&&i>=3;b.classList.toggle('selected',i===at);b.setAttribute('aria-pressed',String(i===at));});

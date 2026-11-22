@@ -37,7 +37,7 @@ for(const [a,b] of [[[200,180],[450,380]],[[650,380],[900,180]],[[450,500],[200,
 await test.shot('directions');
 // Цвет и толщина общие с обычной стрелкой, доступны до отрыва.
 pointer('pointerdown',1020,200);pointer('pointermove',1200,470);test.key('F2');test.key('Tab');pointer('pointerup',1200,470);await test.idle();
-assert(close(last().pts[2],app.settings.arrow.width)&&last().color===app.settings.arrow.color,'цвет и толщина обеих осей обновляются в процессе');
+assert(close(last().pts[2],app.settings.arrow.width)&&last().color===app.currentColor,'цвет и толщина обеих осей обновляются в процессе');
 test.key('KeyZ');assert(app.doc.size===4,'оси отменяются целиком');
 // Alt фиксирует первую точку только при касании; отпускание не сдвигает её.
 app.settings.grid.step=24;test.key('AltLeft');pointer('pointerdown',1021,201);pointer('pointermove',1191,493);

@@ -43,6 +43,7 @@ pointer('pointerdown',a.x,a.y);pointer('pointermove',b.x,b.y);pointer('pointerup
 o=[...app.doc.values()].at(-1);assert(near(o.ox,144)&&near(o.oy,240)&&near(end(o).x,293),'узлы остаются в системе координат холста');
 // Подсказки берут собственные настройки каждого инструмента, а не предыдущего.
 app.doc.replace([]);app.history.clear();app.view.reset();app.actions.run('view.grid');
+app.setStylePerTool(true);
 const samples=[['line','#79ad65','dash'],['arrow','#c9514e','dots'],['pen','#000000','solid']];
 for(const [id,color,mode] of samples){
   Object.assign(app.settings[id],{color,dashed:mode!=='solid',dotted:mode==='dots',dashLength:6,dashGap:4,dotSpacing:5,round:false});

@@ -103,7 +103,7 @@ export class ShapeTool implements Tool {
     this.app.renderer.invalidateLive();
   }
   private object(id:number,z:number):StrokeObj {
-    const b=this.app.settings[this.id==='coordinates'?'arrow':this.id==='adiabat'?'hyperbola':this.id],s={...this.shape,frame:{...this.shape.frame}},pts=shapePoints(s,b.width);
+    const b=this.app.ink,s={...this.shape,frame:{...this.shape.frame}},pts=shapePoints(s,b.width);
     const oy=this.origin!.y-(this.id==='coordinates'?s.height:0);
     return withShapeBounds({...makeStroke(id,z,this.origin!.x,oy,pts,b.color),shape:s,
       ...(b.dashed?{dash:inkDash(b,b.width)}:{})});

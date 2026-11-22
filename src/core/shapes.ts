@@ -166,7 +166,7 @@ export function strokeLoops(o: StrokeObj): Loops {
     return strokeOutline(p,undefined,cap(first),cap(last));
   });
   // Плоские концы штрихов: клип контура плоскостями начала и конца отрезка.
-  if(o.dash&&!o.dash.round&&o.shape?.kind!=='arrow'){
+  if(body.length>=6&&o.dash&&!o.dash.round&&o.shape?.kind!=='arrow'){
     loops.length=0;
     for(const p of pieces){
       const n=p.length;let polys=strokeOutline(p);

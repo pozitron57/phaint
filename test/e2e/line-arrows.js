@@ -15,6 +15,7 @@ const draw=async(kind,from,to,controls)=>{
   test.key('KeyM');app.selection.show(obj);
   return obj;
 };
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;app.settings.grid.enabled=false;
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
 Object.assign(app.settings.arrow,{width:6,color:'#315ca8',headType:'filled',headLength:8,headWidth:4.5,headRound:.6,both:false});

@@ -52,7 +52,7 @@ test.key('KeyH');assert(app.tool.id==='arrow','повтор H возвращае
 pointer('pointerdown',200,150);pointer('pointermove',600,500);test.key('F2');test.key('Tab');
 await test.frames(2);await test.shot('hyperbola-live');pointer('pointerup',600,500);await test.idle();
 let hyperbola=last();assert(hyperbola.shape.kind==='hyperbola'&&hyperbola.shape.length===400,'гипербола фиксируется одним жестом с одинаковым масштабом осей');
-assert(hyperbola.color===app.settings.hyperbola.color&&close(hyperbola.pts[2],app.settings.hyperbola.width),'цвет и толщина меняются до отрыва');
+assert(hyperbola.color===app.currentColor&&close(hyperbola.pts[2],app.settings.hyperbola.width),'цвет и толщина меняются до отрыва');
 await drag([700,150],[880,330]);test.key('Digit2');await drag([960,150],[1140,330]);test.key('Digit2');
 const data=await app.files.worker.run('native',await app.files.worker.run('svg',app.files.snapshot()));
 assert(data.objects.every(o=>o.shape?.kind==='hyperbola')&&data.objects[2].dash,'параметры гиперболы и штрихи восстановились из SVG');

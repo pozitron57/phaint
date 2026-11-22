@@ -1,6 +1,7 @@
 // Краевые случаи: прозрачность после стирания/растяжения, головки, настройки и внешний SVG.
 const {app,test}=window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;
 const assert=(v,m)=>{if(!v)throw new Error(m);};
 const tool=id=>app.selectTool(id,false);

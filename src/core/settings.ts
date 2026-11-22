@@ -4,17 +4,22 @@ import { DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA, type ShapeKind } from './shapes.ts
 import { validCombo, normalizeCombo } from './actions.ts';
 import { defaultExportSettings, normalizeExportSettings, type ExportSettings } from '../files/export-options.ts';
 export interface GridSettings { enabled:boolean; step:number; save?:boolean }
-export interface InkSettings { width:number; color:string; dashed:boolean; dotted:boolean; dotSpacing:number; dashLength:number; dashGap:number; round:boolean }
+export interface InkStyle { color:string; dashed:boolean; dotted:boolean; dotSpacing:number; dashLength:number; dashGap:number; round:boolean }
+export interface InkSettings extends InkStyle { width:number }
 export type DrawingTool = 'pen' | 'marker' | ShapeKind;
 export interface Settings {
   version:number;
+  stylePerTool:boolean;
+  sharedStyle:InkStyle;
   pen:PenSettings & InkSettings;
   line:InkSettings;
   arrow:InkSettings & {headLength:number;headWidth:number;headRound:number;headType:'open'|'filled';both:boolean};
+  coordinates:InkStyle;
   ellipse:InkSettings;
   sine:InkSettings & {amplitude:number;period:number};
   parabola:InkSettings;
   hyperbola:InkSettings & {gamma:number};
+  adiabat:InkStyle;
   marker:InkSettings & {opacity:number};
   eraser:{width:number;original:boolean};
   selection:{keepWidth:boolean};
@@ -29,17 +34,20 @@ export interface Settings {
 }
 export const PALETTE=['#315ca8','#79ad65','#c9514e','#000000','#ffffff','#cf914d','#946bb0'];
 export const CYCLE=PALETTE.slice(0,3);
-const ink=():InkSettings=>({width:2.6,color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
+const style=():InkStyle=>({color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
+const ink=():InkSettings=>({width:2.6,...style()});
 export function defaultSettings():Settings {
-  return {version:10,pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+  return {version:11,stylePerTool:false,sharedStyle:style(),coordinates:style(),adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
     line:ink(),arrow:{...ink(),headLength:5,headWidth:3,headRound:.4,headType:'open',both:false},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
     grid:{enabled:true,step:24,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
 }
 export function mergeSettings(raw:unknown):Settings {
-  const base=defaultSettings();merge(base as unknown as Record<string,unknown>,raw);
-  base.version=10;
+  const base=defaultSettings(),profile=raw as Partial<Settings>|null;
+  // В старом профиле стартовым инструментом была ручка, координаты и адиабата делили оформление со своими парами.
+  merge(base.sharedStyle,profile?.pen);merge(base.coordinates,profile?.arrow);merge(base.adiabat,profile?.hyperbola);
+  merge(base,raw);base.version=11;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
     const step=base.grid.step>0?base.grid.step:24;
@@ -49,8 +57,8 @@ export function mergeSettings(raw:unknown):Settings {
   if(!/^#[\da-f]{6}$/i.test(base.customColor))base.customColor='#ffffff';
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<8)base.input.predict=false;base.palette=[...PALETTE];
   const old:Record<string,string>={'#3f6fb5':PALETTE[0],'#4d9160':PALETTE[1],'#2f3136':'#000000'};
-  for(const id of ['pen','line','arrow','ellipse','sine','parabola','hyperbola','marker'] as const){
-    const b=base[id];b.width=Math.min(id==='marker'?240:60,Math.max(.3,b.width));
+  for(const id of ['sharedStyle','pen','line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','marker'] as const){
+    const b=base[id];if('width' in b)b.width=Math.min(id==='marker'?240:60,Math.max(.3,b.width));
     b.color=old[b.color]??b.color;if(!/^#[\da-f]{6}$/i.test(b.color))b.color=PALETTE[0];
     b.dashLength=Math.min(40,Math.max(.5,b.dashLength));b.dashGap=Math.min(40,Math.max(.5,b.dashGap));
     b.dotSpacing=Math.min(20,Math.max(1.25,b.dotSpacing));
@@ -71,9 +79,9 @@ export function mergeSettings(raw:unknown):Settings {
     if(keys&&typeof keys==='object')for(const [id,list] of Object.entries(keys))if(/^[a-z][A-Za-z0-9.+_-]{0,100}$/.test(id)&&Array.isArray(list)&&list.every(k=>typeof k==='string'&&validCombo(k,'hold')))base.keys[id]=[...new Set(list.map(normalizeCombo))];
   }return base;
 }
-function merge(target: Record<string, unknown>, src: unknown): void {
+function merge(obj: object, src: unknown): void {
   if (!src || typeof src !== 'object') return;
-  const from = src as Record<string, unknown>;
+  const target=obj as Record<string,unknown>,from=src as Record<string, unknown>;
   for (const key of Object.keys(target)) {
     const cur = target[key];
     const val = from[key];

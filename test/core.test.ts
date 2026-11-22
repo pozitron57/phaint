@@ -214,3 +214,28 @@ test('настройки: слияние отбрасывает мусор', () 
   assert.deepEqual(s.keys, { 'tool.pen': ['KeyP'] });
   assert.deepEqual(mergeSettings(null), d);
 });
+
+test('цвет и штрих: перенос старых пресетов и независимое сохранение обоих режимов', () => {
+  const s = mergeSettings({
+    version: 10,
+    pen: { width: 7, color: '#4d9160', dashed: true, dashGap: 9, round: false },
+    arrow: { width: 6, color: '#aa3322', dotted: true, dashed: true, dotSpacing: 28 },
+    hyperbola: { width: 4, color: '#654321', dashLength: 8 },
+  });
+  assert.equal(s.stylePerTool, false);
+  assert.deepEqual(s.sharedStyle, { ...defaultSettings().sharedStyle, color: '#79ad65', dashed: true, dashGap: 9, round: false });
+  assert.equal(s.coordinates.color, s.arrow.color);
+  assert.equal(s.coordinates.dotSpacing, 20);
+  assert.equal(s.adiabat.color, s.hyperbola.color);
+  assert.equal(s.adiabat.dashLength, 8);
+  for (const style of [s.sharedStyle, s.coordinates, s.adiabat]) assert.ok(!('width' in style));
+
+  s.stylePerTool = true;
+  s.sharedStyle.color = '#ffffff';
+  s.coordinates.dotSpacing = 3;
+  s.adiabat.dashLength = 2;
+  assert.equal(s.pen.color, '#79ad65');
+  assert.equal(s.arrow.dotSpacing, 20);
+  assert.equal(s.hyperbola.dashLength, 8);
+  assert.deepEqual(mergeSettings(JSON.parse(JSON.stringify(s))), s);
+});

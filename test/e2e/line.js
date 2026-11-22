@@ -1,6 +1,7 @@
 // Прямая: неподвижное начало, живые толщина/цвет без движения пера, одна фиксация и SVG.
 const { app, test } = window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;
 const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
 const live = document.getElementById('live');

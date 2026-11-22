@@ -57,7 +57,7 @@ test.key('KeyL');assert(app.tool.id==='pen','старое назначение �
 test.pointer('pointerdown',200,200,.5);test.pointer('pointermove',400,270,.5);test.key('ControlLeft',{ctrlKey:true});
 let preview=app.tool.object(0,0),angle=Math.atan2(preview.pts[4],preview.pts[3]);assert(Math.abs(angle/Math.PI*180-15)<.01,'новый Ctrl ограничивает угол');
 const width=app.settings.line.width;test.key('KeyJ',{ctrlKey:true});assert(app.settings.line.width<width,'новая клавиша толщины работает во время жеста с модификатором');
-const color=app.settings.line.color;test.key('KeyT',{ctrlKey:true});assert(app.settings.line.color!==color,'новая клавиша цвета работает во время жеста');
+const color=app.currentColor;test.key('KeyT',{ctrlKey:true});assert(app.currentColor!==color,'новая клавиша цвета работает во время жеста');
 test.pointer('pointerup',400,270,0);up('ControlLeft');await test.idle();let line=[...app.doc.values()].at(-1);
 // Безье теперь на Shift. Переделка старой линии через M тоже работает.
 test.key('ShiftLeft',{shiftKey:true});test.pointer('pointerdown',310,130,.5,'pen',{shiftKey:true});test.pointer('pointermove',310,120,.5,'pen',{shiftKey:true});test.pointer('pointerup',310,120,0,'pen',{shiftKey:true});up('ShiftLeft');

@@ -35,6 +35,7 @@ export function registerActions(app: App): void {
   add('style.dash','Следующий вид линии',['Digit2'],()=>app.cycleLinePattern());
   add('style.previous','Предыдущий вид линии',['Shift+Digit2'],()=>app.cycleLinePattern(-1));
   add('style.dots','Линия из точек',['Digit5'],()=>app.toggleDash('dots'));
+  add('style.perTool','Штрих и цвет привязаны к инструменту',['F5'],()=>app.setStylePerTool(!app.settings.stylePerTool));
   add('tool.select', 'Выбор объекта', ['KeyM'], () => app.selectTool('select'));
   add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
   add('edit.pasteImage', 'Вставить картинку', ['KeyV'], () => {void app.pasteImage();});
@@ -91,7 +92,7 @@ export function registerActions(app: App): void {
 
   add('ui.toolbar', 'Показать или скрыть панель', ['F9'], () => app.toggleToolbar());
   add('ui.brush', 'Настройки инструмента или выделения', ['KeyB'], () => app.togglePanel('brush'));
-  add('ui.background', 'Фон и сетка', ['F5'], () => app.togglePanel('background'));
+  add('ui.background', 'Фон и сетка', ['Shift+KeyG'], () => app.togglePanel('background'));
   add('ui.shortcuts','Настройки клавиш…',['Cmd+Comma'],()=>app.shortcuts.show());
   for(const [key,degrees] of [['BracketLeft',-90],['BracketRight',90],['Comma',-15],['Period',15],['Shift+Comma',-1],['Shift+Period',1]] as const) add(`selection.rotate.${key}`,`Повернуть на ${Math.abs(degrees)}° ${degrees>0?'по часовой':'против часовой'}`,[key],()=>app.selection?.rotate(degrees),true);
   add('ui.escape', 'Закрыть панели и отменить текущее действие', ['Escape'], () => { if(app.files?.processingFile){app.files.cancelProcessing();return;} if(app.imageText.cancel())return; app.input.cancelCurrent(); app.closePanels(); });

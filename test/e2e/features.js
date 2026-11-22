@@ -1,6 +1,7 @@
 // Совместные сценарии инструментов, выделения, преобразований, ползунков и SVG.
 const {app,test}=window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 const last=()=>[...app.doc.values()].at(-1);

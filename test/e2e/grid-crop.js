@@ -15,7 +15,7 @@ const worldPixel=(x,y)=>{const p=app.view.toScreen(x,y);return [...document.quer
 const white=(x,y)=>worldPixel(x,y).slice(0,3).every(n=>n>245);
 const check=(label)=>[...app.panels.background.el.querySelectorAll('label')].find(e=>e.textContent===label).querySelector('input');
 assert(app.settings.snapToGrid,'привязка по умолчанию');origin();
-test.key('F5');const snap=check('Привязка к сетке по умолчанию');
+test.key('KeyG',{shiftKey:true});const snap=check('Привязка к сетке по умолчанию');
 snap.click();assert(!app.settings.snapToGrid&&!app.files.dirty,'режим привязки — настройка приложения, не изменение документа');
 const saveSettings=app.platform.saveSettings;let stored;
 app.platform.saveSettings=async value=>{stored=structuredClone(value);};await app.flushSettings();app.platform.saveSettings=saveSettings;
@@ -44,8 +44,8 @@ for(const id of ['line','arrow','coordinates','ellipse']){
  pointer('pointerup',541,446);await test.idle();
 }
 app.settings.snapToGrid=false;tool('ellipse');test.key('AltLeft');await drag([613,251],[760,300]);up('AltLeft');assert(near(last().ox,624)&&near(last().oy,240),'обратный режим: Alt привязывает центр окружности');
-// F5 управляет видом; выбор включения сетки в экспорт перенесён в Cmd+E.
-test.key('F5');check('Показывать сетку').click();assert(!document.body.textContent.includes('Сохранять сетку в файл'),'в F5 нет настройки экспорта');
+// Shift+G открывает настройки сетки; выбор включения сетки в экспорт перенесён в Cmd+E.
+test.key('KeyG',{shiftKey:true});check('Показывать сетку').click();assert(!document.body.textContent.includes('Сохранять сетку в файл'),'в панели сетки нет настройки экспорта');
 assert(app.settings.grid.save,'рабочий SVG сохраняет сетку по умолчанию');await choose({saves:['сетка.svg']});assert(await app.files.save(),'сетка сохранена');
 let svg=await read('сетка.svg');assert(svg.includes('data-phaint-grid="true"')&&svg.includes('<pattern'),'сетка записана компактным шаблоном');
 assert((await app.files.worker.run('native',svg)).grid.save,'metadata содержит флажок');

@@ -34,26 +34,26 @@ assert(await app.files.open() && app.doc.size===3,'SVG открыл фрагме
 assert(!ink(500,240) && !ink(650,240),'стёртые участки не возвращаются после открытия SVG');
 key('KeyD'); assert(app.tool.id==='pen','Cmd+Shift+D включает ручку');
 const colors=app.settings.palette;
-test.key('Tab'); assert(app.palette.open && app.settings.pen.color===colors[1],'первое Tab сразу меняет цвет');
-test.key('Tab',{repeat:true}); assert(app.settings.pen.color===colors[1],'удержание Tab не листает самопроизвольно');
-test.key('Tab',{shiftKey:true}); assert(app.palette.open && app.settings.pen.color===colors[1] && !app.palette.el.querySelector('.palette-label').hidden,'Shift+Tab открывает все цвета без изменения цвета');
+test.key('Tab'); assert(app.palette.open && app.currentColor===colors[1],'первое Tab сразу меняет цвет');
+test.key('Tab',{repeat:true}); assert(app.currentColor===colors[1],'удержание Tab не листает самопроизвольно');
+test.key('Tab',{shiftKey:true}); assert(app.palette.open && app.currentColor===colors[1] && !app.palette.el.querySelector('.palette-label').hidden,'Shift+Tab открывает все цвета без изменения цвета');
 app.palette.hide(); test.key('Tab',{shiftKey:true}); assert(app.palette.open,'Shift+Tab открывает закрытую палитру');app.palette.el.querySelectorAll('button')[2].click();
 const grid=app.settings.grid.enabled; test.key('KeyG'); assert(app.settings.grid.enabled!==grid,'G переключает сетку'); test.key('KeyG'); assert(app.settings.grid.enabled===grid,'повторное G возвращает сетку');
 for(let i=0;i<3;i++){
-  test.key('Tab'); assert(app.settings.pen.color===colors[i],'повторное Tab выбирает следующий цвет');
+  test.key('Tab'); assert(app.currentColor===colors[i],'повторное Tab выбирает следующий цвет');
   await test.pen([[200,340+i*60,.5],[800,340+i*60,.5]],3);
   assert([...app.doc.values()].at(-1).color===colors[i],'штрих получает выбранный цвет');
 }
 await test.sleep(650); test.key('Tab'); await test.sleep(500);
-assert(app.palette.open && app.settings.pen.color===colors[0],'таймер продлевается после повторного нажатия');
+assert(app.palette.open && app.currentColor===colors[0],'таймер продлевается после повторного нажатия');
 await test.shot('palette'); await test.sleep(550);
 assert(!app.palette.open,'палитра исчезает через секунду');
 test.key('Tab'); app.palette.el.querySelectorAll('button')[1].click();
-assert(app.settings.pen.color===colors[1],'цвет выбирается нажатием кружка');
+assert(app.currentColor===colors[1],'цвет выбирается нажатием кружка');
 // Выбор цвета во время письма не перекрашивает уже начатую линию.
 test.pointer('pointerdown',900,200,.5); test.pointer('pointermove',1000,220,.5);
 test.key('Tab'); test.pointer('pointerup',1050,220,0);
-assert([...app.doc.values()].at(-1).color===colors[1] && app.settings.pen.color===colors[2],'цвет меняется со следующего штриха');
+assert([...app.doc.values()].at(-1).color===colors[1] && app.currentColor===colors[2],'цвет меняется со следующего штриха');
 test.key('F9'); assert(!app.palette.open && app.toolbar.el.hidden,'F9 закрывает палитру вместе с интерфейсом');
 test.key('F9'); await test.idle();
 return {ok:true,objects:app.doc.size,colors};

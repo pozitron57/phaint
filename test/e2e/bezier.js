@@ -1,6 +1,7 @@
 // Ctrl+перетаскивание, ручки M, неизменные концы, отмена и SVG на настоящих PointerEvent.
 const {app,test}=window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
+app.setStylePerTool(true);
 app.settings.snapToGrid=false;
 const assert=(v,message)=>{if(!v)throw new Error(message);},close=(a,b)=>Math.abs(a-b)<.002;
 const last=()=>[...app.doc.values()].at(-1),tool=id=>app.selectTool(id,false);
