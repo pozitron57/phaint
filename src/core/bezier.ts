@@ -3,11 +3,6 @@ import { matApply, type Mat, type Pt } from './geom.ts';
 
 export function bezierPoints(end:Pt,controls:readonly Pt[],frame:Mat,width:number):Float32Array {
   const curve=[{x:0,y:0},...controls,end].map(p=>matApply(frame,p.x,p.y));
-  return flattenBezier(curve,width);
-}
-
-/** Контрольный многоугольник уже задан в координатах штриха. */
-export function flattenBezier(curve:Pt[],width:number):Float32Array {
   const out=[curve[0].x,curve[0].y,width];
   const middle=(a:Pt,b:Pt):Pt=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
   const flat=(p:Pt,a:Pt,b:Pt):boolean=>{
@@ -39,9 +34,32 @@ export function pathLength(p:Float32Array):number {
   let length=0;for(let i=3;i<p.length;i+=3)length+=Math.hypot(p[i]-p[i-3],p[i+1]-p[i-2]);return length;
 }
 
-/** Отрезает ось по длине дуги; используется только под головками кривой стрелки. */
-export function trimPath(p:Float32Array,start:number,end:number):Float32Array {
-  const stop=pathLength(p)-end,out:number[]=[];let at=0;
+/** Длина дуги до основания головки. Её вершина — конец линии, заданная длина — хорда.
+ * На короткой или петляющей дуге берём самую удалённую точку разрешённого участка. */
+export function headArc(p:Float32Array,fromStart:boolean,length:number,limit:number):number {
+  const tip=fromStart?0:p.length-3, step=fromStart?3:-3;
+  let arc=0, farthest=0, farthestArc=0;
+  for(let i=tip; i+step>=0 && i+step<p.length && arc<limit; i+=step){
+    const dx=p[i+step]-p[i], dy=p[i+step+1]-p[i+1], segment=Math.hypot(dx,dy);
+    if(!segment)continue;
+    const ux=dx/segment, uy=dy/segment, take=Math.min(segment,limit-arc);
+    const x=p[i]-p[tip], y=p[i+1]-p[tip+1];
+    const distance=Math.hypot(x+take*ux,y+take*uy);
+    if(distance>=length){
+      // Первая встреча отрезка с окружностью заданного радиуса вокруг вершины.
+      const perpendicular=x*uy-y*ux;
+      const hit=Math.sqrt(Math.max(0,length*length-perpendicular*perpendicular))-(x*ux+y*uy);
+      return arc+Math.max(0,Math.min(take,hit));
+    }
+    arc+=take;
+    if(distance>farthest){farthest=distance;farthestArc=arc;}
+  }
+  return farthestArc;
+}
+
+/** Оставляет часть исходной оси между основаниями заполненных головок. */
+export function trimPath(p:Float32Array,start:number,end:number,length:number):Float32Array {
+  const stop=length-end,out:number[]=[];let at=0;
   for(let i=3;i<p.length;i+=3){
     const x=p[i-3],y=p[i-2],dx=p[i]-x,dy=p[i+1]-y,len=Math.hypot(dx,dy),next=at+len;
     if(len>1e-9&&next>start&&at<stop){

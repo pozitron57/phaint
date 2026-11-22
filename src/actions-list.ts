@@ -14,10 +14,17 @@ export function registerActions(app: App): void {
   };
 
   add('tool.pen', 'Ручка', ['KeyD', 'Digit1', 'Cmd+Shift+KeyD'], () => app.selectTool('pen'));
-  add('tool.line', 'Прямая', ['KeyL'], () => app.selectTool('line'));
+  add('tool.line', 'Прямая', ['KeyL'], () => {
+    if(!app.selection?.setLineHeads('line'))app.selectTool('line');
+  });
   add('tool.eraser', 'Ластик', ['KeyE', 'Cmd+Shift+KeyE'], () => app.selectTool('eraser'));
-  add('tool.arrow','Стрелка',['Digit3'],()=>app.selectArrow(false));
-  add('tool.arrowBoth','Двусторонняя стрелка',['Shift+Digit3'],()=>app.selectArrow(true));
+  add('tool.arrow','Стрелка',['Digit3'],()=>{
+    if(!app.selection?.setLineHeads('end'))app.selectArrow(false);
+  });
+  add('tool.arrowBoth','Двусторонняя стрелка',['Shift+Digit3'],()=>{
+    if(!app.selection?.setLineHeads('both'))app.selectArrow(true);
+  });
+  add('selection.flipArrowHead','Перенести наконечник на другой конец',['Ctrl+Digit3'],()=>app.selection?.setLineHeads('reverse'));
   add('tool.coordinates','Координаты',['KeyC'],()=>app.selectTool('coordinates'));
   add('tool.marker','Маркер',['Digit4'],()=>app.selectTool('marker'));
   add('tool.ellipse','Окружность / эллипс',['KeyO'],()=>app.selectTool('ellipse'));

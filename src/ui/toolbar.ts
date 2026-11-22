@@ -108,6 +108,7 @@ export class Toolbar {
         title: hint ? `${title} (${hint})` : title,
         onclick: () => {
           if(action==='tool.arrow')this.app.selectTool(this.app.arrowMode);
+          else if(action==='tool.line')this.app.selectTool('line');
           else if(action==='tool.hyperbola')this.app.selectTool(this.app.hyperbolaMode);
           else if(action==='style.dash')this.app.cycleLinePattern();
           else this.app.actions.run(action);

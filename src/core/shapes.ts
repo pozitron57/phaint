@@ -1,7 +1,7 @@
 // Параметрические фигуры и штриховой рисунок. Геометрия общая для Canvas, SVG и ластика.
 import { bboxUnion, matApply, matBBox, type Mat, type Pt } from './geom.ts';
-import { curveOutline, segmentOutline, strokeOutline, type Loops } from './outline.ts';
-import { bezierPoints, bezierTangent, flattenBezier, pathLength, trimPath } from './bezier.ts';
+import { segmentOutline, strokeOutline, type Loops, type StrokeCap } from './outline.ts';
+import { bezierPoints, bezierTangent, headArc, pathLength, trimPath } from './bezier.ts';
 import { makeStroke, strokeBBox, type StrokeObj } from './types.ts';
 import { withClipBounds } from './clip.ts';
 
@@ -21,6 +21,8 @@ export interface ShapeData {
   headRound?: number;
   headType: 'open' | 'filled';
   both: boolean;
+  /** Одиночный наконечник в точке касания; порядок концов и контрольных точек сохраняется. */
+  headAtStart?: boolean;
   /** Показатель в p·V^γ = const; только у адиабаты. */
   gamma?: number;
   /** Одна точка — квадратичная Безье, две — кубическая; в локальной системе frame. */
@@ -72,10 +74,7 @@ export function rebuildShape(o: StrokeObj, shape=o.shape!): StrokeObj {
 }
 export function withShapeBounds(o:StrokeObj):StrokeObj {
   if(o.shape?.kind!=='arrow'&&o.shape?.kind!=='coordinates'&&!o.matrix)return withClipBounds(o);
-  const heads=arrowHeads(o);
-  const axes=[o.pts,...heads];
-  if(heads.length&&o.shape?.controls?.length&&o.shape.headType==='filled')axes.push(curvedShaft(o.pts,heads));
-  const b=axes.map(p=>strokeBBox(0,0,p)).reduce(bboxUnion);
+  const b=arrowHeads(o).reduce((box,head)=>bboxUnion(box,strokeBBox(0,0,head)),strokeBBox(0,0,o.pts));
   const m=o.matrix??identity();
   return withClipBounds({...o,bbox:matBBox({...m,e:m.e+o.ox,f:m.f+o.oy},b)});
 }
@@ -112,41 +111,60 @@ export function dashedPoints(pts: Float32Array, dash?: DashStyle): Float32Array[
   }
   flush();return out;
 }
+function arrowParts(o:StrokeObj) {
+  const s=o.shape;
+  if(s?.kind!=='arrow')return;
+  const p=o.pts, w=p[2], total=pathLength(p);
+  if(total<.001)return;
+  const start=s.both||!!s.headAtStart, end=s.both||!s.headAtStart;
+  const filled=s.headType==='filled', limit=total*(s.both ? .375 : .65);
+  const length=Math.min(s.headLength*w,limit), halfWidthRatio=s.headWidth/(2*s.headLength);
+  const cut=(fromStart:boolean)=>s.controls?.length?headArc(p,fromStart,length,limit):length;
+  const startTrim=filled&&start?cut(true):0, endTrim=filled&&end?cut(false):0;
+  const body=filled?trimPath(p,startTrim,endTrim,total):p;
+  const head=(atEnd:boolean)=>{
+    const tip=atEnd?p.length-3:0, x=p[tip], y=p[tip+1];
+    let dx:number, dy:number;
+    if(filled){
+      // Центр основания лежит на той же линии, что и вершина. Видимая дуга не перестраивается.
+      const base=atEnd?body.length-3:0;
+      dx=x-body[base];dy=y-body[base+1];
+    }else{
+      const tangent=bezierTangent({x:s.length,y:s.height},s.controls??[],s.frame,atEnd);
+      const signed=atEnd?length:-length;
+      dx=signed*tangent.x;dy=signed*tangent.y;
+    }
+    const bx=x-dx, by=y-dy, nx=-dy*halfWidthRatio, ny=dx*halfWidthRatio;
+    return Float32Array.of(bx+nx,by+ny,w,x,y,w,bx-nx,by-ny,w);
+  };
+  return {body,startTrim,startHead:start?head(false):undefined,endHead:end?head(true):undefined};
+}
 export function arrowHeads(o: StrokeObj): Float32Array[] {
   if(o.shape?.kind==='coordinates')return coordinateAxes(o).flatMap(arrowHeads);
-  const s=o.shape;if(s?.kind!=='arrow')return [];
-  const p=o.pts,w=p[2],len=pathLength(p),n=p.length;if(len<.001)return [];
-  const end={x:s.length,y:s.height};
-  const tip=bezierTangent(end,s.controls??[],s.frame,true),tail=bezierTangent(end,s.controls??[],s.frame,false);
-  // На короткой стрелке уменьшаем обе стороны с одним коэффициентом, сохраняя пропорции.
-  const scale=Math.min(1,len*(s.both?.375:.65)/(s.headLength*w));
-  const l=s.headLength*w*scale,h=s.headWidth*w/2*scale;
-  const head=(x:number,y:number,dx:number,dy:number)=>Float32Array.of(x-dx*l-dy*h,y-dy*l+dx*h,w,x,y,w,x-dx*l+dy*h,y-dy*l-dx*h,w);
-  const heads=[head(p[n-3],p[n-2],tip.x,tip.y)];if(s.both)heads.push(head(p[0],p[1],-tail.x,-tail.y));return heads;
+  const parts=arrowParts(o);
+  return [parts?.endHead,parts?.startHead].filter(h=>h!==undefined);
 }
 export function strokeLoops(o: StrokeObj): Loops {
   if(o.shape?.kind==='coordinates')return coordinateAxes(o).flatMap(strokeLoops);
-  let body=o.pts;
-  const arrow=o.shape?.kind==='arrow',filled=arrow&&o.shape!.headType==='filled';
-  const heads=arrowHeads(o);
-  if(filled){
-    if(heads.length){
-      if(o.shape?.controls?.length)body=curvedShaft(o.pts,heads);
-      else{
-        body=o.pts.slice();const end=heads[0];body[3]=(end[0]+end[6])/2;body[4]=(end[1]+end[7])/2;
-        if(heads[1]){body[0]=(heads[1][0]+heads[1][6])/2;body[1]=(heads[1][1]+heads[1][7])/2;}
-      }
-    }
-  }
-  const pieces=dashedPoints(body,o.dash);
-  // Последний торец всегда плоский; у двух головок — оба внешних торца.
-  // Внутренние концы штрихов сохраняют выбранное оформление.
-  const round=o.dash?.round??true;
-  const outline=o.shape?.controls?.length?curveOutline:segmentOutline;
-  const loops=arrow&&!o.dash?.dots?pieces.flatMap((p,i)=>outline(p,round&&!(o.shape!.both&&i===0),round&&i<pieces.length-1))
-    :pieces.flatMap(p=>strokeOutline(p));
+  const parts=arrowParts(o), body=parts?.body??o.pts;
+  const dash=o.dash&&parts?.startTrim?{...o.dash,offset:(o.dash.offset??0)+parts.startTrim}:o.dash;
+  const pieces=dashedPoints(body,dash);
+  const loops=pieces.flatMap(p=>{
+    if(!parts||dash?.dots)return strokeOutline(p);
+    // Внутренние концы штрихов сохраняют оформление, даже если перед головкой попал пробел.
+    const round=dash?.round??true;
+    const first=p[0]===body[0]&&p[1]===body[1]?parts.startHead:undefined;
+    const last=p.at(-3)===body.at(-3)&&p.at(-2)===body.at(-2)?parts.endHead:undefined;
+    if(!o.shape!.controls?.length)return segmentOutline(p,round&&!first,round&&!last);
+    const cap=(head?:Float32Array):StrokeCap=>{
+      if(!head)return round;
+      if(o.shape!.headType==='open')return false;
+      return {x:head[3]-(head[0]+head[6])/2,y:head[4]-(head[1]+head[7])/2};
+    };
+    return strokeOutline(p,undefined,cap(first),cap(last));
+  });
   // Плоские концы штрихов: клип контура плоскостями начала и конца отрезка.
-  if(o.dash&&!o.dash.round&&!arrow){
+  if(o.dash&&!o.dash.round&&o.shape?.kind!=='arrow'){
     loops.length=0;
     for(const p of pieces){
       const n=p.length;let polys=strokeOutline(p);
@@ -156,7 +174,9 @@ export function strokeLoops(o: StrokeObj): Loops {
       loops.push(...polys);
     }
   }
-  for(const p of heads){
+  if(!parts)return loops;
+  for(const p of [parts.endHead,parts.startHead]){
+    if(!p)continue;
     if(o.shape!.headType==='filled')loops.push(roundedHead(p,o.shape!.headRound));
     else loops.push(...strokeOutline(p));
   }
@@ -175,40 +195,6 @@ export function coordinateFrame(m:Mat):Mat {
   const x=Math.hypot(m.a,m.b),y=Math.hypot(m.c,m.d),sign=m.a*m.d-m.b*m.c<0?-1:1;
   if(x<1e-12)return m;
   return {...m,c:-m.b/x*y*sign,d:m.a/x*y*sign};
-}
-/** Сохраняем середину исходной дуги. У каждой головки кубическая Безье
- * сопрягает её касательную с осью головки, заканчиваясь в центре основания. */
-function curvedShaft(p:Float32Array,heads:Float32Array[]):Float32Array {
-  const headLength=(h:Float32Array)=>Math.hypot(h[3]-(h[0]+h[6])/2,h[4]-(h[1]+h[7])/2);
-  const end=headLength(heads[0]),start=heads[1]?headLength(heads[1]):0;
-  const available=pathLength(p)-start-end;
-  const middle=trimPath(p,start+Math.min(start,available/3),end+Math.min(end,available/3));
-  if(middle.length<6)return middle;
-  const out:number[]=[];
-  const join=(head:Float32Array,first:boolean)=>{
-    const i=first?0:middle.length-3,j=first?3:i-3;
-    const a={x:middle[i],y:middle[i+1]},base={x:(head[0]+head[6])/2,y:(head[1]+head[7])/2};
-    const dx=head[3]-base.x,dy=head[4]-base.y,len=Math.hypot(dx,dy)||1;
-    const ux=dx/len,uy=dy/len;
-    const distance=Math.hypot(base.x-a.x,base.y-a.y);
-    const flat=Math.min(p[2]/2,distance/8);
-    const b={x:base.x-flat*ux,y:base.y-flat*uy};
-    const arm=Math.hypot(b.x-a.x,b.y-a.y)/3;
-    const vx=a.x-middle[j],vy=a.y-middle[j+1],vlen=Math.hypot(vx,vy)||1;
-    const curve=flattenBezier([a,{x:a.x+arm*vx/vlen,y:a.y+arm*vy/vlen},
-      {x:b.x-arm*ux,y:b.y-arm*uy},b],p[2]);
-    // Точку a уже содержит середина. Короткий прямой конец даёт точный плоский торец.
-    if(first)out.push(base.x,base.y,p[2]);
-    for(let k=3;k<curve.length;k+=3){
-      const index=first?curve.length-k:k;
-      out.push(curve[index],curve[index+1],p[2]);
-    }
-    if(!first)out.push(base.x,base.y,p[2]);
-  };
-  if(heads[1])join(heads[1],true);
-  for(const value of middle)out.push(value);
-  join(heads[0],false);
-  return Float32Array.from(out);
 }
 /** Короткие участки у вершин задают небольшое скругление, одинаковое в Canvas и SVG. */
 function roundedHead(p:Float32Array,round?:number):Float32Array {

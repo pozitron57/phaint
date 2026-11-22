@@ -24,9 +24,9 @@ test('Безье: одна и две точки задают точную фор
   assert.ok([...back].filter((_,i)=>i%3===0).some(x=>x>170));
 });
 
-test('кривая стрелка: головки на обоих концах направлены по точным касательным',()=>{
+test('кривая стрелка: открытые головки на обоих концах направлены по точным касательным',()=>{
   for(const controls of [[{x:100,y:180}],[{x:40,y:120},{x:160,y:-120}],[{x:0,y:0},{x:200,y:0}]]){
-    const s={...shapeData('arrow'),length:200,controls,both:true,headType:'filled' as const};
+    const s={...shapeData('arrow'),length:200,controls,both:true};
     const o=rebuildShape({...makeStroke(1,1,50,70,shapePoints(s,5),'#315ca8'),shape:s}),heads=arrowHeads(o);
     assert.deepEqual([...heads[0].slice(3,5)],[200,0]);assert.deepEqual([...heads[1].slice(3,5)],[0,0]);
     const tipControl=controls.findLast(p=>p.x!==200||p.y!==0)!,tailControl=controls.find(p=>p.x!==0||p.y!==0)!;
@@ -43,8 +43,8 @@ test('кривая стрелка: головки на обоих концах �
 });
 
 test('Безье: поворот, отражение, штрихи и точные ручки сохраняются в SVG',async()=>{
-  for(const kind of ['line','arrow'] as const){
-    const shape={...shapeData(kind),length:300,height:60,controls:[{x:40,y:-180},{x:200,y:200}],headType:'filled' as const};
+  for(const base of [shapeData('line'),shapeData('arrow'),{...shapeData('arrow'),headAtStart:true}]){
+    const shape={...base,length:300,height:60,controls:[{x:40,y:-180},{x:200,y:200}],headType:'filled' as const};
     const o=rebuildShape({...makeStroke(1,1,80,90,shapePoints(shape,4),'#315ca8'),shape,dash:{length:20,gap:12,round:false}});
     const changed=transformObject(o,{a:-1.8,b:.3,c:.4,d:2,e:20,f:30},true);
     assert.equal(changed.kind,'stroke');if(changed.kind==='stroke'){assert.deepEqual(changed.shape?.controls,shape.controls);assert.equal(changed.pts[2],4);}
@@ -53,21 +53,36 @@ test('Безье: поворот, отражение, штрихи и точны
   }
 });
 
-
-test('длинный заполненный наконечник плавно соединяется со стержнем Безье',()=>{
-  // Пропорции стрелки с рисунка. Проверяем тот же стык на конце и в начале.
-  const width=27;
-  for(const reverse of [false,true]){
-    const shape={...shapeData('arrow'),length:reverse?793:-793,height:reverse?-1057:1057,
-      controls:[reverse?{x:592,y:-152}:{x:-201,y:905}],both:reverse,
-      headType:'filled' as const,headLength:8,headWidth:4.5,headRound:.6};
-    const o=rebuildShape({...makeStroke(1,1,0,0,shapePoints(shape,width),'#315ca8'),shape});
-    const h=arrowHeads(o)[reverse?1:0],x=(h[0]+h[6])/2,y=(h[1]+h[7])/2;
-    const len=Math.hypot(x-h[3],y-h[4]),ux=(x-h[3])/len,uy=(y-h[4])/len;
-    for(const along of [2,6,10,15,20,25])for(const across of [-.4,0,.4]){
-      const p={x:x+along*ux-across*width*uy,y:y+along*uy+across*width*ux};
-      assert.ok(strokeIntersectsSweep(o,p,p,0),'просвет в стержне сразу за основанием');
+test('до самого основания заполненной головки обе стороны стержня совпадают с линией Безье',()=>{
+  // Два рисунка автора, в том числе пологая дуга с увеличенного скриншота.
+  for(const [ex,ey,cx,cy,width] of [[-793,1057,-201,905,27],[-660,546,-157,741,6]]){
+    for(const headAtStart of [false,true]){
+      const control=headAtStart?{x:cx-ex,y:cy-ey}:{x:cx,y:cy};
+      const shape={...shapeData('arrow'),length:headAtStart?-ex:ex,height:headAtStart?-ey:ey,
+        controls:[control],headAtStart,headType:'filled' as const,headLength:8,headWidth:4.5,headRound:.6};
+      const arrow=rebuildShape({...makeStroke(1,1,0,0,shapePoints(shape,width),'#315ca8'),shape});
+      const line=rebuildShape(arrow,{...shape,kind:'line'});
+      const [head]=arrowHeads(arrow), bx=(head[0]+head[6])/2, by=(head[1]+head[7])/2;
+      const hx=head[3]-bx, hy=head[4]-by, length=Math.hypot(hx,hy);
+      assert.deepEqual([...head.slice(3,5)],headAtStart?[0,0]:[ex,ey]);
+      assert.ok(Math.abs(length-8*width)<.001);
+      assert.equal(strokeLoops(arrow).length,2);
+      let nearBase=0;
+      for(let step=1;step<1000;step++){
+        const t=step/1000,u=1-t;
+        const x=2*t*u*cx+t*t*ex-(headAtStart?ex:0), y=2*t*u*cy+t*t*ey-(headAtStart?ey:0);
+        const dx=u*cx+t*(ex-cx), dy=u*cy+t*(ey-cy), norm=Math.hypot(dx,dy);
+        for(const offset of [-.57,-.43,0,.43,.57]){
+          const p={x:x-offset*width*dy/norm,y:y+offset*width*dx/norm};
+          const behind=((bx-p.x)*hx+(by-p.y)*hy)/length;
+          if(behind<.05||behind>2*length)continue;
+          if(behind<width)nearBase++;
+          const inside=strokeIntersectsSweep(line,p,p,0);
+          assert.equal(inside,Math.abs(offset)<.5);
+          assert.equal(strokeIntersectsSweep(arrow,p,p,0),inside,'края стержня до головки');
+        }
+      }
+      assert.ok(nearBase>8,'проверили и сечение непосредственно у основания');
     }
-    assert.equal(strokeLoops(o).length,reverse?3:2,'на плавной дуге нет острых изломов с дополнительными дисками');
   }
 });

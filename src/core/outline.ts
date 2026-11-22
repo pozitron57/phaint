@@ -13,7 +13,11 @@
 //   4. Там, где линия закручена круче собственной толщины, добавляются диски.
 // Все петли одной ориентации, поэтому при заливке nonzero их объединение никогда не даёт дыр.
 
+import type { Pt } from './geom.ts';
+
 export type Loops = Float32Array[];
+/** true — полукруг, false — прямой торец, вектор — нормаль к плоскости среза. */
+export type StrokeCap = boolean | Pt;
 
 /** Отрезков в полукруге на конце штриха. */
 const CAP_SEGS = 8;
@@ -56,13 +60,8 @@ export function segmentOutline(pts:Float32Array,roundStart:boolean,roundEnd:bool
   return [out];
 }
 
-/** Уже уплотнённая Безье: без дополнительного сглаживания оси, с заданными торцами. */
-export function curveOutline(pts:Float32Array,roundStart:boolean,roundEnd:boolean):Loops {
-  if(pts.length<6)return strokeOutline(pts);
-  const loops:Loops=[];piece(loops,Array.from(pts),roundStart,roundEnd);return loops;
-}
-
-export function strokeOutline(pts: ArrayLike<number>, count: number = Math.floor(pts.length / 3)): Loops {
+export function strokeOutline(pts: ArrayLike<number>, count: number = Math.floor(pts.length / 3),
+  startCap:StrokeCap=true, endCap:StrokeCap=true): Loops {
   const loops: Loops = [];
   const n = count;
   if (n <= 0) return loops;
@@ -92,11 +91,11 @@ export function strokeOutline(pts: ArrayLike<number>, count: number = Math.floor
   let start = 0;
   for (let i = 1; i < m; i++) {
     if (turn[i] > SHARP) {
-      piece(loops, densify(pts, start, i, turn));
+      piece(loops, densify(pts, start, i, turn), start===0 ? startCap : true);
       start = i;
     }
   }
-  piece(loops, densify(pts, start, m, turn));
+  piece(loops, densify(pts, start, m, turn), start===0 ? startCap : true, endCap);
   return loops;
 }
 
@@ -192,8 +191,17 @@ function densify(pts: ArrayLike<number>, a: number, b: number, turn: Float64Arra
   return out;
 }
 
+/** Пересечение обеих сторон ленты с основанием головки. На развороте линии
+ * ограничиваем косой срез двумя радиусами, дальше используем обычный круглый конец. */
+function cutNormal(cap:StrokeCap,tx:number,ty:number):Pt|undefined {
+  if(typeof cap!=='object')return;
+  const along=tx*cap.x+ty*cap.y;
+  if(!along||Math.abs(along)<.5*Math.hypot(cap.x,cap.y))return;
+  return {x:-cap.y/along,y:cap.x/along};
+}
+
 /** Лента и, если нужно, диски для одного куска линии (тройки x, y, w; не меньше двух точек). */
-function piece(loops: Loops, d: number[], roundStart=true, roundEnd=true): void {
+function piece(loops: Loops, d: number[], start:StrokeCap=true, end:StrokeCap=true): void {
   const cnt = d.length / 3;
   const dir = directions(d, cnt);
   if (!dir) {
@@ -202,6 +210,8 @@ function piece(loops: Loops, d: number[], roundStart=true, roundEnd=true): void 
   }
   const { dx, dy, len } = dir;
   const last = cnt - 1;
+  const firstCut=cutNormal(start,dx[0],dy[0]), lastCut=cutNormal(end,dx[last-1],dy[last-1]);
+  const roundStart=start!==false&&!firstCut, roundEnd=end!==false&&!lastCut;
   const startCap=roundStart?CAP_SEGS-1:2,endCap=roundEnd?CAP_SEGS-1:2;
   const out = new Float32Array((2 * cnt + startCap + endCap) * 2);
   const rightBase = cnt + endCap;
@@ -236,8 +246,9 @@ function piece(loops: Loops, d: number[], roundStart=true, roundEnd=true): void 
       }
     }
     const h = Math.max(d[3 * i + 2], MIN_W) / 2;
-    const nx = -ty * h;
-    const ny = tx * h;
+    const cut=i===0?firstCut:i===last?lastCut:undefined;
+    const nx = (cut ? cut.x : -ty) * h;
+    const ny = (cut ? cut.y : tx) * h;
     const x = d[3 * i];
     const y = d[3 * i + 1];
     out[2 * i] = x + nx;

@@ -1,7 +1,7 @@
 // M: временная группа, рамка, перенос, размер, отражение, поворот, порядок и ручки фигур.
 import type { App } from '../app.ts';
 import type { Obj, StrokeObj } from '../core/types.ts';
-import { makeStroke, isLocked } from '../core/types.ts';
+import { makeStroke, isLocked, strokeBBox } from '../core/types.ts';
 import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Pt } from '../core/geom.ts';
 import { around, rotation, transformObject } from '../core/transform.ts';
 import { identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
@@ -292,6 +292,29 @@ export class SelectTool implements Tool {
   }
   editShapes(edit:(o:StrokeObj)=>StrokeObj,group?:object):void {
     this.replace(this.objects.map(o=>o.kind==='stroke'?edit(o):o),group);
+  }
+  /** В M команды инструментов меняют одну выбранную фигуру, сохраняя порядок концов. */
+  setLineHeads(mode:'line'|'end'|'both'|'reverse'):boolean {
+    const o=this.selected;
+    if(this.objects.length!==1||!bendable(o))return false;
+    const shape=o.shape!;
+    if(mode==='line'&&shape.kind==='line')return false;
+    if(this.app.input.blocked||this.app.input.drawing)return true;
+    if(mode==='reverse'&&shape.kind==='arrow'&&shape.both)return true;
+
+    const kind=mode==='line'?'line':'arrow', both=mode==='both';
+    const atStart=mode==='reverse'&&!shape.headAtStart;
+    if(shape.kind===kind&&shape.both===both&&!!shape.headAtStart===atStart)return true;
+    const next:typeof shape={...shape,kind,both};
+    if(atStart)next.headAtStart=true;
+    else delete next.headAtStart;
+    if(shape.kind==='line'){
+      const {headLength,headWidth,headType,headRound}=this.app.settings.arrow;
+      Object.assign(next,{headLength,headWidth,headType,headRound});
+    }
+    const bbox=kind==='line'?strokeBBox(o.ox,o.oy,o.pts):o.bbox;
+    this.replace([withShapeBounds({...o,shape:next,bbox})]);
+    return true;
   }
   private draw=(ctx:CanvasRenderingContext2D):void=>{
     if(this.objects.length===1&&bendable(this.selected))drawBezierControls(ctx,this.app,this.selected,false);
