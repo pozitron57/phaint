@@ -5,7 +5,7 @@ import type { Pt } from '../core/geom.ts';
 import { objectMatrix } from '../core/transform.ts';
 import { drawObj, objPath, vectorPath } from './draw.ts';
 
-export const PICK_RADIUS=24;
+export const PICK_RADIUS=10;
 
 export class ObjectPicker {
   private ctx=document.createElement('canvas').getContext('2d',{willReadFrequently:true})!;
