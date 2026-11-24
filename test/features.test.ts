@@ -13,12 +13,27 @@ test('оформление стрелок из старых настроек п�
   const settings=mergeSettings({version:11,arrow:{...old,both:true}});
   assert.deepEqual(arrowHeadStyle(settings.arrow),old);
   assert.deepEqual(settings.arrow.doubleHead,old);
+  assert.deepEqual(arrowHeadStyle(settings.coordinates),old);
   const double={headLength:3,headWidth:2,headRound:.75,headType:'open' as const};
   Object.assign(settings.arrow.doubleHead,double);
   const saved=mergeSettings(JSON.parse(JSON.stringify(settings)));
   assert.deepEqual(arrowHeadStyle(saved.arrow),old);
   assert.deepEqual(saved.arrow.doubleHead,double);
   assert.equal(saved.arrow.both,true);
+});
+
+test('координаты наследуют головку одиночной стрелки из профиля v12 и сохраняют собственное оформление',()=>{
+  const single={headLength:9,headWidth:4,headRound:0,headType:'filled' as const};
+  const double={headLength:3,headWidth:2,headRound:.75,headType:'open' as const};
+  const settings=mergeSettings({version:12,arrow:{...single,both:true,doubleHead:double},coordinates:{color:'#946bb0'}});
+  assert.deepEqual(arrowHeadStyle(settings.coordinates),single);
+  assert.equal(settings.coordinates.color,'#946bb0');
+  const axes={headLength:7,headWidth:5,headRound:.25,headType:'open' as const};
+  Object.assign(settings.coordinates,axes);
+  const saved=mergeSettings(JSON.parse(JSON.stringify(settings)));
+  assert.deepEqual(arrowHeadStyle(saved.coordinates),axes);
+  assert.deepEqual(arrowHeadStyle(saved.arrow),single);
+  assert.deepEqual(saved.arrow.doubleHead,double);
 });
 
 test('SVG и смена числа головок сохраняют собственное оформление старой стрелки',async()=>{

@@ -52,30 +52,51 @@ app.changeArrow('both',false);
 assert(app.selection.selected.shape.headType==='open','флажок у выбранной стрелки применяет второй набор');
 app.changeArrow('both',true);
 assert(app.selection.selected.shape.headWidth===7&&app.selection.selected.shape.headType==='filled','возврат флажка восстанавливает оформление');
+
+app.selectTool('coordinates',false);test.key('KeyB');
+const slider=name=>[...panel.querySelectorAll('label')].find(row=>row.textContent.startsWith(name)).querySelector('input');
+const headLength=slider('Длина головки'),headWidth=slider('Ширина головки');
+const setSlider=(input,value)=>{input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));};
+assert(open.getAttribute('aria-pressed')==='true'&&Number(headLength.value)===5,'панель координат показывает свои головки при активном режиме двух концов');
+filled.click();setSlider(headLength,10);setSlider(slider('Скругление углов'),.25);
+await test.pen([[230,515,.5],[500,625,.5]],1);
+app.selectTool('select',false);app.selection.show(last());setSlider(headWidth,6);
+const axes=app.selection.selected;app.closePanels();
 await app.flushSettings();
 const savedSettings=await app.platform.loadSettings();
-assert(savedSettings.arrow.headType==='open'&&savedSettings.arrow.headWidth===3&&savedSettings.arrow.doubleHead.headWidth===7&&savedSettings.arrow.doubleHead.headRound===.75,'раздельные параметры записаны в настройки');
+const matchesHead=(a,b)=>['headType','headLength','headWidth','headRound'].every(field=>a[field]===b[field]);
+assert(matchesHead(savedSettings.arrow,original.shape)&&matchesHead(savedSettings.arrow.doubleHead,app.doc.get(two.id).shape),'панель координат сохраняет настройки обеих стрелок');
+assert(matchesHead(savedSettings.coordinates,{headType:'filled',headLength:10,headWidth:6,headRound:.25})&&matchesHead(axes.shape,savedSettings.coordinates),'панель инструмента и выделенных координат сохраняет их собственные головки');
+
 // Клавиши головок применяются к готовой фигуре и к одному объекту в M.
-for(const kind of ['arrow','coordinates']){
-  app.selectTool(kind,false);
-  await test.pen([[200,140,.5],[620,450,.5]],1);
-  const drawn=last(),w=drawn.shape.headWidth,l=drawn.shape.headLength;
+const cases=[[original,savedSettings.arrow],[app.doc.get(two.id),savedSettings.arrow.doubleHead],[axes,savedSettings.coordinates]];
+for(const [row,[reference,preset]] of cases.entries()){
+  const {kind,both}=reference.shape;
+  const choose=()=>kind==='coordinates'?app.selectTool(kind,false):app.selectArrow(both);
+  const draw=async x=>{
+    const y=200+row*170;
+    await test.pen([[x,y,.5],[x+200,y+(kind==='coordinates'?85:0),.5]],1);
+    return last();
+  };
+  choose();const drawn=await draw(730),w=preset.headWidth,l=preset.headLength;
+  assert(matchesHead(drawn.shape,preset),'новая фигура использует свой набор из меню');
   test.key('F2',{shiftKey:true});test.key('F1',{ctrlKey:true});
-  assert(last().shape.headWidth===w+.25&&last().shape.headLength===l-.25,'ширина и длина сразу после отрыва');
-  if(kind==='arrow'){
-    assert(app.settings.arrow.doubleHead.headWidth===w+.25&&app.settings.arrow.doubleHead.headLength===l-.25,'клавиши запоминают размеры двусторонних стрелок');
-    assert(app.settings.arrow.headWidth===3&&app.settings.arrow.headLength===5,'размер одиночной головки сохранён');
-  }
+  const edited=app.doc.get(drawn.id);
+  assert(edited.shape.headWidth===w+.25&&edited.shape.headLength===l-.25,'ширина и длина сразу после отрыва');
+  assert(Number(headWidth.value)===w&&Number(headLength.value)===l&&app.doc.get(reference.id)===reference,'после правки недавней фигуры меню и соседняя фигура сохраняют свои размеры');
   test.key('KeyG');
-  const edited=last();
-  test.key('F1',{shiftKey:true});assert(last()===edited,'другая команда завершает правку последней фигуры');
-  app.selectTool('select',false);app.selection.show(edited);
+  test.key('F1',{shiftKey:true});assert(app.doc.get(drawn.id)===edited,'другая команда завершает правку последней фигуры');
+  app.selectTool('select',false);app.selection.show(reference);
   test.key('F1',{shiftKey:true});test.key('F2',{ctrlKey:true});
-  assert(last().shape.headWidth===w&&last().shape.headLength===l,'размеры выделенной фигуры восстановлены');
-  test.key('KeyZ');assert(last().shape.headLength===l-.25,'отмена длины');test.key('KeyY');
+  const resized=app.selection.selected;
+  assert(resized.shape.headWidth===w-.25&&resized.shape.headLength===l+.25,'клавиши меняют размеры выбранной фигуры');
+  test.key('KeyZ');assert(app.selection.selected.shape.headLength===l,'отмена длины');test.key('KeyY');
+  assert(app.selection.selected===resized,'повтор длины');
   await app.applyShortcuts({'arrowHead.wider':['KeyU']});
-  test.key('KeyU');assert(last().shape.headWidth===w+.25,'новая клавиша ширины');
+  test.key('KeyU');assert(app.selection.selected.shape.headWidth===w,'новая клавиша ширины');
   await app.applyShortcuts({});
+  choose();const next=await draw(990);
+  assert(matchesHead(next.shape,preset)&&app.doc.get(drawn.id)===edited,'после правки выделения новая фигура берёт размеры из меню, соседняя сохраняет свои');
 }
 await test.idle();await test.shot('head-shortcuts');
 app.selectTool('arrow',false);

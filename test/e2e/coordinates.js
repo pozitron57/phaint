@@ -12,7 +12,8 @@ const world=(o,x,y)=>({x:o.ox+o.shape.frame.a*x+o.shape.frame.c*y+o.shape.frame.
 const pixel=(x,y)=>Array.from(document.querySelector('#scene').getContext('2d').getImageData(Math.round(x*app.view.dpr),Math.round(y*app.view.dpr),1,1).data);
 const white=(x,y)=>pixel(x,y).slice(0,3).every(n=>n>245);
 origin();app.settings.grid.enabled=false;
-Object.assign(app.settings.arrow,{width:5,color:'#315ca8',headType:'filled',headLength:6,headWidth:4,both:true,dashed:false});
+Object.assign(app.settings.arrow,{width:5,both:true});
+Object.assign(app.settings.coordinates,{headType:'filled',headLength:6,headWidth:4});
 test.key('KeyC');assert(app.tool.id==='coordinates','C включает координаты');test.key('KeyC');assert(app.tool.id==='pen','повтор C возвращает ручку');
 test.key('KeyA',{shiftKey:true});up('ShiftLeft');test.key('KeyC');test.key('KeyC');assert(app.tool.id==='arrow','повтор C возвращает стрелку');test.key('KeyC');
 const button=document.querySelector('[data-action="tool.line"]'),axesButton=document.querySelector('[data-action="tool.coordinates"]');
@@ -73,7 +74,7 @@ assert(restored.objects.length===4&&restored.objects.every(o=>o.shape.kind==='co
 assert(restored.objects.every((o,i)=>JSON.stringify(o.pts)===JSON.stringify(data.objects[i].pts)),'SVG сохраняет все оси после редактирования');
 
 // У открытых головок ластик не видит выдуманную диагональ между наконечниками.
-app.doc.replace([]);app.history.clear();tool('coordinates');Object.assign(app.settings.arrow,{headType:'open',width:5});
+app.doc.replace([]);app.history.clear();tool('coordinates');app.settings.coordinates.headType='open';app.settings.arrow.width=5;
 await drag([240,180],[760,600]);const axes=last();tool('eraser');app.settings.eraser.width=24;
 await drag([500,390],[500,390]);assert(app.doc.size===1&&last()===axes,'пустота между осями не стирается');
 await drag([500,600],[500,600]);assert(app.doc.size>1&&white(500,600)&&!white(240,390),'ластик разрезает только затронутую ось');

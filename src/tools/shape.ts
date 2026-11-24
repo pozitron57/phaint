@@ -101,7 +101,7 @@ export class ShapeTool implements Tool {
     }
     if(this.id==='arrow'||this.id==='coordinates'){
       s.both=this.id==='arrow'&&this.app.settings.arrow.both;
-      Object.assign(s,arrowHeadStyle(this.app.arrowHeadSettings(s.both)));
+      Object.assign(s,arrowHeadStyle(this.app.arrowHeadSettings(this.id,s.both)));
     }
     this.app.renderer.invalidateLive();
   }

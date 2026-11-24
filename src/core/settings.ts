@@ -15,7 +15,7 @@ export interface Settings {
   pen:PenSettings & InkSettings;
   line:InkSettings;
   arrow:InkSettings & Required<ArrowHeadStyle> & {both:boolean; doubleHead:Required<ArrowHeadStyle>};
-  coordinates:InkStyle;
+  coordinates:InkStyle & Required<ArrowHeadStyle>;
   ellipse:InkSettings;
   sine:InkSettings & {amplitude:number;period:number};
   parabola:InkSettings;
@@ -34,13 +34,13 @@ export interface Settings {
   export:ExportSettings;
 }
 export const QUICK_COLORS={blue:'#315ca8',red:'#c9514e',green:'#79ad65'};
-export const MAX_HEAD_SETTING=30;
+const MAX_HEAD_SETTING=30;
 export const PALETTE=[QUICK_COLORS.blue,QUICK_COLORS.green,QUICK_COLORS.red,'#000000','#ffffff','#cf914d','#946bb0'];
 export const CYCLE=PALETTE.slice(0,3);
 const style=():InkStyle=>({color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
 const ink=():InkSettings=>({width:2.6,...style()});
 export function defaultSettings():Settings {
-  return {version:12,stylePerTool:false,sharedStyle:style(),coordinates:style(),adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+  return {version:13,stylePerTool:false,sharedStyle:style(),coordinates:{...style(),...DEFAULT_ARROW_HEAD},adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
     line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
@@ -48,11 +48,11 @@ export function defaultSettings():Settings {
 }
 export function mergeSettings(raw:unknown):Settings {
   const base=defaultSettings(),profile=raw as Partial<Settings>|null;
-  // В старом профиле стартовым инструментом была ручка, координаты и адиабата делили оформление со своими парами.
+  // До версии 13 координаты брали головки у одиночной стрелки. Свои сохранённые поля имеют приоритет.
   merge(base.sharedStyle,profile?.pen);merge(base.coordinates,profile?.arrow);merge(base.adiabat,profile?.hyperbola);
   // До версии 12 у стрелок был один набор головок. Обе копии начинают с прежних значений.
   merge(base.arrow.doubleHead,profile?.arrow);
-  merge(base,raw);base.version=12;
+  merge(base,raw);base.version=13;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
     const step=base.grid.step>0?base.grid.step:DEFAULT_GRID_STEP;
@@ -71,7 +71,7 @@ export function mergeSettings(raw:unknown):Settings {
   base.marker.opacity=Math.min(1,Math.max(.05,base.marker.opacity));
   base.sine.period=Math.min(2000,Math.max(12,base.sine.period));base.sine.amplitude=Math.min(1000,Math.max(0,base.sine.amplitude));
   base.hyperbola.gamma=Math.min(MAX_GAMMA,Math.max(MIN_GAMMA,base.hyperbola.gamma));
-  for (const head of [base.arrow,base.arrow.doubleHead]) {
+  for (const head of [base.arrow,base.arrow.doubleHead,base.coordinates]) {
     head.headLength=Math.min(MAX_HEAD_SETTING,Math.max(1,head.headLength));head.headWidth=Math.min(MAX_HEAD_SETTING,Math.max(1,head.headWidth));
     head.headRound=Math.min(1,Math.max(0,head.headRound));
     if(head.headType!=='filled')head.headType='open';

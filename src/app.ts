@@ -4,7 +4,7 @@ import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
 import { Doc } from './core/doc.ts';
 import { History } from './core/history.ts';
-import { MAX_HEAD_SETTING, type Settings, type DrawingTool, type InkSettings, type InkStyle } from './core/settings.ts';
+import type { Settings, DrawingTool, InkSettings, InkStyle } from './core/settings.ts';
 import { PointerInput } from './input/pointer.ts';
 import type { Platform } from './platform.ts';
 import { PenTool } from './tools/pen.ts';
@@ -266,7 +266,8 @@ export class App {
     },group);
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
   }
-  arrowHeadSettings(both:boolean):Required<ArrowHeadStyle> {
+  arrowHeadSettings(kind:'arrow'|'coordinates',both=this.settings.arrow.both):Required<ArrowHeadStyle> {
+    if(kind==='coordinates')return this.settings.coordinates;
     return both?this.settings.arrow.doubleHead:this.settings.arrow;
   }
   changeArrow(key:keyof ArrowHeadStyle|'both',value:number|string|boolean):void {
@@ -275,17 +276,19 @@ export class App {
       const both=value===true;
       this.settings.arrow.both=both;
       selection?.editShapes(o=>o.shape?.kind==='arrow'&&o.shape.both!==both
-        ?rebuildShape(o,withArrowHeadCount(o.shape,both,this.arrowHeadSettings(both))):o,this.editGroup);
+        ?rebuildShape(o,withArrowHeadCount(o.shape,both,this.arrowHeadSettings('arrow',both))):o,this.editGroup);
     }else{
       const change={[key]:value};
       if(selection?.objects.length){
         selection.editShapes(o=>{
           const shape=o.shape;
           if(shape?.kind!=='arrow'&&shape?.kind!=='coordinates')return o;
-          Object.assign(this.arrowHeadSettings(shape.kind==='arrow'&&shape.both),change);
+          Object.assign(this.arrowHeadSettings(shape.kind,shape.both),change);
           return shape[key]===value?o:rebuildShape(o,{...shape,...change});
         },this.editGroup);
-      }else Object.assign(this.arrowHeadSettings(this.tool.id==='arrow'&&this.settings.arrow.both),change);
+      }else if(this.tool.id==='arrow'||this.tool.id==='coordinates'){
+        Object.assign(this.arrowHeadSettings(this.tool.id),change);
+      }
     }
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
   }
@@ -299,10 +302,6 @@ export class App {
     // Старые рисунки со значением выше предела ползунка уменьшаются по одному шагу.
     const value=Math.max(1,Math.min(Math.max(20,shape[key]),shape[key]+direction*.25));
     if(value===shape[key])return;
-    if(shape.kind==='arrow'){
-      this.arrowHeadSettings(shape.both)[key]=Math.min(MAX_HEAD_SETTING,value);
-      this.settingsChanged();
-    }
     const updated=rebuildShape(target,{...shape,[key]:value});
     if(selection)selection.editShapes(()=>updated);
     else{

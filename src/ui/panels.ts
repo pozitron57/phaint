@@ -182,7 +182,7 @@ export function brushPanel(app:App):Panel {
   });
   p.section('Головка стрелки',()=>active('arrow'),()=>{
     const both=()=>!coordinates()&&(selected('arrow')?.shape?.both??app.settings.arrow.both);
-    const head=()=>selected('arrow')?.shape??app.arrowHeadSettings(both());
+    const head=()=>selected('arrow')?.shape??app.arrowHeadSettings(app.tool.id==='coordinates'?'coordinates':'arrow');
     p.slider('Длина головки × толщину',1,20,.25,()=>head().headLength,v=>app.changeArrow('headLength',v),v=>v.toFixed(2));
     p.slider('Ширина головки × толщину',1,20,.25,()=>head().headWidth,v=>app.changeArrow('headWidth',v),v=>v.toFixed(2));
     p.choice('Форма',{open:'Открытая',filled:'Треугольник'},()=>head().headType,v=>app.changeArrow('headType',v));
