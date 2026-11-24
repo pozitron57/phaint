@@ -43,7 +43,7 @@ export class ShapeTool implements Tool {
     // у прямой/стрелки/координат поздний Alt обращает привязку только конца.
     this.origin=gridSnap(this.app.settings.snapToGrid,this.alt)?snapPoint(this.start,this.app.settings.grid.step):this.start;
     if(this.id!=='line'&&this.id!=='arrow'&&this.id!=='coordinates')this.tip=this.origin;
-    this.shape=shapeData(this.id);this.app.renderer.settle();this.app.renderer.busy=true;this.update();
+    this.shape=shapeData(this.id,this.app.settings.grid.step);this.app.renderer.settle();this.app.renderer.busy=true;this.update();
     this.app.renderer.setLive(this.draw);
   }
   move(samples:PenSample[]):void {

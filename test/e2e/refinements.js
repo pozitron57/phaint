@@ -50,6 +50,21 @@ tool('select');app.selection.show([...app.doc.values()][0]);await test.shot('arr
 const data=app.files.snapshot(),svg=await app.files.worker.run('svg',data),native=await app.files.worker.run('native',svg);
 assert(native.objects.every(o=>o.shape?.headType==='filled'),'короткие головки сохраняются как редактируемые стрелки');
 
+// Шаг клетки при рисовании определяет размер головки и сохраняется у готовых стрелок.
+await reset();
+const previousStep=app.settings.grid.step;
+app.settings.grid.step=30;app.settings.grid.enabled=true;
+Object.assign(app.settings.arrow,{width:3,headLength:6,headWidth:4,headType:'filled',both:false});
+for(const [row,cells] of [.5,1,1.5,2,3].entries()){
+  const x=240,y=150+row*60,tip=x+cells*30;
+  tool('arrow');await drag([x,y],[tip,y]);const drawn=last();
+  tool('select');app.selection.show(drawn);
+  const base=app.selection.handles().find(h=>h.name==='endpoint').point;
+  assert(close(tip-base.x,18*Math.min(1,cells/2)),'длина наконечника при длине стрелки в клетках: '+cells);
+}
+tool('pen');await test.idle();await test.shot('arrow-head-size');
+app.settings.grid.step=previousStep;
+
 // Частичная волна появляется постепенно и не удлиняется после отрыва.
 await reset();tool('sine');app.settings.sine.period=144;app.settings.sine.amplitude=36;
 pointer('pointerdown',200,300);pointer('pointermove',218,300);await test.idle();

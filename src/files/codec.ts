@@ -112,6 +112,7 @@ export function decodeData(text: string): DocumentData {
       if(o.shape!==undefined){const s=object(o.shape);
         if(!['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat'].includes(String(s.kind)))throw new Error('Неверная фигура.');
         extra.shape={kind:s.kind as ShapeData['kind'],frame:matrix(s.frame),length:finite(s.length),height:finite(s.height),bend:finite(s.bend),amplitude:finite(s.amplitude,0,1e9),period:finite(s.period,.01,1e9),cycles:finite(s.cycles,0,1000),...readArrowHead(s),both:s.both===true};
+        if(s.headGridStep!==undefined&&(s.kind==='arrow'||s.kind==='line'||s.kind==='coordinates'))extra.shape.headGridStep=finite(s.headGridStep,1,10000);
         if((s.kind==='arrow'||s.kind==='line')&&s.otherHead!==undefined)extra.shape.otherHead=readArrowHead(object(s.otherHead));
         if(s.kind==='arrow'&&s.headAtStart===true)extra.shape.headAtStart=true;
         if(s.kind==='line'&&s.savedHeadStyle===true)extra.shape.savedHeadStyle=true;

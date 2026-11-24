@@ -1,6 +1,8 @@
 // Общий режим сетки: Alt временно обращает настройку; начало/центр фиксируются при касании.
 import type { Pt } from './geom.ts';
 
+export const DEFAULT_GRID_STEP = 24;
+
 export function gridSnap(defaultOn:boolean,alt:boolean):boolean {return defaultOn!==alt;}
 
 export function snapPoint(p:Pt,step:number):Pt {

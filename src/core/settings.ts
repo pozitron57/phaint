@@ -2,6 +2,7 @@
 import type { PenSettings } from './brush.ts';
 import { DEFAULT_ARROW_HEAD, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA, type ArrowHeadStyle, type ShapeKind } from './shapes.ts';
 import { validCombo, normalizeCombo } from './actions.ts';
+import { DEFAULT_GRID_STEP } from './snap.ts';
 import { defaultExportSettings, normalizeExportSettings, type ExportSettings } from '../files/export-options.ts';
 export interface GridSettings { enabled:boolean; step:number; save?:boolean }
 export interface InkStyle { color:string; dashed:boolean; dotted:boolean; dotSpacing:number; dashLength:number; dashGap:number; round:boolean }
@@ -43,7 +44,7 @@ export function defaultSettings():Settings {
     line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
-    grid:{enabled:true,step:24,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
+    grid:{enabled:true,step:DEFAULT_GRID_STEP,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
 }
 export function mergeSettings(raw:unknown):Settings {
   const base=defaultSettings(),profile=raw as Partial<Settings>|null;
@@ -54,7 +55,7 @@ export function mergeSettings(raw:unknown):Settings {
   merge(base,raw);base.version=12;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
-    const step=base.grid.step>0?base.grid.step:24;
+    const step=base.grid.step>0?base.grid.step:DEFAULT_GRID_STEP;
     base.sine.amplitude=3*step;base.sine.period=8*step;
   }
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<9)base.grid.save=true;

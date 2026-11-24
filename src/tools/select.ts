@@ -341,11 +341,12 @@ export class SelectTool implements Tool {
     if(state===current)return true;
 
     const both=state==='both';
-    const next:typeof shape=state==='line'?{...shape,kind:'line'}:withArrowHeadCount(shape,both,this.app.arrowHeadSettings(both));
+    const next:typeof shape=state==='line'?{...shape,kind:'line'}:withArrowHeadCount(shape,both,this.app.arrowHeadSettings(both),this.app.settings.grid.step);
     if(state==='start')next.headAtStart=true;
     else delete next.headAtStart;
     if(mode==='line'){
       next.both=false;
+      delete next.headGridStep;
       delete next.savedHeadStyle;
       delete next.otherHead;
     }else if(state==='line'){

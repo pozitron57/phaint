@@ -4,6 +4,7 @@ import { segmentOutline, strokeOutline, type Loops, type StrokeCap } from './out
 import { bezierPoints, bezierTangent, headArc, pathLength, trimPath } from './bezier.ts';
 import { makeStroke, strokeBBox, type StrokeObj } from './types.ts';
 import { withClipBounds } from './clip.ts';
+import { DEFAULT_GRID_STEP } from './snap.ts';
 
 export type ShapeKind = 'line' | 'arrow' | 'coordinates' | 'ellipse' | 'sine' | 'parabola' | 'hyperbola' | 'adiabat';
 export const DEFAULT_GAMMA=5/3, MIN_GAMMA=1, MAX_GAMMA=3;
@@ -24,6 +25,8 @@ export interface ShapeData extends ArrowHeadStyle {
   period: number;
   cycles: number;
   both: boolean;
+  /** Шаг сетки при создании наконечника. В старых рисунках действует прежний предел по длине стрелки. */
+  headGridStep?: number;
   /** Одиночный наконечник в точке касания; порядок концов и контрольных точек сохраняется. */
   headAtStart?: boolean;
   /** Линия, у которой цикл временно скрыл головки, хранит их оформление для следующего шага. */
@@ -41,17 +44,21 @@ export function inkDash(ink:{dashed:boolean;dotted:boolean;dotSpacing:number;das
   return ink.dotted?{length:width,gap:ink.dotSpacing*width,round:true,dots:true}:{length:ink.dashLength*width,gap:ink.dashGap*width,round:ink.round};
 }
 export const identity = (): Mat => ({a:1,b:0,c:0,d:1,e:0,f:0});
-export function shapeData(kind: ShapeKind): ShapeData {
-  return {kind,frame:identity(),length:1,height:0,bend:0,amplitude:72,period:192,cycles:1,...DEFAULT_ARROW_HEAD,both:false,...(kind==='adiabat'?{gamma:DEFAULT_GAMMA}:{})};
+export function shapeData(kind: ShapeKind, gridStep = DEFAULT_GRID_STEP): ShapeData {
+  const shape:ShapeData={kind,frame:identity(),length:1,height:0,bend:0,amplitude:72,period:192,cycles:1,...DEFAULT_ARROW_HEAD,both:false};
+  if(kind==='arrow'||kind==='coordinates')shape.headGridStep=gridStep;
+  if(kind==='adiabat')shape.gamma=DEFAULT_GAMMA;
+  return shape;
 }
 export function arrowHeadStyle({headLength, headWidth, headRound, headType}: ArrowHeadStyle): ArrowHeadStyle {
   return {headLength, headWidth, headRound, headType};
 }
 /** При первом переходе берём настройки инструмента, при возврате — собственные головки фигуры. */
-export function withArrowHeadCount(shape: ShapeData, both: boolean, preset: ArrowHeadStyle): ShapeData {
+export function withArrowHeadCount(shape: ShapeData, both: boolean, preset: ArrowHeadStyle, gridStep = DEFAULT_GRID_STEP): ShapeData {
   const next: ShapeData = {...shape, kind:'arrow', both};
   if (shape.kind === 'line' && !shape.savedHeadStyle) {
     Object.assign(next, arrowHeadStyle(preset));
+    next.headGridStep = gridStep;
   } else if (shape.both !== both) {
     Object.assign(next, arrowHeadStyle(shape.otherHead ?? preset));
     next.otherHead = arrowHeadStyle(shape);
@@ -140,7 +147,8 @@ function arrowParts(o:StrokeObj) {
   if(total<.001)return;
   const start=s.both||!!s.headAtStart, end=s.both||!s.headAtStart;
   const filled=s.headType==='filled', limit=total*(s.both ? .375 : .65);
-  const length=Math.min(s.headLength*w,limit), halfWidthRatio=s.headWidth/(2*s.headLength);
+  const scale=s.headGridStep===undefined?1:Math.min(1,total/(2*s.headGridStep));
+  const length=Math.min(s.headLength*w*scale,limit), halfWidthRatio=s.headWidth/(2*s.headLength);
   const cut=(fromStart:boolean)=>s.controls?.length?headArc(p,fromStart,length,limit):length;
   const startTrim=filled&&start?cut(true):0, endTrim=filled&&end?cut(false):0;
   const body=filled?trimPath(p,startTrim,endTrim,total):p;

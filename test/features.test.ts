@@ -24,6 +24,7 @@ test('оформление стрелок из старых настроек п�
 test('SVG и смена числа головок сохраняют собственное оформление старой стрелки',async()=>{
   const single={...shapeData('arrow'),length:200,headLength:9,headType:'filled' as const};
   delete single.headRound; // Старый контур со своим способом скругления.
+  delete single.headGridStep;
   const preset={headType:'open' as const,headLength:4,headWidth:2,headRound:0};
   const double=withArrowHeadCount(single,true,preset);
   assert.deepEqual(arrowHeadStyle(double),preset);
@@ -33,6 +34,9 @@ test('SVG и смена числа головок сохраняют собст�
   const saved=(await nativeSvgData(svg))?.objects[0];
   assert.ok(saved?.kind==='stroke'&&saved.shape?.savedHeadStyle);
   const restored=withArrowHeadCount(saved.shape,false,preset);
+  assert.equal(restored.headGridStep,undefined);
+  const resized=rebuildShape(saved,{...restored,length:24});
+  assert.ok(Math.abs(24-arrowHeads(resized)[0][0]-24*.65)<.0001);
   assert.deepEqual(arrowHeadStyle(restored),arrowHeadStyle(single));
   assert.deepEqual(arrowHeadStyle(withArrowHeadCount(restored,true,single)),preset);
 });
@@ -81,6 +85,32 @@ test('короткие стрелки: головка уменьшается п�
   const head=strokeLoops(o).at(-1)!;
   for(let i=0;i<head.length;i+=2){assert.ok(head[i]>=0&&head[i]<=20);assert.ok(Math.abs(head[i+1])<=8);}
  }
+});
+test('наконечники достигают половины выбранных длины и ширины на клетке, полного размера на двух',()=>{
+  for(const step of [24,30,48])for(const cells of [.5,1,1.5,2,3]){
+    for(const headType of ['open','filled'] as const)for(const [both,headAtStart] of [[false,false],[false,true],[true,false]]){
+      const shape={...shapeData('arrow',step),length:cells*step,headType,both,headAtStart};
+      const stroke={...makeStroke(1,1,0,0,shapePoints(shape,2),'#315ca8'),shape};
+      const scale=Math.min(1,cells/2);
+      const heads=arrowHeads(stroke);
+      assert.equal(heads.length,both?2:1);
+      for(const h of heads){
+        assert.equal(Math.abs(h[3]-h[0]),2*shape.headLength*scale);
+        assert.equal(Math.abs(h[7]-h[1]),2*shape.headWidth*scale);
+      }
+    }
+  }
+});
+test('первая головка на линии запоминает шаг клетки при назначении, смене сетки и открытии SVG',async()=>{
+  const line={...shapeData('line'),length:36};
+  const shape=withArrowHeadCount(line,false,line,36);
+  const arrow=rebuildShape({...makeStroke(1,1,0,0,shapePoints(shape,2),'#315ca8'),shape});
+  const svg=await encodeSvg({objects:[arrow],grid:{enabled:false,step:12},view:{x:0,y:0,scale:3,rotSteps:0}});
+  const copy=(await nativeSvgData(svg))?.objects[0];
+  assert.ok(copy?.kind==='stroke'&&copy.shape);
+  assert.equal(withArrowHeadCount(copy.shape,true,line,12).headGridStep,36);
+  assert.deepEqual(arrowHeads(copy),arrowHeads(arrow));
+  assert.equal(arrowHeads(copy)[0][0],31);
 });
 test('скругление головки: ноль сохраняет вершины, максимум заметно смягчает их; старые SVG поддерживаются',()=>{
  const shape={...shapeData('arrow'),length:200,headLength:8,headWidth:6,headType:'filled' as const};

@@ -24,6 +24,15 @@ test('Безье: одна и две точки задают точную фор
   assert.ok([...back].filter((_,i)=>i%3===0).some(x=>x>170));
 });
 
+test('размер головки кривой стрелки определяется длиной дуги',()=>{
+  const shape={...shapeData('arrow',30),length:20,controls:[{x:10,y:80}]};
+  const stroke={...makeStroke(1,1,0,0,shapePoints(shape,2),'#315ca8'),shape};
+  for(const headType of ['open','filled'] as const){
+    const [h]=arrowHeads({...stroke,shape:{...shape,headType}});
+    assert.ok(Math.abs(Math.hypot(h[3]-(h[0]+h[6])/2,h[4]-(h[1]+h[7])/2)-10)<.0001);
+  }
+});
+
 test('кривая стрелка: открытые головки на обоих концах направлены по точным касательным',()=>{
   for(const controls of [[{x:100,y:180}],[{x:40,y:120},{x:160,y:-120}],[{x:0,y:0},{x:200,y:0}]]){
     const s={...shapeData('arrow'),length:200,controls,both:true};
