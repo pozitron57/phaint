@@ -20,8 +20,8 @@ assert(app.currentColor==='#8c5c8e'&&getComputedStyle(custom.parentElement).back
 app.palette.el.querySelectorAll('button')[0].click();test.key('Tab',{shiftKey:true});
 assert(custom.value==='#8c5c8e'&&getComputedStyle(custom.parentElement).backgroundColor==='rgb(140, 92, 142)','произвольный цвет остаётся под плюсом после выбора стандартного');
 await test.shot('palette');app.palette.hide();
-for(const [name,pattern] of [['dash','13 9'],['dots','0 9'],['solid',null]]){
- test.key('Digit2');const toast=document.querySelector('.toast');assert(toast.querySelector('svg path').getAttribute('stroke-dasharray')===pattern,'образец '+name);assert(!toast.textContent.trim(),'в подсказке нет названия штриха');await test.shot('style-'+name);
+for(const [key,name,pattern] of [['Digit2','dash','13 9'],['Digit3','dots','0 9'],['Digit1','solid',null]]){
+ test.key(key);const toast=document.querySelector('.toast');assert(toast.querySelector('svg path').getAttribute('stroke-dasharray')===pattern,'образец '+name);assert(!toast.textContent.trim(),'в подсказке нет названия штриха');await test.shot('style-'+name);
 }
 app.settings.snapToGrid=false;app.selectTool('line',false);await test.pen([[260,230,.5],[710,420,.5]],2);await test.idle();
 await native.testFiles('choices',{choices:{saves:['1889p.svg']}});assert(await app.files.save(),'сохранение');

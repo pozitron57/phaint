@@ -2,39 +2,59 @@
 const {app,test}=window.__phaint;
 const assert=(v,m)=>{if(!v)throw new Error(m);};
 const up=code=>window.dispatchEvent(new KeyboardEvent('keyup',{code,bubbles:true}));
-const key=(both)=>{test.key('Digit3',{shiftKey:both});up('Digit3');up('ShiftLeft');};
+const key=(both)=>{test.key('KeyA',{shiftKey:both});up('KeyA');up('ShiftLeft');};
 const cursor=()=>document.querySelector('#live').style.cursor;
 const last=()=>[...app.doc.values()].at(-1);
 const button=document.querySelector('[data-action="tool.line"]');
 app.settings.snapToGrid=false;app.settings.grid.enabled=false;
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
 Object.assign(app.settings.arrow,{width:6,color:'#315ca8',both:true,headType:'open'});
-key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both,'3 явно выбирает один конец');
+key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both,'A явно выбирает один конец');
 const single=cursor();await test.pen([[230,200,.5],[700,200,.5]],1);
 assert(!last().shape.both,'рисунок с одним наконечником');const original=last(),tool=app.tool;
-key(true);assert(app.tool===tool&&app.settings.arrow.both,'Shift+3 меняет режим, сохраняя последнюю фигуру');
-assert(cursor()!==single&&button.dataset.mode==='arrowBoth'&&button.title.includes('⇧3'),'курсор и кнопка показывают два конца');
+key(true);assert(app.tool===tool&&app.settings.arrow.both,'Shift+A меняет режим, сохраняя последнюю фигуру');
+assert(cursor()!==single&&button.dataset.mode==='arrowBoth'&&button.title.includes('⇧A'),'курсор и кнопка показывают два конца');
 assert(app.doc.get(original.id)===original,'смена режима не переделывает уже готовую стрелку');
-await test.pen([[230,340,.5],[700,340,.5]],1);assert(last().shape.both,'рисунок с двумя наконечниками');
-const double=cursor();key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both&&cursor()===single,'3 возвращает один конец без выхода из стрелки');
+const panel=app.panels.brush.el;
+const filled=panel.querySelector('[data-value="filled"]'),open=panel.querySelector('[data-value="open"]');
+test.key('KeyB');filled.click();
+app.changeArrow('headLength',8);app.changeArrow('headWidth',5);app.changeArrow('headRound',.75);
+await test.pen([[230,340,.5],[700,340,.5]],1);
+const two=last();
+assert(two.shape.both&&two.shape.headLength===8&&two.shape.headWidth===5&&two.shape.headRound===.75&&two.shape.headType==='filled','две головки рисуются с выбранными параметрами');
+const double=cursor();key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both&&cursor()===single,'A возвращает один конец без выхода из стрелки');
+assert(open.getAttribute('aria-pressed')==='true','панель показывает форму для одного конца');
+await test.pen([[230,460,.5],[700,460,.5]],1);
+assert(last().shape.headType==='open'&&last().shape.headLength===original.shape.headLength,'следующая одиночная стрелка сохраняет свой вид');
+app.closePanels();
 key(false);assert(app.tool.id==='pen','повтор того же режима возвращает прежний инструмент');
-key(true);assert(app.tool.id==='arrow'&&cursor()===double,'Shift+3 из ручки возвращает два конца');
+key(true);assert(app.tool.id==='arrow'&&cursor()===double,'Shift+A из ручки возвращает два конца');
 test.key('KeyC');assert(app.tool.id==='coordinates'&&cursor()!==double,'координаты имеют отдельный курсор');
 test.key('KeyD');button.click();assert(app.tool.id==='arrow'&&button.dataset.mode==='arrowBoth','общая кнопка помнит последнюю стрелку');
 button.click();assert(app.tool.id==='line'&&button.dataset.mode==='line','повторный щелчок выбирает прямую');
 button.click();assert(app.tool.id==='arrow'&&cursor()===double,'из прямой снова доступна стрелка');
 document.querySelector('[data-action="tool.coordinates"]').click();assert(app.tool.id==='coordinates','отдельная кнопка координат');
-key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both,'3 из координат выбирает одну стрелку');
+key(false);assert(app.tool.id==='arrow'&&!app.settings.arrow.both,'A из координат выбирает одну стрелку');
 app.changeArrow('both',true);assert(cursor()===double&&button.dataset.mode==='arrowBoth','галочка в настройках тоже обновляет курсор и кнопку');
+assert(filled.getAttribute('aria-pressed')==='true','галочка возвращает вид двух головок');
 key(true);assert(app.tool.id==='coordinates','повтор двустороннего режима возвращает предыдущий инструмент');
 key(true);
-// Прямое назначение нового действия доступно в настройках; существующее Shift+3 приоритетнее.
-const saved=app.actions.preserveCustomBindings({'tool.pen':['Shift+Digit3']});
+// Прямое назначение нового действия доступно в настройках; существующее Shift+A приоритетнее.
+const saved=app.actions.preserveCustomBindings({'tool.pen':['Shift+KeyA']});
 assert(saved['tool.arrowBoth'].length===0,'новая стандартная клавиша не перекрывает пользовательскую');
 await app.applyShortcuts({'tool.arrowBoth':['KeyU']});
 app.selectTool('pen',false);key(true);assert(app.tool.id==='pen','прежнее сочетание после переназначения не действует');
 test.key('KeyU');assert(app.tool.id==='arrow'&&app.settings.arrow.both,'новое сочетание выбирает два конца');
 await app.applyShortcuts({});
+app.selectTool('select',false);app.selection.show(two);
+app.changeArrow('headWidth',7);
+app.changeArrow('both',false);
+assert(app.selection.selected.shape.headType==='open','флажок у выбранной стрелки применяет второй набор');
+app.changeArrow('both',true);
+assert(app.selection.selected.shape.headWidth===7&&app.selection.selected.shape.headType==='filled','возврат флажка восстанавливает оформление');
+await app.flushSettings();
+const savedSettings=await app.platform.loadSettings();
+assert(savedSettings.arrow.headType==='open'&&savedSettings.arrow.headWidth===3&&savedSettings.arrow.doubleHead.headWidth===7&&savedSettings.arrow.doubleHead.headRound===.75,'раздельные параметры записаны в настройки');
 // Клавиши головок применяются к готовой фигуре и к одному объекту в M.
 for(const kind of ['arrow','coordinates']){
   app.selectTool(kind,false);
@@ -42,6 +62,10 @@ for(const kind of ['arrow','coordinates']){
   const drawn=last(),w=drawn.shape.headWidth,l=drawn.shape.headLength;
   test.key('F2',{shiftKey:true});test.key('F1',{ctrlKey:true});
   assert(last().shape.headWidth===w+.25&&last().shape.headLength===l-.25,'ширина и длина сразу после отрыва');
+  if(kind==='arrow'){
+    assert(app.settings.arrow.doubleHead.headWidth===w+.25&&app.settings.arrow.doubleHead.headLength===l-.25,'клавиши запоминают размеры двусторонних стрелок');
+    assert(app.settings.arrow.headWidth===3&&app.settings.arrow.headLength===5,'размер одиночной головки сохранён');
+  }
   test.key('KeyG');
   const edited=last();
   test.key('F1',{shiftKey:true});assert(last()===edited,'другая команда завершает правку последней фигуры');
@@ -71,7 +95,7 @@ for(const density of [1,2])for(const both of [false,true])for(const [i,pattern] 
     const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
     for(let x=0;x<canvas.width;x++)assert(!data[x*4+3]&&!data[((canvas.height-1)*canvas.width+x)*4+3],'головки не обрезаны по вертикали');
     for(let y=0;y<canvas.height;y++)assert(!data[y*canvas.width*4+3]&&!data[(y*canvas.width+canvas.width-1)*4+3],'головки не обрезаны по горизонтали');
-    if(width===16){const x=i*240+(both?120:0),y=(density-1)*150;g.fillStyle='#252a33';g.font='13px system-ui';g.fillText(both?'Shift+3':'3',x+35,y+24);g.drawImage(image,x+22,y+40,80,80);}
+    if(width===16){const x=i*240+(both?120:0),y=(density-1)*150;g.fillStyle='#252a33';g.font='13px system-ui';g.fillText(both?'Shift+A':'A',x+35,y+24);g.drawImage(image,x+22,y+40,80,80);}
     count++;
   }
 }

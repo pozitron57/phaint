@@ -1,4 +1,4 @@
-// Tab листает три цвета; Shift+Tab и кнопка открывают всю палитру. Плюс помнит свой цвет.
+// Быстрый выбор трёх цветов и полная палитра с запоминаемым произвольным цветом.
 import type { App } from '../app.ts';
 import { CYCLE } from '../core/settings.ts';
 import { h, icon } from './dom.ts';
@@ -24,7 +24,10 @@ export class Palette {
   toggle():void {if(this.open&&this.full){this.hide();return;}this.full=true;this.el.hidden=false;window.clearTimeout(this.timer);this.sync();}
   advance(direction=1):void {
     const at=CYCLE.indexOf(this.app.currentColor),next=at<0?(direction>0?0:2):(at+direction+3)%3;
-    this.app.chooseColor(CYCLE[next]);this.full=false;this.el.hidden=false;this.sync();
+    this.pick(CYCLE[next]);
+  }
+  pick(color:string):void {
+    this.app.chooseColor(color);this.full=false;this.el.hidden=false;this.sync();
     window.clearTimeout(this.timer);this.timer=window.setTimeout(()=>this.hide(),1000);
   }
   sync():void {

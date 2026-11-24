@@ -1,6 +1,6 @@
 // Настройки инструментов и интерфейса. Старые файлы настроек дополняются новыми значениями.
 import type { PenSettings } from './brush.ts';
-import { DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA, type ShapeKind } from './shapes.ts';
+import { DEFAULT_ARROW_HEAD, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA, type ArrowHeadStyle, type ShapeKind } from './shapes.ts';
 import { validCombo, normalizeCombo } from './actions.ts';
 import { defaultExportSettings, normalizeExportSettings, type ExportSettings } from '../files/export-options.ts';
 export interface GridSettings { enabled:boolean; step:number; save?:boolean }
@@ -13,7 +13,7 @@ export interface Settings {
   sharedStyle:InkStyle;
   pen:PenSettings & InkSettings;
   line:InkSettings;
-  arrow:InkSettings & {headLength:number;headWidth:number;headRound:number;headType:'open'|'filled';both:boolean};
+  arrow:InkSettings & Required<ArrowHeadStyle> & {both:boolean; doubleHead:Required<ArrowHeadStyle>};
   coordinates:InkStyle;
   ellipse:InkSettings;
   sine:InkSettings & {amplitude:number;period:number};
@@ -32,13 +32,15 @@ export interface Settings {
   keys:Record<string,string[]>;
   export:ExportSettings;
 }
-export const PALETTE=['#315ca8','#79ad65','#c9514e','#000000','#ffffff','#cf914d','#946bb0'];
+export const QUICK_COLORS={blue:'#315ca8',red:'#c9514e',green:'#79ad65'};
+export const MAX_HEAD_SETTING=30;
+export const PALETTE=[QUICK_COLORS.blue,QUICK_COLORS.green,QUICK_COLORS.red,'#000000','#ffffff','#cf914d','#946bb0'];
 export const CYCLE=PALETTE.slice(0,3);
 const style=():InkStyle=>({color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
 const ink=():InkSettings=>({width:2.6,...style()});
 export function defaultSettings():Settings {
-  return {version:11,stylePerTool:false,sharedStyle:style(),coordinates:style(),adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
-    line:ink(),arrow:{...ink(),headLength:5,headWidth:3,headRound:.4,headType:'open',both:false},ellipse:ink(),
+  return {version:12,stylePerTool:false,sharedStyle:style(),coordinates:style(),adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+    line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
     grid:{enabled:true,step:24,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
@@ -47,7 +49,9 @@ export function mergeSettings(raw:unknown):Settings {
   const base=defaultSettings(),profile=raw as Partial<Settings>|null;
   // В старом профиле стартовым инструментом была ручка, координаты и адиабата делили оформление со своими парами.
   merge(base.sharedStyle,profile?.pen);merge(base.coordinates,profile?.arrow);merge(base.adiabat,profile?.hyperbola);
-  merge(base,raw);base.version=11;
+  // До версии 12 у стрелок был один набор головок. Обе копии начинают с прежних значений.
+  merge(base.arrow.doubleHead,profile?.arrow);
+  merge(base,raw);base.version=12;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
     const step=base.grid.step>0?base.grid.step:24;
@@ -66,9 +70,11 @@ export function mergeSettings(raw:unknown):Settings {
   base.marker.opacity=Math.min(1,Math.max(.05,base.marker.opacity));
   base.sine.period=Math.min(2000,Math.max(12,base.sine.period));base.sine.amplitude=Math.min(1000,Math.max(0,base.sine.amplitude));
   base.hyperbola.gamma=Math.min(MAX_GAMMA,Math.max(MIN_GAMMA,base.hyperbola.gamma));
-  base.arrow.headLength=Math.min(30,Math.max(1,base.arrow.headLength));base.arrow.headWidth=Math.min(30,Math.max(1,base.arrow.headWidth));
-  base.arrow.headRound=Math.min(1,Math.max(0,base.arrow.headRound));
-  if(base.arrow.headType!=='filled')base.arrow.headType='open';
+  for (const head of [base.arrow,base.arrow.doubleHead]) {
+    head.headLength=Math.min(MAX_HEAD_SETTING,Math.max(1,head.headLength));head.headWidth=Math.min(MAX_HEAD_SETTING,Math.max(1,head.headWidth));
+    head.headRound=Math.min(1,Math.max(0,head.headRound));
+    if(head.headType!=='filled')head.headType='open';
+  }
   base.eraser.width=Math.min(120,Math.max(2,base.eraser.width));
   normalizeExportSettings(base.export,raw&&typeof raw==='object'?(raw as {export?:unknown}).export:undefined);
   // Прежний общий флажок переносится в экспорт один раз. Затем выборы независимы.

@@ -51,6 +51,8 @@ export function shortcutInfo(id:string):Pick<ActionDef,'group'|'description'> {
     'app.quit':'Завершить Phaint с предложением сохранить рисунок в каждом окне.',
     'app.close':'Закрыть окно с предложением сохранить рисунок.',
   };
+  if(['style.solid','style.dashed','style.dotted'].includes(id))return {group,description:'Выбрать вид линии для рисования или выделенных штрихов.'};
+  if(['color.blue','color.red','color.green'].includes(id))return {group,description:'Выбрать цвет для рисования или выделенных объектов.'};
   return {group,description:descriptions[id]??(prefix==='tool'?'Повторное нажатие возвращает предыдущий инструмент.':prefix==='selection'?'Вокруг центра вращения выбранного объекта или группы.':'')};
 }
 const gesture=(id:string,title:string,key:string,description:string,contexts:string[],kind:'modifier'|'hold'='modifier'):ActionDef=>({id,title,keys:[key],description,contexts,kind,group:'gestures',run:()=>{}});

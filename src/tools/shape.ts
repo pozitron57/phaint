@@ -1,7 +1,7 @@
 // Фигуры: параметры остаются редактируемыми после фиксации и открытия SVG.
 // Парабола задаётся двумя жестами: концы, затем точка изгиба; Esc отменяет оба этапа.
 import type { App } from '../app.ts';
-import { inkDash, rebuildShape, shapeData, shapePoints, withShapeBounds, type ShapeKind, type ShapeData } from '../core/shapes.ts';
+import { arrowHeadStyle, inkDash, rebuildShape, shapeData, shapePoints, withShapeBounds, type ShapeKind, type ShapeData } from '../core/shapes.ts';
 import { makeStroke, type StrokeObj } from '../core/types.ts';
 import { objPath } from '../view/draw.ts';
 import { matApply, matInvert, type Pt } from '../core/geom.ts';
@@ -99,7 +99,10 @@ export class ShapeTool implements Tool {
       const ends=snapSegment(this.start,this.tip,this.app.settings.grid.step,snap,this.ctrl,this.origin!);
       s.length=ends.end.x-ends.start.x;s.height=ends.end.y-ends.start.y;
     }
-    if(this.id==='arrow'||this.id==='coordinates')Object.assign(s,{headLength:this.app.settings.arrow.headLength,headWidth:this.app.settings.arrow.headWidth,headRound:this.app.settings.arrow.headRound,headType:this.app.settings.arrow.headType,both:this.id==='coordinates'?false:this.app.settings.arrow.both});
+    if(this.id==='arrow'||this.id==='coordinates'){
+      s.both=this.id==='arrow'&&this.app.settings.arrow.both;
+      Object.assign(s,arrowHeadStyle(this.app.arrowHeadSettings(s.both)));
+    }
     this.app.renderer.invalidateLive();
   }
   private object(id:number,z:number):StrokeObj {

@@ -8,9 +8,10 @@ assert(inside(dialog)&&inside(dialog.querySelector('footer')),'диалог и �
 const rows=dialog.querySelector('.shortcut-rows');
 assert(rows.getBoundingClientRect().bottom<=dialog.querySelector('.shortcut-note').getBoundingClientRect().top&&rows.scrollHeight>rows.clientHeight,'список прокручивается внутри отведённой области');
 await test.shot('compact');
+const penKeys=app.actions.keysOf('tool.pen').length;
 row('tool.pen').querySelector('.shortcut-add').click();test.key('KeyU');editor.querySelector('.primary').click();
-assert(row('tool.pen').querySelectorAll('.shortcut-key').length===4,'можно добавить ещё одно сочетание');
-row('tool.pen').querySelector('.shortcut-key-remove').click();assert(row('tool.pen').querySelectorAll('.shortcut-key').length===3,'удаляется только одно сочетание');
+assert(row('tool.pen').querySelectorAll('.shortcut-key').length===penKeys+1,'можно добавить ещё одно сочетание');
+row('tool.pen').querySelector('.shortcut-key-remove').click();assert(row('tool.pen').querySelectorAll('.shortcut-key').length===penKeys,'удаляется только одно сочетание');
 const changed=dialog.querySelector('input[type=checkbox]');changed.click();assert(dialog.querySelectorAll('.shortcut-row').length===1,'фильтр изменённых назначений');
 row('tool.pen').querySelector('.shortcut-default').click();assert(dialog.querySelectorAll('.shortcut-row').length===0,'сброс одного действия возвращает все стандартные сочетания');changed.click();
 row('tool.pen').querySelector('.shortcut-key').click();test.key('KeyL');await test.frames(2);

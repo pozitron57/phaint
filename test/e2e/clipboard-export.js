@@ -22,7 +22,7 @@ for(const scale of [.25,4]){
 }
 origin();tool('arrow');Object.assign(app.settings.arrow,{width:5,headType:'filled'});test.key('Digit5');await drag([150,300],[450,340]);
 const arrow=last();assert(arrow.dash?.dots,'5 включает точки у стрелки');
-test.key('Digit2');assert(app.linePattern==='solid','2 замыкает цикл после точек');test.key('Digit2');assert(app.linePattern==='dash','2 переключает на штрихи');test.key('Digit5');assert(app.linePattern==='dots','5 возвращает точки');test.key('Digit5');assert(app.linePattern==='solid','повтор 5 выключает');
+test.key('Digit1');assert(app.linePattern==='solid','1 выбирает сплошную после точек');test.key('Digit2');assert(app.linePattern==='dash','2 переключает на штрихи');test.key('Digit5');assert(app.linePattern==='dots','5 возвращает точки');test.key('Digit5');assert(app.linePattern==='solid','повтор 5 выключает');
 tool('pen');test.key('Digit5');await test.pen([[150,410,.6],[190,390,.6],[230,420,.6],[270,395,.6],[310,410,.6]],5);await test.idle();
 const ink=last();assert(ink.dash?.dots,'5 работает у ручки');test.key('Digit5');
 tool('marker');app.settings.marker.width=36;await test.pen([[170,200,.5],[340,200,.5]],4);await test.idle();

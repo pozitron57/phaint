@@ -24,7 +24,7 @@ assert(selectButton.getBoundingClientRect().top===selectTop,'кнопки не �
 await test.shot('eraser');tool('arrow');assert(getComputedStyle(original).visibility==='hidden'&&selectButton.getBoundingClientRect().top===selectTop,'кнопка скрывается без сдвига соседей');
 
 // Ручка конца меняет длину и направление, но начало горизонтальной стрелки не съезжает.
-await reset();tool('arrow');Object.assign(app.settings.arrow,{width:8,headLength:8,headWidth:6,headType:'filled',both:false});
+await reset();tool('arrow');Object.assign(app.settings.arrow,{width:8,headLength:8,headWidth:6,headType:'filled',doubleHead:{headLength:8,headWidth:6,headType:'filled',headRound:.4},both:false});
 await drag([220,160],[560,160]);const initial=last();tool('select');app.selection.show(initial);
 const end=app.selection.handles().find(h=>h.name==='endpoint');assert(end,'у стрелки есть жёлтая ручка конца');
 assert(close(end.point.x,496)&&close(end.point.y,160),'ручка у основания головки длиной 64');
@@ -34,11 +34,11 @@ let arrow=app.selection.selected;
 assert(close(arrow.ox+arrow.pts[0],220)&&close(arrow.oy+arrow.pts[1],160),'начало стрелки неподвижно');
 assert(close(arrow.oy+arrow.pts[4],160)&&close(arrow.ox+arrow.pts[3],740),'конец остаётся на той же горизонтали');
 test.key('KeyZ');assert(close(app.selection.selected.pts[3],initial.pts[3]),'изменение конца отменяется одним действием');
-test.key('Digit3');const start=app.selection.handles().find(h=>h.name==='startpoint').point;
+test.key('KeyA');const start=app.selection.handles().find(h=>h.name==='startpoint').point;
 assert(close(start.x,284)&&close(start.y,160),'после разворота ручка переходит к основанию головки в начале');
 await drag([start.x+1,start.y],[start.x+1-45,start.y+12]);arrow=app.selection.selected;
 assert(close(arrow.ox+arrow.pts[0],175)&&close(arrow.oy+arrow.pts[1],172)&&close(arrow.ox+arrow.pts[3],560)&&close(arrow.oy+arrow.pts[4],160),'движется начало, дальний конец остаётся на месте');
-test.key('KeyZ');test.key('Digit3');const grips=app.selection.handles();
+test.key('KeyZ');test.key('KeyA');const grips=app.selection.handles();
 assert(grips.find(h=>h.name==='startpoint').point.x===284&&grips.find(h=>h.name==='endpoint').point.x===496,'обе головки одновременно имеют свои ручки');
 const beforeZoom=app.files.snapshot().view;app.view.restore({...beforeZoom,scale:.1});
 const tiny=app.selection.handles(),tinyEnds=tiny.filter(h=>h.name==='startpoint'||h.name==='endpoint');

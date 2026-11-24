@@ -3,10 +3,39 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeStroke, makeImage, makeSvg } from '../src/core/types.ts';
 import { transformObject, rotation } from '../src/core/transform.ts';
-import { shapeData, shapePoints, dashedPoints, rebuildShape, arrowHeads, strokeLoops } from '../src/core/shapes.ts';
+import { shapeData, shapePoints, dashedPoints, rebuildShape, arrowHeads, strokeLoops, arrowHeadStyle, withArrowHeadCount } from '../src/core/shapes.ts';
 import { encodeSvg, nativeSvgData } from '../src/files/codec.ts';
 import { mergeSettings } from '../src/core/settings.ts';
 import { safePredictions } from '../src/core/prediction.ts';
+
+test('оформление стрелок из старых настроек переносится в два независимых режима',()=>{
+  const old={headLength:8,headWidth:6,headRound:0,headType:'filled' as const};
+  const settings=mergeSettings({version:11,arrow:{...old,both:true}});
+  assert.deepEqual(arrowHeadStyle(settings.arrow),old);
+  assert.deepEqual(settings.arrow.doubleHead,old);
+  const double={headLength:3,headWidth:2,headRound:.75,headType:'open' as const};
+  Object.assign(settings.arrow.doubleHead,double);
+  const saved=mergeSettings(JSON.parse(JSON.stringify(settings)));
+  assert.deepEqual(arrowHeadStyle(saved.arrow),old);
+  assert.deepEqual(saved.arrow.doubleHead,double);
+  assert.equal(saved.arrow.both,true);
+});
+
+test('SVG и смена числа головок сохраняют собственное оформление старой стрелки',async()=>{
+  const single={...shapeData('arrow'),length:200,headLength:9,headType:'filled' as const};
+  delete single.headRound; // Старый контур со своим способом скругления.
+  const preset={headType:'open' as const,headLength:4,headWidth:2,headRound:0};
+  const double=withArrowHeadCount(single,true,preset);
+  assert.deepEqual(arrowHeadStyle(double),preset);
+  const hidden={...double,kind:'line' as const,savedHeadStyle:true};
+  const obj={...makeStroke(1,1,0,0,shapePoints(hidden,3),'#315ca8'),shape:hidden};
+  const svg=await encodeSvg({objects:[obj],grid:{enabled:false,step:24},view:{x:0,y:0,scale:1,rotSteps:0}});
+  const saved=(await nativeSvgData(svg))?.objects[0];
+  assert.ok(saved?.kind==='stroke'&&saved.shape?.savedHeadStyle);
+  const restored=withArrowHeadCount(saved.shape,false,preset);
+  assert.deepEqual(arrowHeadStyle(restored),arrowHeadStyle(single));
+  assert.deepEqual(arrowHeadStyle(withArrowHeadCount(restored,true,single)),preset);
+});
 
 test('размер: толщина пера сохраняется, маркер масштабируется, отражение не теряет нажим',()=>{
  const p=makeStroke(1,1,10,20,Float32Array.of(0,0,2,30,40,4),'#315ca8');

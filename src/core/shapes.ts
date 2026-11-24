@@ -7,7 +7,14 @@ import { withClipBounds } from './clip.ts';
 
 export type ShapeKind = 'line' | 'arrow' | 'coordinates' | 'ellipse' | 'sine' | 'parabola' | 'hyperbola' | 'adiabat';
 export const DEFAULT_GAMMA=5/3, MIN_GAMMA=1, MAX_GAMMA=3;
-export interface ShapeData {
+export interface ArrowHeadStyle {
+  headLength: number;
+  headWidth: number;
+  headRound?: number;
+  headType: 'open' | 'filled';
+}
+export const DEFAULT_ARROW_HEAD: Required<ArrowHeadStyle> = {headLength:5, headWidth:3, headRound:.4, headType:'open'};
+export interface ShapeData extends ArrowHeadStyle {
   kind: ShapeKind;
   frame: Mat;
   length: number;
@@ -16,15 +23,13 @@ export interface ShapeData {
   amplitude: number;
   period: number;
   cycles: number;
-  headLength: number;
-  headWidth: number;
-  headRound?: number;
-  headType: 'open' | 'filled';
   both: boolean;
   /** Одиночный наконечник в точке касания; порядок концов и контрольных точек сохраняется. */
   headAtStart?: boolean;
   /** Линия, у которой цикл временно скрыл головки, хранит их оформление для следующего шага. */
   savedHeadStyle?: boolean;
+  /** Оформление другого числа головок у этой фигуры. При скрытых головках both указывает сохранённый режим. */
+  otherHead?: ArrowHeadStyle;
   /** Показатель в p·V^γ = const; только у адиабаты. */
   gamma?: number;
   /** Одна точка — квадратичная Безье, две — кубическая; в локальной системе frame. */
@@ -37,7 +42,22 @@ export function inkDash(ink:{dashed:boolean;dotted:boolean;dotSpacing:number;das
 }
 export const identity = (): Mat => ({a:1,b:0,c:0,d:1,e:0,f:0});
 export function shapeData(kind: ShapeKind): ShapeData {
-  return {kind,frame:identity(),length:1,height:0,bend:0,amplitude:72,period:192,cycles:1,headLength:5,headWidth:3,headRound:.4,headType:'open',both:false,...(kind==='adiabat'?{gamma:DEFAULT_GAMMA}:{})};
+  return {kind,frame:identity(),length:1,height:0,bend:0,amplitude:72,period:192,cycles:1,...DEFAULT_ARROW_HEAD,both:false,...(kind==='adiabat'?{gamma:DEFAULT_GAMMA}:{})};
+}
+export function arrowHeadStyle({headLength, headWidth, headRound, headType}: ArrowHeadStyle): ArrowHeadStyle {
+  return {headLength, headWidth, headRound, headType};
+}
+/** При первом переходе берём настройки инструмента, при возврате — собственные головки фигуры. */
+export function withArrowHeadCount(shape: ShapeData, both: boolean, preset: ArrowHeadStyle): ShapeData {
+  const next: ShapeData = {...shape, kind:'arrow', both};
+  if (shape.kind === 'line' && !shape.savedHeadStyle) {
+    Object.assign(next, arrowHeadStyle(preset));
+  } else if (shape.both !== both) {
+    Object.assign(next, arrowHeadStyle(shape.otherHead ?? preset));
+    next.otherHead = arrowHeadStyle(shape);
+  }
+  delete next.savedHeadStyle;
+  return next;
 }
 export function shapePoints(s: ShapeData, width: number): Float32Array {
   if((s.kind==='line'||s.kind==='arrow')&&s.controls?.length)return bezierPoints({x:s.length,y:s.height},s.controls,s.frame,width);

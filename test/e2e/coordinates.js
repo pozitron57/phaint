@@ -14,7 +14,7 @@ const white=(x,y)=>pixel(x,y).slice(0,3).every(n=>n>245);
 origin();app.settings.grid.enabled=false;
 Object.assign(app.settings.arrow,{width:5,color:'#315ca8',headType:'filled',headLength:6,headWidth:4,both:true,dashed:false});
 test.key('KeyC');assert(app.tool.id==='coordinates','C включает координаты');test.key('KeyC');assert(app.tool.id==='pen','повтор C возвращает ручку');
-test.key('Digit3',{shiftKey:true});up('ShiftLeft');test.key('KeyC');test.key('KeyC');assert(app.tool.id==='arrow','повтор C возвращает стрелку');test.key('KeyC');
+test.key('KeyA',{shiftKey:true});up('ShiftLeft');test.key('KeyC');test.key('KeyC');assert(app.tool.id==='arrow','повтор C возвращает стрелку');test.key('KeyC');
 const button=document.querySelector('[data-action="tool.line"]'),axesButton=document.querySelector('[data-action="tool.coordinates"]');
 assert(axesButton.classList.contains('active')&&!button.classList.contains('active')&&button.dataset.mode==='arrowBoth','кнопка координат независима от линии и стрелки');
 button.click();test.key('KeyB');const panel=app.panels.brush.el;

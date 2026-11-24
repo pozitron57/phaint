@@ -4,6 +4,7 @@ import type { App } from './app.ts';
 import { generateStrokes } from './debug.ts';
 import { GESTURES, shortcutInfo } from './core/shortcut-info.ts';
 import type { KeyLike } from './core/actions.ts';
+import { QUICK_COLORS } from './core/settings.ts';
 
 export function registerActions(app: App): void {
   const add = (id: string, title: string, keys: string[], run: (key?:KeyLike) => void, repeat = false): void => {
@@ -13,28 +14,31 @@ export function registerActions(app: App): void {
     } });
   };
 
-  add('tool.pen', 'Ручка', ['KeyD', 'Digit1', 'Cmd+Shift+KeyD'], () => app.selectTool('pen'));
+  add('tool.pen', 'Ручка', ['KeyD', 'Cmd+Shift+KeyD'], () => app.selectTool('pen'));
   add('tool.line', 'Прямая', ['KeyL'], () => {
     if(!app.selection?.setLineHeads('line'))app.selectTool('line');
   });
-  add('tool.eraser', 'Ластик', ['KeyE', 'Cmd+Shift+KeyE'], () => app.selectTool('eraser'));
-  add('tool.arrow','Стрелка',['Digit3'],()=>{
+  add('tool.eraser', 'Ластик', ['Cmd+Shift+KeyE'], () => app.selectTool('eraser'));
+  add('tool.arrow','Стрелка',['KeyA'],()=>{
     if(!app.selection?.setLineHeads('next'))app.selectArrow(false);
   });
-  add('tool.arrowBoth','Двусторонняя стрелка',['Shift+Digit3'],()=>{
+  add('tool.arrowBoth','Двусторонняя стрелка',['Shift+KeyA'],()=>{
     if(!app.selection?.setLineHeads('previous'))app.selectArrow(true);
   });
-  add('selection.flipArrowHead','Перенести наконечник на другой конец',['Ctrl+Digit3'],()=>app.selection?.setLineHeads('reverse'));
+  add('selection.flipArrowHead','Перенести наконечник на другой конец',['Ctrl+KeyA'],()=>app.selection?.setLineHeads('reverse'));
   add('tool.coordinates','Координаты',['KeyC'],()=>app.selectTool('coordinates'));
   add('tool.marker','Маркер',['Digit4'],()=>app.selectTool('marker'));
   add('tool.ellipse','Окружность / эллипс',['KeyO'],()=>app.selectTool('ellipse'));
   add('tool.sine','Синусоида',['KeyS'],()=>app.selectTool('sine'));
   add('tool.parabola','Парабола',['KeyP'],()=>app.selectTool('parabola'));
   add('tool.hyperbola','Гипербола',['KeyH'],()=>app.selectTool('hyperbola'));
-  add('tool.adiabat','Адиабата',['KeyA'],()=>app.selectTool('adiabat'));
-  add('style.dash','Следующий вид линии',['Digit2'],()=>app.cycleLinePattern());
+  add('tool.adiabat','Адиабата',['Shift+KeyH'],()=>app.selectTool('adiabat'));
+  add('style.solid','Сплошная линия',['Digit1'],()=>app.setLinePattern('solid'));
+  add('style.dashed','Штриховая линия',['Digit2'],()=>app.setLinePattern('dash'));
+  add('style.dotted','Пунктирная линия (точки)',['Digit3'],()=>app.setLinePattern('dots'));
+  add('style.dash','Следующий вид линии',[],()=>app.cycleLinePattern());
   add('style.previous','Предыдущий вид линии',['Shift+Digit2'],()=>app.cycleLinePattern(-1));
-  add('style.dots','Линия из точек',['Digit5'],()=>app.toggleDash('dots'));
+  add('style.dots','Включить или выключить точки',['Digit5'],()=>app.toggleDash('dots'));
   add('style.perTool','Штрих и цвет привязаны к инструменту',['F5'],()=>app.setStylePerTool(!app.settings.stylePerTool));
   add('tool.select', 'Выбор объекта', ['KeyM'], () => app.selectTool('select'));
   add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
@@ -51,6 +55,9 @@ export function registerActions(app: App): void {
   add('selection.order.backward','На один шаг назад',['Ctrl+Shift+KeyB'],()=>app.selection?.reorder('backward'));
   add('eraser.original', 'Стирать также исходный SVG', [], () => app.toggleOriginalEraser());
   add('color.menu','Все цвета',['Shift+Tab'],()=>app.palette.toggle());
+  add('color.blue','Синий',['KeyQ'],()=>app.palette.pick(QUICK_COLORS.blue));
+  add('color.red','Красный',['KeyW'],()=>app.palette.pick(QUICK_COLORS.red));
+  add('color.green','Зелёный',['KeyE'],()=>app.palette.pick(QUICK_COLORS.green));
   add('color.palette', 'Следующий цвет', ['Tab'], () => app.palette.advance());
 
   add('view.grid', 'Показать или скрыть сетку', ['KeyG'], () => {

@@ -4,12 +4,12 @@ import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
 import { Doc } from './core/doc.ts';
 import { History } from './core/history.ts';
-import type { Settings, DrawingTool, InkSettings, InkStyle } from './core/settings.ts';
+import { MAX_HEAD_SETTING, type Settings, type DrawingTool, type InkSettings, type InkStyle } from './core/settings.ts';
 import { PointerInput } from './input/pointer.ts';
 import type { Platform } from './platform.ts';
 import { PenTool } from './tools/pen.ts';
 import { ShapeTool } from './tools/shape.ts';
-import { inkDash, rebuildShape, MIN_GAMMA, MAX_GAMMA } from './core/shapes.ts';
+import { inkDash, rebuildShape, withArrowHeadCount, MIN_GAMMA, MAX_GAMMA, type ArrowHeadStyle } from './core/shapes.ts';
 import type { StrokeObj } from './core/types.ts';
 import { SelectTool } from './tools/select.ts';
 import { SpaceTool } from './tools/space.ts';
@@ -32,6 +32,8 @@ import { ImageText } from './files/image-text.ts';
 const SAVE_DELAY = 400;
 /** Шаг прокрутки стрелками, экранные px. */
 const SCROLL_STEP = 80;
+type LinePattern = 'solid'|'dash'|'dots';
+const strokePattern = (o:StrokeObj):LinePattern => o.dash ? (o.dash.dots ? 'dots' : 'dash') : 'solid';
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -237,32 +239,55 @@ export class App {
       this.hud.drawingTool((both?'Двусторонняя стрелка':'Стрелка')+(grid?` · ${grid} — ${this.settings.snapToGrid?'без привязки':'сетка'}`:''));
     }
   }
-  get linePattern():'solid'|'dash'|'dots' {
-    const dash=this.selectedStroke?.dash;
-    return this.selectedStroke?(dash?(dash.dots?'dots':'dash'):'solid'):this.inkStyle.dashed?(this.inkStyle.dotted?'dots':'dash'):'solid';
+  get linePattern():LinePattern {
+    const stroke=this.selectedStroke;
+    return stroke?strokePattern(stroke):this.inkStyle.dashed?(this.inkStyle.dotted?'dots':'dash'):'solid';
   }
-  toggleDash(mode:'dash'|'dots'='dash'):void {this.setLinePattern(this.linePattern===mode?'solid':mode);this.hud.linePattern(this.linePattern);}
+  toggleDash(mode:'dash'|'dots'='dash'):void {this.setLinePattern(this.linePattern===mode?'solid':mode);}
   cycleLinePattern(direction=1):void {
-    if(this.tool.id==='eraser'||this.tool.id==='space')return;
     const modes=['solid','dash','dots'] as const,mode=modes[(modes.indexOf(this.linePattern)+direction+3)%3];
-    this.setLinePattern(mode);this.hud.linePattern(mode);
+    this.setLinePattern(mode);
   }
-  setLinePattern(mode:'solid'|'dash'|'dots'):void {
-    this.setLineStyle({dashed:mode!=='solid',dotted:mode==='dots'});
+  setLinePattern(mode:LinePattern):void {
+    if(this.tool.id==='eraser'||this.tool.id==='space')return;
+    this.setLineStyle(mode);
+    this.hud.linePattern(mode);
   }
-  setLineStyle(change:Partial<Omit<InkStyle,'color'>>,group?:object):void {
+  setLineStyle(change:Partial<Omit<InkStyle,'color'>>|LinePattern,group?:object):void {
     if(this.tool.id==='eraser'||this.tool.id==='space')return;
     const {dashed,dotted,dotSpacing,dashLength,dashGap,round}=this.inkStyle;
-    const pattern={dashed,dotted,dotSpacing,dashLength,dashGap,round,...change};
+    const update=typeof change==='string'?{dashed:change!=='solid',dotted:change==='dots'}:change;
+    const pattern={dashed,dotted,dotSpacing,dashLength,dashGap,round,...update};
     Object.assign(this.settings.sharedStyle,pattern);
     if(this.settings.stylePerTool)Object.assign(this.settings[this.inkTool],pattern);
-    this.selection?.editShapes(o=>({...o,dash:inkDash(pattern,o.pts[2])}),group);
+    this.selection?.editShapes(o=>{
+      if(typeof change==='string'&&strokePattern(o)===change)return o;
+      return {...o,dash:inkDash(pattern,o.pts[2])};
+    },group);
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
   }
-  changeArrow(key:'headLength'|'headWidth'|'headRound'|'headType'|'both',value:number|string|boolean):void {
-    Object.assign(this.settings.arrow,{[key]:value});
-    this.selection?.editShapes(o=>o.shape?.kind==='arrow'||(o.shape?.kind==='coordinates'&&key!=='both')?rebuildShape(o,{...o.shape,[key]:value}):o,this.editGroup);
-    this.settingsChanged();this.toolbar.update();
+  arrowHeadSettings(both:boolean):Required<ArrowHeadStyle> {
+    return both?this.settings.arrow.doubleHead:this.settings.arrow;
+  }
+  changeArrow(key:keyof ArrowHeadStyle|'both',value:number|string|boolean):void {
+    const selection=this.selection;
+    if(key==='both'){
+      const both=value===true;
+      this.settings.arrow.both=both;
+      selection?.editShapes(o=>o.shape?.kind==='arrow'&&o.shape.both!==both
+        ?rebuildShape(o,withArrowHeadCount(o.shape,both,this.arrowHeadSettings(both))):o,this.editGroup);
+    }else{
+      const change={[key]:value};
+      if(selection?.objects.length){
+        selection.editShapes(o=>{
+          const shape=o.shape;
+          if(shape?.kind!=='arrow'&&shape?.kind!=='coordinates')return o;
+          Object.assign(this.arrowHeadSettings(shape.kind==='arrow'&&shape.both),change);
+          return shape[key]===value?o:rebuildShape(o,{...shape,...change});
+        },this.editGroup);
+      }else Object.assign(this.arrowHeadSettings(this.tool.id==='arrow'&&this.settings.arrow.both),change);
+    }
+    this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
   }
   stepArrowHead(key:'headWidth'|'headLength',direction:1|-1):void {
     if(this.input.drawing||this.input.blocked)return;
@@ -274,6 +299,10 @@ export class App {
     // Старые рисунки со значением выше предела ползунка уменьшаются по одному шагу.
     const value=Math.max(1,Math.min(Math.max(20,shape[key]),shape[key]+direction*.25));
     if(value===shape[key])return;
+    if(shape.kind==='arrow'){
+      this.arrowHeadSettings(shape.both)[key]=Math.min(MAX_HEAD_SETTING,value);
+      this.settingsChanged();
+    }
     const updated=rebuildShape(target,{...shape,[key]:value});
     if(selection)selection.editShapes(()=>updated);
     else{
@@ -493,7 +522,7 @@ export class App {
     // Настраиваемые клавиши цвета/толщины работают и с удерживаемыми модификаторами
     // геометрии. Более точное сочетание (например, вся палитра) имеет приоритет.
     if(!handled&&(this.input.drawing||this.tool.id==='select'||this.tool.pending)){
-      handled=this.actions.handle(e,id=>id==='ui.escape'||id.startsWith('width.')||id==='color.palette'||id==='color.menu'||id.startsWith('style.')||
+      handled=this.actions.handle(e,id=>id==='ui.escape'||id.startsWith('width.')||id.startsWith('color.')||id.startsWith('style.')||
         (this.tool.id==='select'&&(id.startsWith('selection.rotate.')||id==='edit.delete')),true);
     }
     if (handled) {

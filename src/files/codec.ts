@@ -5,7 +5,7 @@ import { maskedSvg } from '../core/svg-mask.ts';
 import { vectorErasedSvg } from './eraser-clip.ts';
 import { bboxUnion, matBBox, type Mat, type BBox } from '../core/geom.ts';
 import { type Loops } from '../core/outline.ts';
-import { strokeLoops, withShapeBounds, MIN_GAMMA, MAX_GAMMA, type ShapeData } from '../core/shapes.ts';
+import { strokeLoops, withShapeBounds, MIN_GAMMA, MAX_GAMMA, type ArrowHeadStyle, type ShapeData } from '../core/shapes.ts';
 import { objectMatrix, localBounds } from '../core/transform.ts';
 import type { GridSettings } from '../core/settings.ts';
 import { makeStroke, makeSvg, makeImage, isPdfPage, type Obj, type StrokeObj, type VectorObj, type SvgObj, type ImageObj } from '../core/types.ts';
@@ -73,6 +73,11 @@ function object(v: unknown): Record<string, unknown> {
   return v as Record<string, unknown>;
 }
 
+function readArrowHead(s: Record<string, unknown>): ArrowHeadStyle {
+  return {headLength:finite(s.headLength,.1,100),headWidth:finite(s.headWidth,.1,100),headType:s.headType==='filled'?'filled':'open',
+    ...(s.headRound===undefined?{}:{headRound:finite(s.headRound,0,1)})};
+}
+
 export function decodeData(text: string): DocumentData {
   if (text.length > MAX_FILE_BYTES) throw new Error('Документ слишком большой (предел 256 МБ).');
   const raw = object(JSON.parse(text));
@@ -106,8 +111,8 @@ export function decodeData(text: string): DocumentData {
       if(o.dash!==undefined){const d=object(o.dash);extra.dash={length:finite(d.length,.001,1e6),gap:finite(d.gap,.01,1e6),round:d.round!==false,...(d.dots===true?{dots:true}:{}),...(d.offset===undefined?{}:{offset:finite(d.offset)})};}
       if(o.shape!==undefined){const s=object(o.shape);
         if(!['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat'].includes(String(s.kind)))throw new Error('Неверная фигура.');
-        extra.shape={kind:s.kind as ShapeData['kind'],frame:matrix(s.frame),length:finite(s.length),height:finite(s.height),bend:finite(s.bend),amplitude:finite(s.amplitude,0,1e9),period:finite(s.period,.01,1e9),cycles:finite(s.cycles,0,1000),headLength:finite(s.headLength,.1,100),headWidth:finite(s.headWidth,.1,100),headType:s.headType==='filled'?'filled':'open',both:s.both===true};
-        if(s.headRound!==undefined)extra.shape.headRound=finite(s.headRound,0,1);
+        extra.shape={kind:s.kind as ShapeData['kind'],frame:matrix(s.frame),length:finite(s.length),height:finite(s.height),bend:finite(s.bend),amplitude:finite(s.amplitude,0,1e9),period:finite(s.period,.01,1e9),cycles:finite(s.cycles,0,1000),...readArrowHead(s),both:s.both===true};
+        if((s.kind==='arrow'||s.kind==='line')&&s.otherHead!==undefined)extra.shape.otherHead=readArrowHead(object(s.otherHead));
         if(s.kind==='arrow'&&s.headAtStart===true)extra.shape.headAtStart=true;
         if(s.kind==='line'&&s.savedHeadStyle===true)extra.shape.savedHeadStyle=true;
         if(s.kind==='adiabat')extra.shape.gamma=finite(s.gamma,MIN_GAMMA,MAX_GAMMA);

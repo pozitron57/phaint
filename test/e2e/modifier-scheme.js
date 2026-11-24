@@ -18,8 +18,23 @@ const resized=app.selection.selected;assert(!resized.shape.controls&&near((resiz
 // Control-click с правой кнопкой macOS тоже ставит точку.
 pointer('pointerdown',400,220,{ctrlKey:true,button:2,buttons:2});pointer('pointerup',400,220,{ctrlKey:true,button:2});
 assert(app.selection.selected.shape.controls.length===1,'Ctrl ставит точку Безье');
-test.key('Digit2');assert(app.linePattern==='dash','сплошная → штрихи');test.key('Digit2');assert(app.linePattern==='dots','штрихи → точки');test.key('Digit2');assert(app.linePattern==='solid','точки → сплошная');
+for(const [key,mode] of [['Digit3','dots'],['Digit1','solid'],['Digit2','dash']]){
+  test.key(key);assert(app.linePattern===mode&&app.tool.id==='select','прямой выбор штриха в M');
+  const state=app.history.state;test.key(key);assert(app.history.state===state,'повтор не меняет выделение');
+}
+for(const [key,color] of [['KeyW','#c9514e'],['KeyQ','#315ca8'],['KeyE','#79ad65']]){
+  test.key(key);assert(app.selection.selected.color===color,'цвет выделенной фигуры');
+  const state=app.history.state;test.key(key);assert(app.history.state===state,'повтор цвета сохраняет историю');
+}
+await app.applyShortcuts({'style.dash':['KeyU']});
+for(const mode of ['dots','solid','dash','dots','solid']){
+  test.key('KeyU');assert(app.linePattern===mode,'переназначенный прямой цикл');
+}
 test.key('Digit2',{shiftKey:true});assert(app.linePattern==='dots','обратный цикл');
 const dash=JSON.stringify(app.selection.selected.dash);test.key('Digit2',{shiftKey:true,repeat:true});assert(JSON.stringify(app.selection.selected.dash)===dash,'удержание не пролистывает несколько видов');
-app.selectTool('arrow',false);pointer('pointerdown',250,450);pointer('pointermove',700,500);test.key('Digit2');assert(app.tool.object(0,0).dash,'цикл работает в незавершённой стрелке');pointer('pointerup',700,500);
+app.selectTool('arrow',false);pointer('pointerdown',250,450);pointer('pointermove',700,500);
+test.key('Digit2',{altKey:true});test.key('KeyW',{altKey:true});
+const preview=app.tool.object(0,0);
+assert(preview.color==='#c9514e'&&preview.dash&&!preview.dash.dots&&preview.shape.kind==='arrow','прямой выбор до отрыва с удерживаемой привязкой');
+test.key('KeyU');assert(app.tool.object(0,0).dash.dots,'цикл работает в незавершённой стрелке');pointer('pointerup',700,500);
 await test.idle();await test.shot('scheme');return {ok:true};

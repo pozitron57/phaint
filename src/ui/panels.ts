@@ -174,19 +174,20 @@ export function brushPanel(app:App):Panel {
     const update=(key:'dashLength'|'dashGap'|'dotSpacing'|'round',value:number|boolean)=>{
       app.setLineStyle({dashLength:length(),dashGap:gap(),dotSpacing:spacing(),round:round(),dashed:app.linePattern!=='solid',dotted:app.linePattern==='dots',[key]:value},app.editGroup);
     };
-    p.choice('Рисунок линии',{solid:'Сплошная',dash:'Штрихи (2)',dots:'Точки (5)'},()=>app.linePattern,v=>app.setLinePattern(v as 'solid'|'dash'|'dots'));
+    p.choice('Рисунок линии',{solid:'Сплошная',dash:'Штриховая',dots:'Пунктирная'},()=>app.linePattern,v=>app.setLinePattern(v as 'solid'|'dash'|'dots'));
     p.checkbox('Круглые концы',round,v=>update('round',v),()=>app.linePattern!=='dash');
     p.slider('Длина штриха × толщину',.5,20,.25,length,v=>update('dashLength',v),v=>v.toFixed(2),()=>app.linePattern!=='dash');
     p.slider('Промежуток × толщину',.5,20,.25,gap,v=>update('dashGap',v),v=>v.toFixed(2),()=>app.linePattern!=='dash');
     p.slider('Шаг точек × толщину',1.25,20,.25,spacing,v=>update('dotSpacing',v),v=>v.toFixed(2),()=>app.linePattern!=='dots');
   });
   p.section('Головка стрелки',()=>active('arrow'),()=>{
-    const head=()=>selected('arrow')?.shape??app.settings.arrow;
+    const both=()=>!coordinates()&&(selected('arrow')?.shape?.both??app.settings.arrow.both);
+    const head=()=>selected('arrow')?.shape??app.arrowHeadSettings(both());
     p.slider('Длина головки × толщину',1,20,.25,()=>head().headLength,v=>app.changeArrow('headLength',v),v=>v.toFixed(2));
     p.slider('Ширина головки × толщину',1,20,.25,()=>head().headWidth,v=>app.changeArrow('headWidth',v),v=>v.toFixed(2));
     p.choice('Форма',{open:'Открытая',filled:'Треугольник'},()=>head().headType,v=>app.changeArrow('headType',v));
     p.slider('Скругление углов',0,1,.01,()=>head().headRound??.15,v=>app.changeArrow('headRound',v),percent,()=>head().headType!=='filled');
-    p.checkbox('На обоих концах',()=>coordinates()?false:head().both,v=>app.changeArrow('both',v),coordinates);
+    p.checkbox('На обоих концах',both,v=>app.changeArrow('both',v),coordinates);
   });
   p.section('Маркер',()=>active('marker'),()=>{
     p.slider('Непрозрачность',.05,.8,.01,()=>selected('marker')?.opacity??app.settings.marker.opacity,v=>{

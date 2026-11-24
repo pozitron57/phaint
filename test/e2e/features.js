@@ -14,7 +14,7 @@ const pixel=(x,y)=>document.getElementById('scene').getContext('2d').getImageDat
 assert(!app.settings.input.predict,'прогноз выключен по умолчанию');
 test.key('Tab');assert(app.ink.color==='#79ad65','Tab: синий → зелёный');test.key('Tab');assert(app.ink.color==='#c9514e','красный');test.key('Tab');assert(app.ink.color==='#315ca8','цикл из трёх');
 app.palette.toggle();app.palette.el.querySelectorAll('button')[3].click();assert(app.ink.color==='#000000','чёрный в полной палитре');test.key('Tab');assert(app.ink.color==='#315ca8','из чёрного Tab начинает с синего');
-test.key('KeyL');assert(app.tool.id==='line','L');test.key('KeyL');assert(app.tool.id==='pen','повтор L возвращает ручку');test.key('KeyE');test.key('KeyE');assert(app.tool.id==='pen','повтор E');
+test.key('KeyL');assert(app.tool.id==='line','L');test.key('KeyL');assert(app.tool.id==='pen','повтор L возвращает ручку');test.key('KeyE',{metaKey:true,shiftKey:true});assert(app.tool.id==='eraser','Cmd+Shift+E включает ластик');test.key('KeyE',{metaKey:true,shiftKey:true});assert(app.tool.id==='pen','повтор возвращает ручку');
 const scale=app.view.scale;test.key('Equal');assert(app.view.scale>scale,'= увеличивает');test.key('Minus');assert(app.view.scale===scale,'- уменьшает');
 // Ползунок не теряет захват, когда перо далеко выше его полосы.
 app.togglePanel('brush');

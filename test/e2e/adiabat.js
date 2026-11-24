@@ -1,4 +1,4 @@
-// Общая кнопка H/A, точные γ, живой изгиб, редактирование/Undo, SVG и ластик.
+// Общая кнопка H и Shift+H, точные γ, живой изгиб, редактирование/Undo, SVG и ластик.
 const {app,test}=window.__phaint;
 // Геометрия прежних сценариев — без автоматической привязки; оба режима проверяет grid-crop.
 app.settings.snapToGrid=false;
@@ -11,10 +11,10 @@ const sameEnds=(a,b)=>endpoints(a).every((v,i)=>near(v,endpoints(b)[i]));
 app.view.restore({x:app.view.width/app.view.dpr/2,y:app.view.height/app.view.dpr/2,scale:1,rotSteps:0});
 app.settings.grid.enabled=false;app.renderer.invalidateScene();
 assert(app.settings.hyperbola.gamma===5/3,'по умолчанию точное 5/3');
-test.key('KeyA');assert(app.tool.id==='adiabat','A включает адиабату');test.key('KeyA');assert(app.tool.id==='pen','повтор A возвращает ручку');
-test.key('KeyH');test.key('KeyA');test.key('KeyA');assert(app.tool.id==='hyperbola','повтор A возвращает гиперболу');test.key('KeyA');
+test.key('KeyH',{shiftKey:true});assert(app.tool.id==='adiabat','Shift+H включает адиабату');test.key('KeyH',{shiftKey:true});assert(app.tool.id==='pen','повтор Shift+H возвращает ручку');
+test.key('KeyH');test.key('KeyH',{shiftKey:true});test.key('KeyH',{shiftKey:true});assert(app.tool.id==='hyperbola','повтор Shift+H возвращает гиперболу');test.key('KeyH',{shiftKey:true});
 const button=document.querySelector('[data-action="tool.hyperbola"]'),panel=app.panels.brush.el;
-assert(!document.querySelector('[data-action="tool.adiabat"]'),'одна кнопка для H/A');
+assert(!document.querySelector('[data-action="tool.adiabat"]'),'одна кнопка для H и Shift+H');
 assert(button.classList.contains('active')&&button.dataset.mode==='adiabat'&&button.textContent==='5/3','степень на общей кнопке');
 tool('pen');button.click();assert(app.tool.id==='adiabat','общая кнопка помнит режим');
 test.key('KeyB');
@@ -37,7 +37,7 @@ test.key('F2');test.key('Tab');await test.frames(2);await test.shot('live');poin
 assert(last().shape.kind==='adiabat'&&last().shape.gamma===7/5&&near(last().pts[2],app.ink.width)&&last().color===app.ink.color,'один жест, цвет и толщина до отрыва');
 app.changeGamma(5/3);app.chooseColor('#c9514e');await drag([400,150],[750,500]);const first=last();
 await test.shot('curves');
-test.key('Digit2');await drag([820,170],[1090,440]);assert(last().dash&&last().shape.gamma===5/3,'штриховая адиабата');test.key('Digit2');
+test.key('Digit2');await drag([820,170],[1090,440]);assert(last().dash&&last().shape.gamma===5/3,'штриховая адиабата');test.key('Digit1');
 test.key('KeyA',{metaKey:true});assert(app.tool.id==='select'&&app.selection.objects.length===4,'Cmd+A сохраняет выделение всех и не включает адиабату');
 app.selection.show(first);test.key('Period');
 const transformed=app.selection.selected;test.key('KeyB');await test.idle();

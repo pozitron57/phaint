@@ -4,7 +4,7 @@ import type { Obj, StrokeObj } from '../core/types.ts';
 import { makeStroke, isLocked, strokeBBox } from '../core/types.ts';
 import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Pt } from '../core/geom.ts';
 import { around, rotation, transformObject } from '../core/transform.ts';
-import { arrowHeads, coordinateAxes, identity, rebuildShape, withShapeBounds } from '../core/shapes.ts';
+import { arrowHeads, coordinateAxes, identity, rebuildShape, withArrowHeadCount, withShapeBounds } from '../core/shapes.ts';
 import { inheritImage } from '../view/draw.ts';
 import { ObjectPicker, PICK_RADIUS } from '../view/pick.ts';
 import type { DocChange } from '../core/doc.ts';
@@ -310,7 +310,12 @@ export class SelectTool implements Tool {
     const m=rotation(this.center(),degrees*Math.PI/180);this.replace(this.objects.map(o=>{const n=transformObject(o,m,true);inheritImage(o,n);return n;}));
   }
   recolor(color:string):void {
-    this.replace(this.objects.map(o=>o.kind==='stroke'?{...o,color}:o.kind==='vector'?{...o,fill:o.fill==='none'?'none':color,stroke:o.stroke==='none'?'none':color}:o));
+    this.replace(this.objects.map(o=>{
+      if(o.kind==='stroke')return o.color===color?o:{...o,color};
+      if(o.kind!=='vector')return o;
+      const fill=o.fill==='none'?'none':color,stroke=o.stroke==='none'?'none':color;
+      return fill===o.fill&&stroke===o.stroke?o:{...o,fill,stroke};
+    }));
   }
   width(factor:number):void {
     this.replace(this.objects.map(o=>{
@@ -335,17 +340,18 @@ export class SelectTool implements Tool {
     else state=states[(states.indexOf(current)+(mode==='next'?1:states.length-1))%states.length];
     if(state===current)return true;
 
-    const kind=state==='line'?'line':'arrow';
-    const next:typeof shape={...shape,kind,both:state==='both'};
+    const both=state==='both';
+    const next:typeof shape=state==='line'?{...shape,kind:'line'}:withArrowHeadCount(shape,both,this.app.arrowHeadSettings(both));
     if(state==='start')next.headAtStart=true;
     else delete next.headAtStart;
-    if(kind==='line'&&mode!=='line')next.savedHeadStyle=true;
-    else delete next.savedHeadStyle;
-    if(shape.kind==='line'&&!shape.savedHeadStyle){
-      const {headLength,headWidth,headType,headRound}=this.app.settings.arrow;
-      Object.assign(next,{headLength,headWidth,headType,headRound});
+    if(mode==='line'){
+      next.both=false;
+      delete next.savedHeadStyle;
+      delete next.otherHead;
+    }else if(state==='line'){
+      next.savedHeadStyle=true;
     }
-    const bbox=kind==='line'?strokeBBox(o.ox,o.oy,o.pts):o.bbox;
+    const bbox=state==='line'?strokeBBox(o.ox,o.oy,o.pts):o.bbox;
     this.replace([withShapeBounds({...o,shape:next,bbox})]);
     return true;
   }

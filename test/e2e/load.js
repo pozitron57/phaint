@@ -126,7 +126,7 @@ for(let i=0;i<60;i++){
 test.pointer('pointerup',804,536,0);out.coordinates=stop();await test.idle();
 test.key('KeyZ',{metaKey:true});test.key('KeyD');await test.idle();
 // 9. Адиабата: масштаб и изменение γ на большом документе.
-test.key('KeyA');stop=meter();test.pointer('pointerdown',300,180,.5);
+test.key('KeyH',{shiftKey:true});stop=meter();test.pointer('pointerdown',300,180,.5);
 for(let i=0;i<60;i++){
   test.pointer('pointermove',450+i*5,330+i*5,.5);
   if(i%15===0)app.changeGamma(1.4+i/60);
