@@ -16,6 +16,14 @@ export function exportName(name:string|undefined,format:ExportFormat,selection=f
   const same=original.toLowerCase()===`${short}.${format}`.toLowerCase();
   return `${short}${selection?'-part':same?(format==='pdf'?' — пометки':' — копия'):''}.${format}`;
 }
+export function exportFormat(name: string | null): ExportFormat | undefined {
+  return name?.match(/\.(svg|pdf|png|jpg)$/i)?.[1].toLowerCase() as ExportFormat | undefined;
+}
+
+export function repeatExportName(name: string, format: ExportFormat): string {
+  return exportFormat(name) === format ? name : name.replace(/\.[^.]+$/, '.' + format);
+}
+
 export function preferredExport(name:string|undefined,current:ExportFormat):ExportFormat {
   if(name&&/p\.svg$/i.test(name))return 'svg';
   return name&&/\.pdf$/i.test(name)?'pdf':current;

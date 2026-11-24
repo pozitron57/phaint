@@ -1,7 +1,7 @@
 // Браузерный вариант: SVG/картинки/PDF, скачивание файлов, резервная копия в IndexedDB.
 import type { FileApi, RecoveryFile, UnsavedChoice } from './api.ts';
 import { imageTypes } from './binary.ts';
-import { exportName, workingName } from './names.ts';
+import { exportName, repeatExportName, workingName } from './names.ts';
 
 async function recovery(write: boolean, value?: RecoveryFile | null): Promise<RecoveryFile | null> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -64,8 +64,9 @@ export function browserFiles(): FileApi {
       const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     },
-    chooseExport: async (current, format, selection) => {
-      let name=window.prompt('Название файла',exportName(current?.name,format,selection))?.trim();
+    chooseExport: async (current, format, selection, previous) => {
+      const suggested = previous && repeatExportName(previous.name, format);
+      let name=window.prompt('Название файла',suggested || exportName(current?.name,format,selection))?.trim();
       if(!name)return null;
       if(!name.toLowerCase().endsWith(`.${format}`))name+=`.${format}`;
       return {handle:crypto.randomUUID(),name};

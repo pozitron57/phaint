@@ -1,7 +1,8 @@
 // Файловые диалоги и IPC. Рендерер получает непрозрачные идентификаторы выбранных файлов.
 // У каждого окна своя резервная копия; закрытие и его отмена отвечают главному процессу.
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { exportName, workingName } from '../src/files/names.ts';
+import { ExportHistory } from './export-history.ts';
+import { exportFormat, exportName, repeatExportName, workingName } from '../src/files/names.ts';
 import { basename, join, dirname, resolve, isAbsolute } from 'node:path';
 import { mkdir, rm, stat, realpath, readFile, writeFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -28,6 +29,7 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     if (!path) throw new Error('Окно закрыто.');
     return path;
   };
+  const exports = new ExportHistory(join(app.getPath('userData'), 'export-history'));
   const recentPath = join(app.getPath('userData'), 'recent.json');
   const testRoot = join(app.getPath('userData'), 'files');
   let choices: TestChoices = { recovery: recoverForTest };
@@ -115,10 +117,24 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     }
     return register(path);
   });
-  ipcMain.handle('files:choose-export',async(e,current:FileRef|null,format:ExportFormat,selection:boolean)=>{
+  ipcMain.handle('files:export-formats', async (_e, current: FileRef) => {
+    const source = entries.get(current.handle)?.path;
+    if (!source) return {};
+    const [drawing, selection] = await Promise.all([exports.read(source, false), exports.read(source, true)]);
+    return { drawing: exportFormat(drawing), selection: exportFormat(selection) };
+  });
+  ipcMain.handle('files:remember-export', (_e, current: FileRef, selected: boolean, target: FileRef) => queue.run(async () => {
+    const source = entries.get(current.handle)?.path, entry = entries.get(target.handle);
+    if (source && entry?.stamp && exportFormat(entry.path)) await exports.write(source, selected, entry.path);
+  }));
+  ipcMain.handle('files:choose-export',async(e,current:FileRef|null,format:ExportFormat,selection:boolean,last?:FileRef)=>{
     if(!['svg','pdf','png','jpg'].includes(format))throw new Error('Неизвестный формат.');
     const win=windowOf(e),previous=current?entries.get(current.handle)?.path:undefined;
-    const defaultPath=join(previous?dirname(previous):'',exportName(current?.name,format,selection));
+    const remembered = previous ? await exports.read(previous, selection) : null;
+    const lastPath = remembered ?? (last && entries.get(last.handle)?.path);
+    const suggested = lastPath && join(dirname(lastPath), repeatExportName(basename(lastPath), format));
+    const defaultPath = suggested && suggested !== previous ? suggested
+      : join(previous ? dirname(previous) : '', exportName(current?.name, format, selection));
     if(testing)lastDialog={defaultPath,format};
     let path:string|undefined;
     if(testing){const name=choices.saves?.shift();if(name)path=testPath(name);}

@@ -4,6 +4,7 @@ import type { PdfExportRequest } from './pdf-types.ts';
 export type OpenFile = FileRef & ({type?:'svg';text:string}|{type:'image';bytes:Uint8Array;mime:string}|{type:'pdf';bytes:Uint8Array;mime:string});
 export type UnsavedChoice = 'save' | 'discard' | 'cancel';
 export type ExportFormat = 'svg' | 'pdf' | 'png' | 'jpg';
+export type ExportFormats = { drawing?: ExportFormat; selection?: ExportFormat };
 export interface RecoveryFile { data: string; name: string; savedAt: string }
 export interface FileApi {
   open(): Promise<OpenFile | null>;
@@ -12,7 +13,9 @@ export interface FileApi {
   read?(file:FileRef):Promise<OpenFile>;
   remember?(file:FileRef):Promise<void>;
   chooseSave(current: FileRef | null, saveAs: boolean, selection?:boolean): Promise<FileRef | null>;
-  chooseExport(current: FileRef | null, format: ExportFormat, selection: boolean): Promise<FileRef | null>;
+  chooseExport(current: FileRef | null, format: ExportFormat, selection: boolean, previous?: FileRef): Promise<FileRef | null>;
+  exportFormats?(current: FileRef): Promise<ExportFormats>;
+  rememberExport?(current: FileRef, selected: boolean, target: FileRef): Promise<void>;
   writeBinary(file: FileRef, bytes: Uint8Array): Promise<void>;
   pdf?(svg: string, width: number, height: number, job?: string): Promise<Uint8Array>;
   annotatedPdf?(request:PdfExportRequest, job?: string):Promise<Uint8Array>;

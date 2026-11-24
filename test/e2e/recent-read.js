@@ -10,6 +10,19 @@ await native.testKeys('input',{input:{type:'keyDown',keyCode:'R',modifiers:['met
 await native.testKeys('input',{input:{type:'keyUp',keyCode:'R',modifiers:['meta']}});
 await wait(()=>!app.files.busy&&app.files.name==='рабочий.svg'&&app.doc.size===2);
 assert(!app.files.dirty,'Cmd+R открыл файл без диалога выбора');
+app.settings.export.format='jpg';
+const repeat=async(format,expected)=>{
+  const pending=app.files.export(),dialog=document.querySelector('.export-dialog');
+  assert(dialog.querySelector('[data-format="svg"]').getAttribute('aria-checked')==='true','восстановлен формат экспорта рисунка');
+  dialog.querySelector(`[data-format="${format}"]`).click();
+  dialog.querySelector('.export-actions button:last-child').click();
+  assert(!await pending,'отмена выбора файла');
+  const working=await native.testFiles('recent'),last=await native.testFiles('lastDialog');
+  assert(last.defaultPath===working.replace(/[^/]+$/,expected),'точный путь повторного экспорта: '+expected);
+};
+await repeat('svg','экспорт.svg');
+await repeat('png','экспорт.png');
+await repeat('svg','экспорт.svg');
 await test.pen([[150,400,.5],[440,440,.5]],3);const count=app.doc.size;
 await choices({unsaved:['cancel']});assert(!await app.files.open(true)&&app.doc.size===count&&app.files.dirty,'отмена сохраняет текущие изменения');
 await choices({unsaved:['save']});assert(await app.files.open(true)&&app.doc.size===count&&!app.files.dirty,'читаем свежий файл после сохранения того же документа');

@@ -2,7 +2,7 @@
 // Запись снимка не помечает более поздние штрихи сохранёнными. Автокопия только при изменениях,
 // через 5 с тишины, максимум через минуту; тяжёлая сериализация идёт в Worker.
 import type { App } from '../app.ts';
-import type { FileRef, OpenFile, RecoveryFile } from './api.ts';
+import type { ExportFormats, FileRef, OpenFile, RecoveryFile } from './api.ts';
 import type { DocumentData } from './codec.ts';
 import { DocumentWorker } from './worker-client.ts';
 import { FileProcessing } from './processing.ts';
@@ -24,6 +24,8 @@ export class DocumentSession {
   private app: App;
   readonly worker = new DocumentWorker();
   file: FileRef | null = null;
+  private exportFormats: ExportFormats = {};
+  private exportTargets: Partial<Record<keyof ExportFormats, FileRef>> = {};
   private processing: FileProcessing | null = null;
   get processingFile(): boolean { return this.processing !== null; }
   cancelProcessing(): boolean { return this.processing?.cancel() ?? false; }
@@ -156,7 +158,8 @@ export class DocumentSession {
     this.app.settings.export={...choice,format};this.app.settingsChanged();
   }
   private async exportData(data:DocumentData,selected:number,svgOnly=false):Promise<boolean> {
-    const initial={...this.app.settings.export,format:preferredExport(this.file?.name,this.app.settings.export.format)};
+    const scope = selected ? 'selection' : 'drawing';
+    const initial={...this.app.settings.export,format:this.exportFormats[scope] ?? preferredExport(this.file?.name,this.app.settings.export.format)};
     const pdfPages=data.pdf&&this.app.platform.files.annotatedPdf?data.objects.filter(isPdfPage).length:0;
     const withoutGrid=exportSize({...data,grid:{...data.grid,save:false}}),withGrid=exportSize({...data,grid:{...data.grid,save:true}});
     const choice=await chooseExport(withoutGrid.width,withoutGrid.height,selected,initial,svgOnly,{visible:data.grid.enabled,...withGrid},pdfPages);
@@ -173,7 +176,9 @@ export class DocumentSession {
       });
       this.rememberExport(choice,svgOnly);return true;
     }
-    const file=await api.chooseExport(this.file,format,!!selected);if(!file)return false;
+    const file = svgOnly ? await api.chooseSave(this.file, true, true)
+      : await api.chooseExport(this.file, format, !!selected, this.exportTargets[scope]);
+    if (!file) return false;
     return this.process('Экспорт…', async op => {
       if(data.pdf&&format!=='svg'&&(format!=='pdf'||!api.annotatedPdf)){
         const density=format==='png'||format==='jpg'?choice[format].width/width:Math.min(3,VECTOR_QUALITY[vectorOptions(choice[format]).quality].pixelsPerUnit);
@@ -194,6 +199,11 @@ export class DocumentSession {
         if(format==='png')bytes=await op.worker.run<Uint8Array>('png',{bytes,level:choice.png.compression},op.signal);
         op.seal();await api.writeBinary(file,bytes);
         stats={bytes:bytes.byteLength};
+      }
+      if (!svgOnly) {
+        this.exportTargets[scope] = file;
+        this.exportFormats[scope] = format;
+        if (this.file) await this.persistExport(this.file, !!selected, file);
       }
       this.lastWrite={...stats,name:file.name,action:'export'};
       this.rememberExport(choice,svgOnly);this.app.hud.toast(`Экспортировано: ${file.name}`);return true;
@@ -236,6 +246,15 @@ export class DocumentSession {
     const data = this.snapshot();
     const stats=await this.process('Сохранение…', op=>this.write(file,data,op));
     this.lastWrite={...stats,name:file.name,action:'save'};
+    if (!this.file) {
+      for (const scope of ['drawing', 'selection'] as const) {
+        const target = this.exportTargets[scope];
+        if (target) await this.persistExport(file, scope === 'selection', target);
+      }
+    } else if (this.file.handle !== file.handle) {
+      this.exportTargets = {};
+      this.exportFormats = await this.readExportFormats(file);
+    }
     this.file = file;
     this.savedState = state; this.savedGrid = grid;
     if (!this.dirty) await this.clearRecovery();
@@ -261,6 +280,16 @@ export class DocumentSession {
       op.seal();await api.write(file, text);
       return stats;
     }
+  }
+
+  private async readExportFormats(file: FileRef): Promise<ExportFormats> {
+    try { return await this.app.platform.files.exportFormats?.(file) ?? {}; }
+    catch (error) { console.warn('Не удалось прочитать форматы экспорта', error); return {}; }
+  }
+
+  private async persistExport(source: FileRef, selected: boolean, target: FileRef): Promise<void> {
+    try { await this.app.platform.files.rememberExport?.(source, selected, target); }
+    catch (error) { console.warn('Не удалось запомнить путь экспорта', error); }
   }
 
   private async rememberFile(file:FileRef):Promise<void> {
@@ -294,7 +323,9 @@ export class DocumentSession {
       });
       if (!recent&&!await this.canLeave()) return false;
       await this.clearRecovery();
-      this.replace(data, file, false);
+      const ref = {handle:file.handle,name:file.name};
+      this.replace(data, ref, false);
+      this.exportFormats = await this.readExportFormats(ref);
       await this.rememberFile(file);
       return true;
     }, true);
@@ -385,6 +416,8 @@ export class DocumentSession {
     this.switching = true;
     try {
       this.generation++;
+      this.exportFormats = {};
+      this.exportTargets = {};
       this.pdfView?.dispose();this.pdfView=null;this.pdf=data.pdf;
       this.baseScale=data.baseScale??1;
       this.app.history.clear();
