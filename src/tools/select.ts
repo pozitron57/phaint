@@ -2,7 +2,7 @@
 import type { App } from '../app.ts';
 import type { Obj, StrokeObj } from '../core/types.ts';
 import { makeStroke, isLocked, strokeBBox } from '../core/types.ts';
-import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Pt } from '../core/geom.ts';
+import { bboxUnion, matApply, matBBox, matInvert, matMul, type BBox, type Mat, type Pt } from '../core/geom.ts';
 import { around, rotation, transformObject } from '../core/transform.ts';
 import { arrowHeads, coordinateAxes, identity, rebuildShape, withArrowHeadCount, withShapeBounds } from '../core/shapes.ts';
 import { inheritImage } from '../view/draw.ts';
@@ -13,14 +13,22 @@ import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from
 import type { KeyLike } from '../core/actions.ts';
 import { reorderObjects, type ObjectOrder } from '../core/order.ts';
 import { ImageSnap } from '../core/image-snap.ts';
+import { snapPoint } from '../core/snap.ts';
+import { selectionMoveAnchor } from '../view/move-anchor.ts';
 
 type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'startpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
 type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt};
+function sameTransform(a:Mat,b:Mat,zoom:number):boolean {
+  return Math.abs(a.a-b.a)+Math.abs(a.b-b.b)+Math.abs(a.c-b.c)+Math.abs(a.d-b.d)<1e-10
+    &&(Math.abs(a.e-b.e)+Math.abs(a.f-b.f))*zoom<1e-6;
+}
 export class SelectTool implements Tool {
   readonly id='select';
   objects:Obj[]=[];
   private moveStarted=false;
-  private imageMove:ImageSnap|null=null;
+  private imageSnap:ImageSnap|null=null;
+  private moveAnchor:Pt|null=null;
+  private lastResize:Mat|null=null;
   get selected():Obj|null{return this.objects[0]??null;}
   private app:App;
   private mode:Mode='none';
@@ -55,7 +63,7 @@ export class SelectTool implements Tool {
   }
   changed(change:DocChange):void {
     if(!this.replacing)this.finishNudge();
-    if(change.reset){this.mode='none';this.imageMove=null;this.set([]);return;}
+    if(change.reset){this.mode='none';this.imageSnap=null;this.set([]);return;}
     if(!this.objects.length)return;
     if(!this.replacing)this.pivot=null;
     const added=new Map(change.added.map(o=>[o.id,o])),removed=new Set(change.removed.map(o=>o.id));
@@ -127,13 +135,14 @@ export class SelectTool implements Tool {
   begin(s:PenSample,additiveOverride?:boolean):void {
     this.finishNudge();
     const additive=additiveOverride??this.app.input.held('gesture.addSelection',s);
-    this.moveStarted=false;this.imageMove=null;
+    this.moveStarted=false;this.imageSnap=null;this.moveAnchor=null;this.lastResize=null;
     this.initialManualPivot=this.pivot!==null;
     this.start=this.last={x:s.x,y:s.y};this.group={};this.add=additive;this.originals=[...this.objects];this.box=this.screenBox();this.initialPivot=this.objects.length?this.center():null;
     const distance=(h:Handle)=>Math.hypot(h.point.x-s.x,h.point.y-s.y);
     const handle=this.handles().filter(h=>(!additive||(h.name==='resize'&&this.app.input.held('gesture.resizeFree',s)))&&distance(h)<(h.name==='pivot'?5:9)).sort((a,b)=>distance(a)-distance(b))[0];
     if(handle){
       this.mode=handle.name;this.corner=handle.corner??0;
+      if(handle.name==='resize')this.imageSnap=ImageSnap.forSelection(this.originals);
       if(handle.name!=='pivot'&&this.editingShape())this.app.renderer.busy=true;
       if(handle.name==='pivot'){
         this.pivotOffset={x:s.x-handle.anchor!.x,y:s.y-handle.anchor!.y};this.pivotSnap=null;this.pivotSnapped=false;
@@ -169,7 +178,7 @@ export class SelectTool implements Tool {
     if(this.mode==='move'&&!this.moveStarted){
       if(Math.hypot(s.x-this.start.x,s.y-this.start.y)<5)return;
       this.moveStarted=true;if(this.editingShape())this.app.renderer.busy=true;
-      this.imageMove=ImageSnap.forSelection(this.originals);
+      this.imageSnap=ImageSnap.forSelection(this.originals);
     }
     const view=this.app.view,p=view.toWorld(s.x,s.y),a=view.toWorld(this.start.x,this.start.y);
     if(this.mode==='pivot'){
@@ -177,40 +186,36 @@ export class SelectTool implements Tool {
       this.pivot=view.toWorld(target.x,target.y);this.app.renderer.invalidateLive();return;
     }
     let m=identity(),unchanged=Math.abs(s.x-this.start.x)+Math.abs(s.y-this.start.y)<.01;
+    const snap=!unchanged&&!this.app.input.held('gesture.grid',s);
+    const {snapToGrid,snapToImages,grid}=this.app.settings;
+    const gridStep=snap&&snapToGrid?grid.step:null;
     if(this.mode==='move'){
       m.e=p.x-a.x;m.f=p.y-a.y;
-      if(this.imageMove){
-        const snap=!unchanged&&!this.app.input.held('gesture.grid',s);
-        const {snapToGrid,snapToImages,grid}=this.app.settings;
-        const offset=this.imageMove.move(this.app.doc,{x:m.e,y:m.f},view.scale,snap&&snapToGrid?grid.step:null,snap&&snapToImages);
+      if(this.imageSnap){
+        const offset=this.imageSnap.move(this.app.doc,{x:m.e,y:m.f},view.scale,gridStep,snap&&snapToImages);
         m.e=offset.x;m.f=offset.y;
         this.app.renderer.invalidateLive();
-        if(unchanged||(m.e===0&&m.f===0)){
-          this.app.history.cancelGroup(this.group);
-          this.pivot=this.initialManualPivot?this.initialPivot:null;
-          return;
-        }
-        // Много отсчётов пера могут указывать на один узел. Геометрия уже на месте.
-        const original=this.originals[0];
-        if(this.selected?.ox===original.ox+m.e&&this.selected.oy===original.oy+m.f)return;
+      }else if(gridStep){
+        const anchor=this.moveAnchor??=selectionMoveAnchor(this.originals,a);
+        const point=snapPoint({x:anchor.x+m.e,y:anchor.y+m.f},gridStep);
+        m.e=point.x-anchor.x;m.f=point.y-anchor.y;
       }
+      unchanged ||= m.e===0&&m.f===0;
+      // Много отсчётов пера могут указывать на один узел. Геометрия уже на месте.
+      const original=this.originals[0];
+      if(!unchanged&&this.selected?.ox===original.ox+m.e&&this.selected.oy===original.oy+m.f)return;
     }
     else if(this.mode==='rotate'){
       const c=this.initialPivot!;let angle=Math.atan2(p.y-c.y,p.x-c.x)-Math.atan2(a.y-c.y,a.x-c.x);
       if(this.app.input.held('gesture.rotate',s))angle=Math.round(angle/(Math.PI/12))*Math.PI/12;m=rotation(c,angle);
     }else if(this.mode==='resize'){
-      const b=this.box!,left=this.corner===0||this.corner===3,top=this.corner<2;
-      const centerResize=this.app.input.held('gesture.resizeCenter',s);
-      const cx=centerResize?(b.minX+b.maxX)/2:left?b.maxX:b.minX,cy=centerResize?(b.minY+b.maxY)/2:top?b.maxY:b.minY;
-      const bx=left?b.minX:b.maxX,by=top?b.minY:b.maxY;
-      let sx=1+(s.x-this.start.x)/(bx-cx||1),sy=1+(s.y-this.start.y)/(by-cy||1);
-      // Размер ведёт горизонтальная координата угла: короткая высота не усиливает движение пера.
-      // Знак по Y сохраняет отражение при переходе через противоположную сторону.
-      if(!this.app.input.held('gesture.resizeFree',s))sy=Math.sign(sy||1)*Math.abs(sx);
-      sx=Math.abs(sx)<.0001?(sx<0?-.0001:.0001):sx;sy=Math.abs(sy)<.0001?(sy<0?-.0001:.0001):sy;
-      unchanged ||= sx===1&&sy===1;
-      const v={...view.matrix()};for(const k of ['a','b','c','d','e','f'] as const)v[k]/=view.dpr;
-      m=matMul(matInvert(v),matMul(around({x:cx,y:cy},{a:sx,b:0,c:0,d:sy,e:0,f:0}),v));
+      m=this.resizeMatrix(s,gridStep,snap&&snapToImages);
+      unchanged ||= sameTransform(m,identity(),view.scale);
+      if(this.imageSnap){
+        this.app.renderer.invalidateLive();
+        if(!unchanged&&this.lastResize&&sameTransform(m,this.lastResize,view.scale))return;
+        this.lastResize=unchanged?null:m;
+      }
     }else{
       const o=this.originals[0];if(o.kind!=='stroke'||!o.shape)return;
       const shape={...o.shape},local=matApply(matInvert(shape.frame),p.x-o.ox,p.y-o.oy);
@@ -253,11 +258,34 @@ export class SelectTool implements Tool {
       this.replace([rebuildShape(o,shape)],this.group);return;
     }
     if(unchanged){
-      this.pivot=this.initialManualPivot?this.initialPivot:null;this.replace(this.originals,this.group);return;
+      if(this.mode==='move'||this.mode==='resize')this.app.history.cancelGroup(this.group);
+      else this.replace(this.originals,this.group);
+      this.pivot=this.initialManualPivot?this.initialPivot:null;return;
     }
     const next=this.originals.map(o=>{const n=transformObject(o,m,this.app.settings.selection.keepWidth);inheritImage(o,n);return n;});
     this.pivot=this.initialManualPivot&&this.initialPivot?matApply(m,this.initialPivot.x,this.initialPivot.y):null;
     this.replace(next,this.group);
+  }
+  private resizeMatrix(s:PenSample,gridStep:number|null,alignImages:boolean):Mat {
+    const b=this.box!,left=this.corner===0||this.corner===3,top=this.corner<2;
+    const centerResize=this.app.input.held('gesture.resizeCenter',s);
+    const cx=centerResize?(b.minX+b.maxX)/2:left?b.maxX:b.minX,cy=centerResize?(b.minY+b.maxY)/2:top?b.maxY:b.minY;
+    const bx=left?b.minX:b.maxX,by=top?b.minY:b.maxY;
+    let sx=1+(s.x-this.start.x)/(bx-cx||1),sy=1+(s.y-this.start.y)/(by-cy||1);
+    // Размер ведёт экранная X. При переходе через противоположную сторону сохраняем отражение.
+    const independent=this.app.input.held('gesture.resizeFree',s);
+    if(!independent)sy=Math.sign(sy||1)*Math.abs(sx);
+    sx=Math.abs(sx)<.0001?(sx<0?-.0001:.0001):sx;sy=Math.abs(sy)<.0001?(sy<0?-.0001:.0001):sy;
+    if(sx===1&&sy===1){this.imageSnap?.clear();return identity();}
+    const view=this.app.view,v={...view.matrix()};
+    for(const k of ['a','b','c','d','e','f'] as const)v[k]/=view.dpr;
+    const raw=matMul(matInvert(v),matMul(around({x:cx,y:cy},{a:sx,b:0,c:0,d:sy,e:0,f:0}),v));
+    if(!this.imageSnap)return raw;
+    if(!gridStep&&!alignImages){this.imageSnap.clear();return raw;}
+    const bounds=this.originals.map(o=>transformObject(o,raw,true).bbox).reduce(bboxUnion);
+    const pivot=view.toWorld(cx,cy),corner=view.toWorld(cx+(bx-cx)*sx,cy+(by-cy)*sy);
+    const correction=this.imageSnap.resize(this.app.doc,bounds,pivot,corner,independent,view.scale,gridStep,alignImages);
+    return matMul(correction,raw);
   }
   modifiersChanged():void{if(this.mode!=='none')this.move([{...this.last,pressure:.5,t:performance.now(),ctrl:this.app.input.ctrl,shift:this.app.input.shift,alt:this.app.input.alt,meta:this.app.input.meta}]);}
   private editingShape():boolean {
@@ -286,9 +314,9 @@ export class SelectTool implements Tool {
       });
       this.mode='none';this.set([...new Map([...(this.add?this.originals:[]),...found].map(o=>[o.id,o])).values()]);
     }
-    this.app.history.endGroup(this.group);this.mode='none';this.originals=[];this.imageMove=null;this.pivotSnapped=false;this.pivotSnap=null;this.app.renderer.busy=false;this.app.renderer.invalidateLive();
+    this.app.history.endGroup(this.group);this.mode='none';this.originals=[];this.imageSnap=null;this.pivotSnapped=false;this.pivotSnap=null;this.app.renderer.busy=false;this.app.renderer.invalidateLive();
   }
-  cancel():void{this.app.history.cancelGroup(this.group);this.mode='none';this.originals=[];this.imageMove=null;this.app.renderer.busy=false;this.set([]);}
+  cancel():void{this.app.history.cancelGroup(this.group);this.mode='none';this.originals=[];this.imageSnap=null;this.app.renderer.busy=false;this.set([]);}
   private replace(next:Obj[],group?:object):void {
     if(this.keyMove&&this.keyMove.group!==group)this.finishNudge();
     if(next.every((o,i)=>o===this.objects[i]))return;
@@ -382,13 +410,22 @@ export class SelectTool implements Tool {
     const b=this.mode==='box'?{minX:Math.min(this.start.x,this.last.x),minY:Math.min(this.start.y,this.last.y),maxX:Math.max(this.start.x,this.last.x),maxY:Math.max(this.start.y,this.last.y)}:this.screenBox();
     if(!b)return;ctx.strokeRect(b.minX,b.minY,b.maxX-b.minX,b.maxY-b.minY);ctx.setLineDash([]);
     if(this.mode==='box')return;
-    if(this.imageMove?.guides.length){
-      ctx.save();ctx.strokeStyle='#c9514e';ctx.beginPath();
-      for(const [from,to] of this.imageMove.guides){
-        const a=this.app.view.toScreen(from.x,from.y),b=this.app.view.toScreen(to.x,to.y);
-        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    if(this.imageSnap?.guides.length){
+      const view=this.app.view;
+      ctx.save();ctx.strokeStyle='#c9514e';
+      for(const guide of this.imageSnap.guides){
+        let a:Pt,b:Pt;
+        if('columnX' in guide){
+          const visible=view.worldBounds();
+          a=view.toScreen(guide.columnX,visible.minY);b=view.toScreen(guide.columnX,visible.maxY);
+          ctx.setLineDash([5,4]);
+        }else{
+          a=view.toScreen(guide.from.x,guide.from.y);b=view.toScreen(guide.to.x,guide.to.y);
+          ctx.setLineDash([]);
+        }
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
       }
-      ctx.stroke();ctx.restore();
+      ctx.restore();
     }
     ctx.beginPath();ctx.moveTo((b.minX+b.maxX)/2,b.minY);ctx.lineTo((b.minX+b.maxX)/2,b.minY-25);ctx.stroke();
     for(const h of this.handles()){

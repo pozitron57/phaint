@@ -204,7 +204,10 @@ export function brushPanel(app:App):Panel {
   });
   p.section('Выделение',()=>app.tool.id==='select',()=>{
     p.checkbox('Сохранять толщину линий',()=>app.settings.selection.keepWidth,v=>{app.settings.selection.keepWidth=v;changed();});
-    p.note('Маркер и картинки масштабируются целиком. Shift — свободные пропорции, Alt — от центра.');
+    p.note(()=>{
+      const free=app.actions.hint('gesture.resizeFree'),center=app.actions.hint('gesture.resizeCenter');
+      return ['Маркер и картинки масштабируются целиком.',free&&`${free} — свободные пропорции.`,center&&`${center} — от центра.`].filter(Boolean).join(' ');
+    });
   });
   p.section('Ластик',()=>app.tool.id==='eraser',()=>{
     p.slider('Размер ластика',2,120,1,()=>app.settings.eraser.width,v=>{app.settings.eraser.width=v;changed();},v=>String(Math.round(v)));
@@ -227,7 +230,7 @@ export function backgroundPanel(app: App): Panel {
   p.checkbox('Привязывать картинки друг к другу',()=>app.settings.snapToImages,v=>{app.settings.snapToImages=v;app.settingsChanged();});
   p.note(()=>{
     const key=app.actions.hint('gesture.grid');
-    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку фигур и временно отключает обе привязки при переносе картинок.`:'');
+    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. В M удерживайте ${key} для свободного переноса объектов и изменения размера картинок.`:'');
   });
   return p;
 }
