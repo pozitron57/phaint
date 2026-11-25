@@ -44,9 +44,10 @@ app.selectTool('eraser',false);app.settings.eraser.original=true;await draw(240,
 assert(locked.every(o=>app.doc.get(o.id)===o),'векторные страницы после SVG защищены и от ластика исходного SVG');
 const module=await import('./pdf-render.js'),outputs={original:originalPath};
 const set=(dialog,name,value)=>{if(name==='Формат'){const button=dialog.querySelector(`[data-format="${value}"]`);button.click();return button;}const input=dialog.querySelector(`[aria-label="${name}"]`);input.value=String(value);input.dispatchEvent(new Event(input.type==='range'?'input':'change'));};
+let previousFormat='svg';
 const exportFile=async(format,name,layout='pages')=>{
  const path=await native.testFiles('prepare',{name,text:''});await choices({saves:[name]});const pending=app.files.export(),dialog=document.querySelector('.export-dialog');
- assert(dialog.querySelector('[data-format="svg"]').getAttribute('aria-checked')==='true','после p.svg формат SVG по умолчанию');set(dialog,'Формат',format);
+ assert(dialog.querySelector(`[data-format="${previousFormat}"]`).getAttribute('aria-checked')==='true','ожидаемый формат при открытии диалога: '+previousFormat);set(dialog,'Формат',format);
  if(format==='pdf'){
   assert(!dialog.querySelector('[aria-label="Страницы PDF"]').closest('label').hidden,'есть выбор страниц');set(dialog,'Страницы PDF',layout);
   const grid=dialog.querySelector('[aria-label="Сохранить сетку"]');
@@ -54,8 +55,11 @@ const exportFile=async(format,name,layout='pages')=>{
   assert(grid.checked===(layout==='sheet'),'выбор сетки восстановлен при возврате к длинному листу');
  }
  if(format==='png'||format==='jpg')set(dialog,'Ширина в пикселях',900);
- await test.shot(format+'-'+layout+'-settings');[...dialog.querySelectorAll('button')].at(-1).click();assert(await pending,'экспорт '+name+': '+JSON.stringify(await native.testFiles('errors')));return path;
+ await test.shot(format+'-'+layout+'-settings');[...dialog.querySelectorAll('button')].at(-1).click();assert(await pending,'экспорт '+name+': '+JSON.stringify(await native.testFiles('errors')));previousFormat=format;return path;
 };
+await exportFile('svg','1889.svg');
+const svgBytes=app.files.lastWrite.bytes,proposed=await native.testFiles('lastDialog');
+assert(proposed.defaultPath===originalPath.replace('источник.pdf','1889.svg'),'при первом экспорте 1889.svg предлагается в той же папке');
 outputs.pages=await exportFile('pdf','страницы.pdf');outputs.sheet=await exportFile('pdf','лист.pdf','sheet');
 const multipage=await module.loadPdf({name:'страницы.pdf',data:base64(await readBytes('страницы.pdf'))});
 assert(multipage.numPages===3,'один PDF с тремя страницами');
@@ -85,7 +89,6 @@ for(let i=0;i<3;i++){
 await originals.loadingTask.destroy();await multipage.loadingTask.destroy();
 const sheet=await module.loadPdf({name:'лист.pdf',data:base64(await readBytes('лист.pdf'))});assert(sheet.numPages===1,'длинный PDF — одна страница');await sheet.loadingTask.destroy();
 outputs.png=await exportFile('png','лист.png');const png=new Image();png.src='data:image/png;base64,'+base64(await readBytes('лист.png'));await png.decode();assert(png.naturalWidth===900&&png.naturalHeight>2000,'длинный PNG всего холста');
-await choices({saves:['1889.svg']});let pending=app.files.export(),dialog=document.querySelector('.export-dialog');[...dialog.querySelectorAll('button')].at(-1).click();assert(await pending,'SVG экспорт');const proposed=await native.testFiles('lastDialog');assert(proposed.defaultPath===originalPath.replace('источник.pdf','1889.svg'),'1889.svg предлагается в той же папке');
 assert(base64(await readBytes('источник.pdf'))===sourceBase64,'исходный PDF не изменён');
 // Маркеры обязаны умножать цвет исходного PDF и друг друга, а белое перо — закрывать его.
 const marker=async(x,x2)=>{app.selectTool('marker',false);app.chooseColor('#78a95f');await draw(x,320,x2,320);};
@@ -108,4 +111,4 @@ for(const layout of ['pages','sheet']){
 }
 app.view.restore({scale:.43,rotSteps:0,x:280,y:808});await test.sleep(500);await test.idle();await test.shot('all-pages');
 assert(!(await native.testFiles('errors')).length,'нет ошибок');
-return {ok:true,outputs,png:[png.naturalWidth,png.naturalHeight],svgBytes:app.files.lastWrite.bytes,svgErrors};
+return {ok:true,outputs,png:[png.naturalWidth,png.naturalHeight],svgBytes,svgErrors};

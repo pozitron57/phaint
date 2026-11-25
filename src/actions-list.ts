@@ -43,6 +43,7 @@ export function registerActions(app: App): void {
   add('tool.select', 'Выбор объекта', ['KeyM'], () => app.selectTool('select'));
   add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
   add('edit.pasteImage', 'Вставить картинку', ['KeyV'], () => {void app.pasteImage();});
+  add('edit.pasteImageFree', 'Вставить картинку точно под курсором', ['Alt+KeyV'], () => {void app.pasteImage('free');});
   add('edit.copy','Скопировать выделение',['Cmd+KeyC'],()=>{void app.clipboard.copy();});
   add('edit.copyImageText','Распознать и скопировать текст',['Ctrl+KeyC'],()=>{void app.imageText.copy();});
   add('edit.cut','Вырезать выделение',['Cmd+KeyX'],()=>{void app.clipboard.copy(true);});

@@ -28,6 +28,7 @@ export interface Settings {
   customColor:string;
   grid:GridSettings;
   snapToGrid:boolean;
+  snapToImages:boolean;
   input:{predict:boolean};
   ui:{toolbar:boolean;debug:boolean};
   keys:Record<string,string[]>;
@@ -44,7 +45,7 @@ export function defaultSettings():Settings {
     line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
-    grid:{enabled:true,step:DEFAULT_GRID_STEP,save:true},snapToGrid:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
+    grid:{enabled:true,step:DEFAULT_GRID_STEP,save:true},snapToGrid:true,snapToImages:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
 }
 export function mergeSettings(raw:unknown):Settings {
   const base=defaultSettings(),profile=raw as Partial<Settings>|null;

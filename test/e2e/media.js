@@ -34,7 +34,8 @@ test.key('KeyE',{metaKey:true,shiftKey:true});await test.pen([[imagePoint.x,imag
 assert(at(imagePoint.x,imagePoint.y)[0]===201,'ластик не трогает картинку');
 test.key('KeyM');await test.pen([[imagePoint.x,imagePoint.y,.5]],2);test.key('Backspace');assert(![...app.doc.values()].some(o=>o.kind==='image'),'M и Delete удаляют картинку');
 test.key('KeyZ',{metaKey:true});await test.idle();assert([...app.doc.values()].some(o=>o.kind==='image'),'отмена удаления');
-app.selectTool('select',false);await test.pen([[imagePoint.x,imagePoint.y,.5],[imagePoint.x+40,imagePoint.y+30,.5]],3);await test.idle();
+app.selectTool('select',false);test.key('AltLeft');await test.pen([[imagePoint.x,imagePoint.y,.5],[imagePoint.x+40,imagePoint.y+30,.5]],3);
+window.dispatchEvent(new KeyboardEvent('keyup',{code:'AltLeft',bubbles:true}));await test.idle();
 const moved=[...app.doc.values()].find(o=>o.kind==='image');assert(Math.abs((moved.ox-image.ox)*app.view.scale-40)<.1,'объект перемещается');
 test.key('Escape'); // Полный документ: новое Cmd+S с выделением сохраняет только его.
 await choose({saves:['маски-картинки.svg']});assert(await app.files.save(true),'сохранены маски и PNG');

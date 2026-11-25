@@ -2,6 +2,7 @@
 import { registerActions } from './actions-list.ts';
 import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
+import { ImageSnap } from './core/image-snap.ts';
 import { Doc } from './core/doc.ts';
 import { History } from './core/history.ts';
 import type { Settings, DrawingTool, InkSettings, InkStyle } from './core/settings.ts';
@@ -14,7 +15,7 @@ import type { StrokeObj } from './core/types.ts';
 import { SelectTool } from './tools/select.ts';
 import { SpaceTool } from './tools/space.ts';
 import { makeImage } from './core/types.ts';
-import { prepareObjects } from './view/draw.ts';
+import { inheritImage, prepareObjects } from './view/draw.ts';
 import { EraserTool } from './tools/eraser.ts';
 import type { Tool } from './tools/tool.ts';
 import { brushCursor, fallbackCursor } from './ui/cursor.ts';
@@ -325,20 +326,25 @@ export class App {
   }
   finishSlider():void {if(this.editGroup)this.history.endGroup(this.editGroup);this.editGroup=undefined;}
 
-  async pasteImage(): Promise<void> {
+  async pasteImage(placement:'snap'|'free'='snap'): Promise<void> {
     if(this.pasting||this.input.blocked||this.files.busy)return;
     this.input.finishCurrent();this.pasting=true;
     const generation=this.files.generation, position=this.input.position;
-    const p=this.view.toWorld(position?.x??this.view.width/this.view.dpr/2,position?.y??this.view.height/this.view.dpr/2);
-    const scale=this.files.baseScale;
+    const cursor=this.view.toWorld(position?.x??this.view.width/this.view.dpr/2,position?.y??this.view.height/this.view.dpr/2);
+    const scale=this.files.baseScale, zoom=this.view.scale;
+    const gridStep=this.settings.snapToGrid?this.settings.grid.step:null, alignImages=this.settings.snapToImages;
     try {
       const image=await this.platform.clipboardImage();
       if(!image) {this.hud.toast('В буфере нет картинки');return;}
       if(!Number.isFinite(image.width)||!Number.isFinite(image.height)||image.width<=0||image.height<=0)throw new Error('Неверный размер картинки');
-      const o=makeImage(this.doc.nextId(),this.doc.topZ(),p.x,p.y,image.width/scale,image.height/scale,image.dataURL);
-      await prepareObjects([o]);
+      const decoded=makeImage(0,0,0,0,image.width/scale,image.height/scale,image.dataURL);
+      await prepareObjects([decoded]);
       if(generation!==this.files.generation||this.input.blocked)return;
-      this.input.finishCurrent();this.history.commit({added:[o],removed:[]});
+      this.input.finishCurrent();
+      // Курсор и масштаб фиксируются при нажатии. Соседи и верхний слой берутся после декодирования.
+      const p=placement==='free'?cursor:new ImageSnap(decoded.bbox).move(this.doc,cursor,zoom,gridStep,alignImages);
+      const o=makeImage(this.doc.nextId(),this.doc.topZ(),p.x,p.y,decoded.width,decoded.height,decoded.source);
+      inheritImage(decoded,o);this.history.commit({added:[o],removed:[]});
       this.selectTool('select',false);(this.tool as SelectTool).show(o);
     } catch(error) { await this.platform.files.error(String(error)); }
     finally {this.pasting=false;}

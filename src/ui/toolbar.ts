@@ -91,6 +91,10 @@ export class Toolbar {
       b.el.classList.toggle('active', active);
       b.el.disabled = disabled;
       const hint=app.actions.hint(hintAction);b.el.title=title+(hint?` (${hint})`:'');
+      if(b.action==='edit.pasteImage'){
+        const free=app.actions.hint('edit.pasteImageFree');
+        if(free)b.el.title+=` · ${free} — точно под курсором`;
+      }
       if(b.action==='tool.line'&&active)b.el.title+=app.lineMode==='line'?' · ещё один щелчок — стрелка':' · ещё один щелчок — прямая';
       if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+перетаскивание — Безье`;
     }

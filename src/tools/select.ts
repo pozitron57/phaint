@@ -12,6 +12,7 @@ import type { PenSample, Tool } from './tool.ts';
 import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from './bezier.ts';
 import type { KeyLike } from '../core/actions.ts';
 import { reorderObjects, type ObjectOrder } from '../core/order.ts';
+import { ImageSnap } from '../core/image-snap.ts';
 
 type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'startpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
 type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt};
@@ -19,6 +20,7 @@ export class SelectTool implements Tool {
   readonly id='select';
   objects:Obj[]=[];
   private moveStarted=false;
+  private imageMove:ImageSnap|null=null;
   get selected():Obj|null{return this.objects[0]??null;}
   private app:App;
   private mode:Mode='none';
@@ -53,7 +55,7 @@ export class SelectTool implements Tool {
   }
   changed(change:DocChange):void {
     if(!this.replacing)this.finishNudge();
-    if(change.reset){this.mode='none';this.set([]);return;}
+    if(change.reset){this.mode='none';this.imageMove=null;this.set([]);return;}
     if(!this.objects.length)return;
     if(!this.replacing)this.pivot=null;
     const added=new Map(change.added.map(o=>[o.id,o])),removed=new Set(change.removed.map(o=>o.id));
@@ -125,7 +127,7 @@ export class SelectTool implements Tool {
   begin(s:PenSample,additiveOverride?:boolean):void {
     this.finishNudge();
     const additive=additiveOverride??this.app.input.held('gesture.addSelection',s);
-    this.moveStarted=false;
+    this.moveStarted=false;this.imageMove=null;
     this.initialManualPivot=this.pivot!==null;
     this.start=this.last={x:s.x,y:s.y};this.group={};this.add=additive;this.originals=[...this.objects];this.box=this.screenBox();this.initialPivot=this.objects.length?this.center():null;
     const distance=(h:Handle)=>Math.hypot(h.point.x-s.x,h.point.y-s.y);
@@ -167,6 +169,7 @@ export class SelectTool implements Tool {
     if(this.mode==='move'&&!this.moveStarted){
       if(Math.hypot(s.x-this.start.x,s.y-this.start.y)<5)return;
       this.moveStarted=true;if(this.editingShape())this.app.renderer.busy=true;
+      this.imageMove=ImageSnap.forSelection(this.originals);
     }
     const view=this.app.view,p=view.toWorld(s.x,s.y),a=view.toWorld(this.start.x,this.start.y);
     if(this.mode==='pivot'){
@@ -174,7 +177,24 @@ export class SelectTool implements Tool {
       this.pivot=view.toWorld(target.x,target.y);this.app.renderer.invalidateLive();return;
     }
     let m=identity(),unchanged=Math.abs(s.x-this.start.x)+Math.abs(s.y-this.start.y)<.01;
-    if(this.mode==='move'){m.e=p.x-a.x;m.f=p.y-a.y;}
+    if(this.mode==='move'){
+      m.e=p.x-a.x;m.f=p.y-a.y;
+      if(this.imageMove){
+        const snap=!unchanged&&!this.app.input.held('gesture.grid',s);
+        const {snapToGrid,snapToImages,grid}=this.app.settings;
+        const offset=this.imageMove.move(this.app.doc,{x:m.e,y:m.f},view.scale,snap&&snapToGrid?grid.step:null,snap&&snapToImages);
+        m.e=offset.x;m.f=offset.y;
+        this.app.renderer.invalidateLive();
+        if(unchanged||(m.e===0&&m.f===0)){
+          this.app.history.cancelGroup(this.group);
+          this.pivot=this.initialManualPivot?this.initialPivot:null;
+          return;
+        }
+        // Много отсчётов пера могут указывать на один узел. Геометрия уже на месте.
+        const original=this.originals[0];
+        if(this.selected?.ox===original.ox+m.e&&this.selected.oy===original.oy+m.f)return;
+      }
+    }
     else if(this.mode==='rotate'){
       const c=this.initialPivot!;let angle=Math.atan2(p.y-c.y,p.x-c.x)-Math.atan2(a.y-c.y,a.x-c.x);
       if(this.app.input.held('gesture.rotate',s))angle=Math.round(angle/(Math.PI/12))*Math.PI/12;m=rotation(c,angle);
@@ -266,9 +286,9 @@ export class SelectTool implements Tool {
       });
       this.mode='none';this.set([...new Map([...(this.add?this.originals:[]),...found].map(o=>[o.id,o])).values()]);
     }
-    this.app.history.endGroup(this.group);this.mode='none';this.originals=[];this.pivotSnapped=false;this.pivotSnap=null;this.app.renderer.busy=false;this.app.renderer.invalidateLive();
+    this.app.history.endGroup(this.group);this.mode='none';this.originals=[];this.imageMove=null;this.pivotSnapped=false;this.pivotSnap=null;this.app.renderer.busy=false;this.app.renderer.invalidateLive();
   }
-  cancel():void{this.app.history.cancelGroup(this.group);this.mode='none';this.originals=[];this.app.renderer.busy=false;this.set([]);}
+  cancel():void{this.app.history.cancelGroup(this.group);this.mode='none';this.originals=[];this.imageMove=null;this.app.renderer.busy=false;this.set([]);}
   private replace(next:Obj[],group?:object):void {
     if(this.keyMove&&this.keyMove.group!==group)this.finishNudge();
     if(next.every((o,i)=>o===this.objects[i]))return;
@@ -362,6 +382,14 @@ export class SelectTool implements Tool {
     const b=this.mode==='box'?{minX:Math.min(this.start.x,this.last.x),minY:Math.min(this.start.y,this.last.y),maxX:Math.max(this.start.x,this.last.x),maxY:Math.max(this.start.y,this.last.y)}:this.screenBox();
     if(!b)return;ctx.strokeRect(b.minX,b.minY,b.maxX-b.minX,b.maxY-b.minY);ctx.setLineDash([]);
     if(this.mode==='box')return;
+    if(this.imageMove?.guides.length){
+      ctx.save();ctx.strokeStyle='#c9514e';ctx.beginPath();
+      for(const [from,to] of this.imageMove.guides){
+        const a=this.app.view.toScreen(from.x,from.y),b=this.app.view.toScreen(to.x,to.y);
+        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      }
+      ctx.stroke();ctx.restore();
+    }
     ctx.beginPath();ctx.moveTo((b.minX+b.maxX)/2,b.minY);ctx.lineTo((b.minX+b.maxX)/2,b.minY-25);ctx.stroke();
     for(const h of this.handles()){
       ctx.fillStyle=['amplitude','period','length','bend','endpoint','startpoint','control1','control2','axisX','axisY'].includes(h.name)?'#cf914d':'white';

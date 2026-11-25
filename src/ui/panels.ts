@@ -120,8 +120,10 @@ export class Panel {
     }
     this.container.append(h('div',{class:'row'},h('div',{class:'row-label'},label),group));
   }
-  note(text: string): void {
-    this.container.append(h('p', { class: 'note' }, text));
+  note(text: string | (() => string)): void {
+    const el=h('p',{class:'note'},typeof text==='string'?text:text());
+    if(typeof text==='function')this.syncs.push(()=>{el.textContent=text();});
+    this.container.append(el);
   }
 }
 
@@ -222,6 +224,10 @@ export function backgroundPanel(app: App): Panel {
   p.checkbox('Показывать сетку', () => grid.enabled, (v) => { grid.enabled = v; changed(); });
   p.slider('Шаг клетки', 8, 120, 1, () => grid.step, (v) => { grid.step = v; changed(); }, (v) => String(Math.round(v)));
   p.checkbox('Привязка к сетке по умолчанию',()=>app.settings.snapToGrid,v=>{app.settings.snapToGrid=v;app.settingsChanged();});
-  p.note('Alt временно меняет привязку на обратную. Работает и при скрытой сетке.');
+  p.checkbox('Привязывать картинки друг к другу',()=>app.settings.snapToImages,v=>{app.settings.snapToImages=v;app.settingsChanged();});
+  p.note(()=>{
+    const key=app.actions.hint('gesture.grid');
+    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку фигур и временно отключает обе привязки при переносе картинок.`:'');
+  });
   return p;
 }
