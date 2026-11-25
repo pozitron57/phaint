@@ -13,11 +13,11 @@ import { bendable, nextControlIndex, drawBezierControls, withoutControlAt } from
 import type { KeyLike } from '../core/actions.ts';
 import { reorderObjects, type ObjectOrder } from '../core/order.ts';
 import { ImageSnap } from '../core/image-snap.ts';
-import { snapPoint } from '../core/snap.ts';
+import { snapPoint, snapSegment } from '../core/snap.ts';
 import { selectionMoveAnchor } from '../view/move-anchor.ts';
 
 type Mode = 'none'|'box'|'move'|'resize'|'rotate'|'pivot'|'amplitude'|'period'|'length'|'bend'|'endpoint'|'startpoint'|'control1'|'control2'|'curve'|'axisX'|'axisY';
-type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt};
+type Handle = {name:Mode;point:Pt;corner?:number;anchor?:Pt;tip?:Pt};
 function sameTransform(a:Mat,b:Mat,zoom:number):boolean {
   return Math.abs(a.a-b.a)+Math.abs(a.b-b.b)+Math.abs(a.c-b.c)+Math.abs(a.d-b.d)<1e-10
     &&(Math.abs(a.e-b.e)+Math.abs(a.f-b.f))*zoom<1e-6;
@@ -92,23 +92,27 @@ export class SelectTool implements Tool {
     if(this.objects.length===1&&this.selected?.kind==='stroke'&&this.selected.shape){
       const o=this.selected,s=o.shape!;
       const addPoint=(name:Mode,p:Pt)=>{
-        const handle={name,point:this.app.view.toScreen(o.ox+p.x,o.oy+p.y)};
+        const handle:Handle={name,point:this.app.view.toScreen(o.ox+p.x,o.oy+p.y)};
         out.unshift(handle);return handle;
       };
       const add=(name:Mode,x:number,y:number)=>addPoint(name,matApply(s.frame,x,y));
-      const heads:Handle[]=[];
-      const addHead=(name:Mode,head:Float32Array|undefined,pts:Float32Array,atStart=false)=>{
-        const tip=atStart?0:pts.length-3;
-        const base=head?{x:(head[0]+head[6])/2,y:(head[1]+head[7])/2}:{x:pts[tip],y:pts[tip+1]};
-        heads.push(addPoint(name,base));
+      const ends:Pt[]=[];
+      const addEnd=(name:Mode,head:Float32Array|undefined,pts:Float32Array,atStart=false)=>{
+        const i=atStart?0:pts.length-3,tip={x:pts[i],y:pts[i+1]};
+        const base=head?{x:(head[0]+head[6])/2,y:(head[1]+head[7])/2}:tip;
+        const handle=addPoint(name,base);ends.push(handle.point);
+        if(head&&(name==='startpoint'||name==='endpoint')){
+          handle.tip=this.app.view.toScreen(o.ox+tip.x,o.oy+tip.y);
+          ends.push(handle.tip);
+        }
       };
-      if(s.kind==='arrow'){
-        const [first,second]=arrowHeads(o);
-        if(s.both||!s.headAtStart)addHead('endpoint',first,o.pts);
-        if(s.both||s.headAtStart)addHead('startpoint',s.both?second:first,o.pts,true);
+      if(s.kind==='line'||s.kind==='arrow'){
+        const [first,second]=s.kind==='arrow'?arrowHeads(o):[];
+        const startOnly=s.headAtStart&&!s.both;
+        addEnd('startpoint',startOnly?first:second,o.pts,true);
+        addEnd('endpoint',startOnly?undefined:first,o.pts);
       }
-      if(s.kind==='line'&&s.controls?.length)add('endpoint',s.length,s.height);
-      if(s.kind==='coordinates')coordinateAxes(o).forEach((axis,i)=>addHead(i===0?'axisX':'axisY',arrowHeads(axis)[0],axis.pts));
+      if(s.kind==='coordinates')coordinateAxes(o).forEach((axis,i)=>addEnd(i===0?'axisX':'axisY',arrowHeads(axis)[0],axis.pts));
       s.controls?.forEach((p,i)=>add(i===0?'control1':'control2',p.x,p.y));
       if(s.kind==='sine'){
         add('amplitude',s.period/4,-s.amplitude);add('period',s.period,0);add('length',s.period*s.cycles,0);
@@ -116,9 +120,9 @@ export class SelectTool implements Tool {
         out[0].point.y+=18;
       }
       if(s.kind==='parabola')add('bend',s.length/2,s.height/2+s.bend);
-      // На малом масштабе головка бывает меньше ручки. Выносим накрывший её угол рамки наружу.
+      // Концы тонкой линии и вершины стрелок часто совпадают с углами рамки.
       for(const h of out){
-        if(h.corner===undefined||!heads.some(e=>Math.abs(e.point.x-h.point.x)<9&&Math.abs(e.point.y-h.point.y)<9))continue;
+        if(h.corner===undefined||!ends.some(p=>Math.abs(p.x-h.point.x)<9&&Math.abs(p.y-h.point.y)<9))continue;
         h.anchor=h.point;
         h.point={x:h.point.x+(h.corner===0||h.corner===3?-18:18),y:h.point.y+(h.corner<2?-18:18)};
       }
@@ -138,10 +142,18 @@ export class SelectTool implements Tool {
     this.moveStarted=false;this.imageSnap=null;this.moveAnchor=null;this.lastResize=null;
     this.initialManualPivot=this.pivot!==null;
     this.start=this.last={x:s.x,y:s.y};this.group={};this.add=additive;this.originals=[...this.objects];this.box=this.screenBox();this.initialPivot=this.objects.length?this.center():null;
-    const distance=(h:Handle)=>Math.hypot(h.point.x-s.x,h.point.y-s.y);
-    const handle=this.handles().filter(h=>(!additive||(h.name==='resize'&&this.app.input.held('gesture.resizeFree',s)))&&distance(h)<(h.name==='pivot'?5:9)).sort((a,b)=>distance(a)-distance(b))[0];
+    const distance=(p:Pt)=>Math.hypot(p.x-s.x,p.y-s.y);
+    const centerResize=this.app.input.held('gesture.resizeCenter',s);
+    const additiveResize=additive&&this.app.input.held('gesture.resizeFree',s);
+    let handle:Handle|undefined,nearest=Infinity;
+    for(const h of this.handles()){
+      if(additive&&!(additiveResize&&h.name==='resize'))continue;
+      const alternate=h.tip??(centerResize&&h.name==='resize'?h.anchor:undefined);
+      const d=alternate?Math.min(distance(h.point),distance(alternate)):distance(h.point);
+      if(d<nearest&&d<(h.name==='pivot'?5:9)){handle=h;nearest=d;}
+    }
     if(handle){
-      this.mode=handle.name;this.corner=handle.corner??0;
+      this.mode=handle.name;this.corner=handle.corner??0;this.moveStarted=true;
       if(handle.name==='resize')this.imageSnap=ImageSnap.forSelection(this.originals);
       if(handle.name!=='pivot'&&this.editingShape())this.app.renderer.busy=true;
       if(handle.name==='pivot'){
@@ -162,7 +174,17 @@ export class SelectTool implements Tool {
     const found=this.picker.nearest(candidates,p,this.app.view.scale);
     if(found){
       if(additive){this.set(this.objects.some(o=>o.id===found.id)?this.objects.filter(o=>o.id!==found.id):[...this.objects,found]);this.mode='none';}
-      else{this.set([found]);this.mode='move';this.originals=[found];this.box=this.screenBox();this.initialPivot=this.center();}
+      else{
+        this.set([found]);this.mode='move';this.originals=[found];this.box=this.screenBox();
+        this.initialManualPivot=false;this.initialPivot=this.center();
+        // В самом M за видимый конец можно взяться сразу. На стержне первый жест переносит всю фигуру.
+        if(additiveOverride===undefined&&bendable(found)&&!this.app.input.held('gesture.bezier',s)){
+          const start=this.app.view.toScreen(found.ox+found.pts[0],found.oy+found.pts[1]);
+          const i=found.pts.length-3,end=this.app.view.toScreen(found.ox+found.pts[i],found.oy+found.pts[i+1]);
+          const ds=distance(start),de=distance(end);
+          if(Math.min(ds,de)<9)this.mode=ds<de?'startpoint':'endpoint';
+        }
+      }
     }else{this.mode='box';if(!additive)this.set([]);this.app.renderer.setLive(this.draw);}
   }
   secondary(s:PenSample):void {
@@ -175,10 +197,10 @@ export class SelectTool implements Tool {
     if(this.mode==='none'||!this.originals.length)return;
     // Выбор происходит при касании, перенос — только после осмысленного движения.
     // Порог экранный, поэтому одинаков при любом масштабе и на Retina.
-    if(this.mode==='move'&&!this.moveStarted){
+    if(!this.moveStarted&&(this.mode==='move'||this.mode==='startpoint'||this.mode==='endpoint')){
       if(Math.hypot(s.x-this.start.x,s.y-this.start.y)<5)return;
       this.moveStarted=true;if(this.editingShape())this.app.renderer.busy=true;
-      this.imageSnap=ImageSnap.forSelection(this.originals);
+      if(this.mode==='move')this.imageSnap=ImageSnap.forSelection(this.originals);
     }
     const view=this.app.view,p=view.toWorld(s.x,s.y),a=view.toWorld(this.start.x,this.start.y);
     if(this.mode==='pivot'){
@@ -240,13 +262,19 @@ export class SelectTool implements Tool {
         controls[index]=matApply(matInvert(shape.frame),old.x+p.x-a.x,old.y+p.y-a.y);shape.controls=controls;
       }
       if(this.mode==='endpoint'||this.mode==='startpoint'){
-        if(unchanged){this.replace(this.originals,this.group);return;}
         const fromStart=this.mode==='startpoint';
-        const start={x:shape.frame.e,y:shape.frame.f},end=matApply(shape.frame,shape.length,shape.height);
+        const frame={...shape.frame,e:o.ox+shape.frame.e,f:o.oy+shape.frame.f};
+        const start={x:frame.e,y:frame.f},end=matApply(frame,shape.length,shape.height);
         const fixed=fromStart?end:start, moving=fromStart?start:end;
-        let dx=moving.x-fixed.x+p.x-a.x,dy=moving.y-fixed.y+p.y-a.y;
-        if(this.app.input.held('gesture.angle',s)){const angle=Math.round(Math.atan2(dy,dx)/(Math.PI/12))*Math.PI/12,len=Math.hypot(dx,dy);dx=Math.cos(angle)*len;dy=Math.sin(angle)*len;}
-        const x=fixed.x+dx,y=fixed.y+dy,tip=matApply(matInvert(shape.frame),x,y);
+        // Привязываем вершину в координатах холста, сохраняя смещение пера от неё при захвате за основание.
+        const raw={x:moving.x+(p.x-a.x),y:moving.y+(p.y-a.y)};
+        const target=snapSegment(fixed,raw,grid.step,gridStep!==null,this.app.input.held('gesture.angle',s)).end;
+        if(unchanged||Math.hypot(target.x-moving.x,target.y-moving.y)*view.scale<1e-7){
+          this.app.history.cancelGroup(this.group);
+          this.pivot=this.initialManualPivot?this.initialPivot:null;
+          return;
+        }
+        const x=target.x-o.ox,y=target.y-o.oy,tip=matApply(matInvert(shape.frame),x,y);
         if(fromStart){
           // Перенос начала локальной системы сохраняет дальний конец и обе ручки Безье на холсте.
           shape.frame={...shape.frame,e:x,f:y};shape.length-=tip.x;shape.height-=tip.y;

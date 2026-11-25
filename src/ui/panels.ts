@@ -230,7 +230,7 @@ export function backgroundPanel(app: App): Panel {
   p.checkbox('Привязывать картинки друг к другу',()=>app.settings.snapToImages,v=>{app.settings.snapToImages=v;app.settingsChanged();});
   p.note(()=>{
     const key=app.actions.hint('gesture.grid');
-    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. В M удерживайте ${key} для свободного переноса объектов и изменения размера картинок.`:'');
+    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. В M ${key} отключает привязку при переносе объектов, изменении размера картинок и движении концов прямых и стрелок.`:'');
   });
   return p;
 }
