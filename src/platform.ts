@@ -1,6 +1,7 @@
 // Платформа: всё, что зависит от оболочки. В Electron функции даёт preload (window.phaintNative),
 // в обычном браузере — заменители на веб-API. Благодаря этому рендерер можно открыть и проверить
 // в любом браузере без Electron.
+import { isLanguage, type Language } from './core/language.ts';
 import type { FileApi } from './files/api.ts';
 import { browserFiles } from './files/browser.ts';
 import { abortable, checkCancelled } from './core/cancel.ts';
@@ -26,7 +27,8 @@ export interface Platform {
   /** true — работаем внутри Electron. */
   readonly native: boolean;
   loadSettings(): Promise<unknown>;
-  saveSettings(data: unknown): Promise<void>;
+  onLanguage(cb:(value:Language)=>void):void;
+  saveSettings(data: unknown, language?:Language): Promise<void>;
   toggleFullscreen(): void;
   /** Подписка на вход и выход из полноэкранного режима; текущее состояние сообщается сразу. */
   onFullscreen(cb: (on: boolean) => void): void;
@@ -49,7 +51,8 @@ interface NativeApi {
   files: FileApi;
   tabletStats(): Promise<Record<string, number> | null>;
   loadSettings(): Promise<unknown>;
-  saveSettings(data: unknown): Promise<void>;
+  onLanguage(cb:(value:Language)=>void):void;
+  saveSettings(data: unknown, language?:Language): Promise<void>;
   toggleFullscreen(): Promise<void>;
   isFullscreen(): Promise<boolean>;
   onFullscreen(cb: (on: boolean) => void): void;
@@ -57,6 +60,11 @@ interface NativeApi {
 }
 
 const STORAGE_KEY = 'phaint.settings';
+
+function browserSettings():{language?:unknown}|null {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'); }
+  catch { return null; }
+}
 
 export function getPlatform(): Platform {
   let textJob=0;
@@ -81,7 +89,8 @@ export function getPlatform(): Platform {
       files: native.files,
       tabletStats: () => native.tabletStats(),
       loadSettings: () => native.loadSettings(),
-      saveSettings: (data) => native.saveSettings(data),
+      onLanguage: cb => native.onLanguage(cb),
+      saveSettings: (data,language) => native.saveSettings(data,language),
       toggleFullscreen: () => void native.toggleFullscreen(),
       onFullscreen: (cb) => {
         native.onFullscreen(cb);
@@ -110,16 +119,21 @@ export function getPlatform(): Platform {
     },
     files: browserFiles(),
     tabletStats: async () => null,
-    loadSettings: async () => {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-      } catch {
-        return null;
+    loadSettings: async () => browserSettings(),
+    onLanguage: cb => window.addEventListener('storage', e => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        const value = browserSettings()?.language;
+        if (isLanguage(value)) cb(value);
       }
-    },
-    saveSettings: async (data) => {
+    }),
+    saveSettings: async (data, language) => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        let selected=language;
+        if (!selected) {
+          const stored=browserSettings();
+          if(isLanguage(stored?.language))selected=stored.language;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({...data as object, language:selected ?? null}));
       } catch {
         // Хранилище недоступно — настройки просто не сохранятся.
       }

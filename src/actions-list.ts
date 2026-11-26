@@ -1,5 +1,7 @@
 // Список действий приложения и хоткеи по умолчанию. Новое действие добавляется сюда —
 // и сразу доступно клавишей, кнопкой и в редакторе сочетаний.
+import { translate } from './core/menu-text.ts';
+import { t } from './core/language.ts';
 import type { App } from './app.ts';
 import { generateStrokes } from './debug.ts';
 import { GESTURES, shortcutInfo } from './core/shortcut-info.ts';
@@ -8,7 +10,8 @@ import { QUICK_COLORS } from './core/settings.ts';
 
 export function registerActions(app: App): void {
   const add = (id: string, title: string, keys: string[], run: (key?:KeyLike) => void, repeat = false): void => {
-    app.actions.register({ id, title, keys, repeat,...shortcutInfo(id),run:key=>{
+    const {group,description}=shortcutInfo(id);
+    app.actions.register({ id, title:translate(title), keys, repeat,group,description:translate(description??''),run:key=>{
       if(!id.startsWith('arrowHead.'))app.recentArrow=undefined;
       run(key);
     } });
@@ -95,14 +98,14 @@ export function registerActions(app: App): void {
   add('view.up', 'Вверх: выделение или вид холста', ['ArrowUp'], key => app.scroll(0, 1,key), true);
   add('view.down', 'Вниз: выделение или вид холста', ['ArrowDown'], key => app.scroll(0, -1,key), true);
   for(const [direction,title,dx,dy] of [['Left','влево',-1,0],['Right','вправо',1,0],['Up','вверх',0,-1],['Down','вниз',0,1]] as const)
-    add(`selection.move${direction}`,`Сдвинуть выделение ${title} на 2 клетки`,[],key=>app.moveSelection(dx,dy,key,true),true);
+    add(`selection.move${direction}`,t(`Сдвинуть выделение ${title} на 2 клетки`,`Move selection ${translate(title)} by two grid cells`),[],key=>app.moveSelection(dx,dy,key,true),true);
   add('view.fullscreen', 'Полный экран', ['F11'], () => app.platform.toggleFullscreen());
 
   add('ui.toolbar', 'Показать или скрыть панель', ['KeyN','Shift+KeyB'], () => app.toggleToolbar());
   add('ui.brush', 'Настройки инструмента или выделения', ['KeyB'], () => app.togglePanel('brush'));
   add('ui.background', 'Фон и сетка', ['Shift+KeyG'], () => app.togglePanel('background'));
-  add('ui.shortcuts','Настройки клавиш…',['Cmd+Comma'],()=>app.shortcuts.show());
-  for(const [key,degrees] of [['BracketLeft',-90],['BracketRight',90],['Comma',-15],['Period',15],['Shift+Comma',-1],['Shift+Period',1]] as const) add(`selection.rotate.${key}`,`Повернуть на ${Math.abs(degrees)}° ${degrees>0?'по часовой':'против часовой'}`,[key],()=>app.selection?.rotate(degrees),true);
+  add('ui.shortcuts','Настройки…',['Cmd+Comma'],()=>app.shortcuts.show());
+  for(const [key,degrees] of [['BracketLeft',-90],['BracketRight',90],['Comma',-15],['Period',15],['Shift+Comma',-1],['Shift+Period',1]] as const) add(`selection.rotate.${key}`,t(`Повернуть на ${Math.abs(degrees)}° ${degrees>0?'по часовой':'против часовой'}`,`Rotate ${Math.abs(degrees)}° ${degrees>0?'clockwise':'counterclockwise'}`),[key],()=>app.selection?.rotate(degrees),true);
   add('ui.escape', 'Закрыть панели и отменить текущее действие', ['Escape'], () => { if(app.files?.processingFile){app.files.cancelProcessing();return;} if(app.imageText.cancel())return; app.input.cancelCurrent(); app.closePanels(); });
   add('ui.debug', 'Отладочная панель', ['F12'], () => app.toggleDebug());
 
@@ -118,5 +121,5 @@ export function registerActions(app: App): void {
     ['minimize','Свернуть окно',['Cmd+KeyM']],['zoom','Развернуть окно',[]],
     ['showAll','Показать все приложения',[]],['about','О программе Phaint',[]],
   ] as const)add(`app.${id}`,title,[...keys],()=>app.platform.appAction(id));
-  for(const def of GESTURES)app.actions.register(def);
+  for(const def of GESTURES)app.actions.register({...def,title:translate(def.title),description:translate(def.description??'')});
 }

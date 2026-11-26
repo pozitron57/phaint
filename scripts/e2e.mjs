@@ -8,6 +8,7 @@ import electron from 'electron';
 import {verifyVectorPdf} from '../test/verify-vector-pdf.mjs';
 
 const data = mkdtempSync(join(tmpdir(), 'phaint-lifecycle-'));
+const languageData=mkdtempSync(join(tmpdir(),'phaint-language-'));
 const recentData=mkdtempSync(join(tmpdir(),'phaint-recent-'));
 const windowsData=mkdtempSync(join(tmpdir(),'phaint-windows-'));
 const run = (name, extra = [], close = false) => {
@@ -20,6 +21,8 @@ const run = (name, extra = [], close = false) => {
   const row=result.stdout?.split('\n').find(line=>line.startsWith('RESULT '));return row?JSON.parse(row.slice(7)).result:undefined;
 };
 try {
+  run('language',[`--test-data=${languageData}`,'--choose-language=en']);
+  run('language',[`--test-data=${languageData}`]);
   run('pen'); run('pen-taps'); run('pen-pressure'); run('files'); run('file-cancel'); run('input'); run('stroke-lifecycle'); run('tools'); run('line'); run('ink-styles'); run('media'); run('features'); run('sine'); run('editing'); run('refinements'); run('polish'); run('geometry-tools'); run('bezier'); run('coordinates'); run('adiabat'); run('grid-crop');
   run('clipboard-export'); run('image-snap'); run('image-text'); run('windows'); run('windows-files'); run('export-quality'); run('shortcuts'); run('shortcut-gestures'); run('shortcut-layout',['--size=520x650']);
   run('modifier-scheme');for(const path of run('pdf-grid').paths)await verifyVectorPdf(path);await verifyVectorPdf(run('pdf-eraser').path);await verifyVectorPdf(run('contour-curves',['--size=520x650']).path);run('raster-options');run('svg-minify');
@@ -36,4 +39,4 @@ try {
   if(readdirSync(windowsData).some(name=>/^recovery.*\.json$/.test(name)))throw new Error('Остались резервные копии закрытых окон');
   for(const name of ['первое-восстановлено.svg','второе-восстановлено.svg'])if(!readFileSync(join(windowsData,'files',name),'utf8').includes('<path '))throw new Error('Не сохранён рисунок окна: '+name);
   console.log('Проверены SVG, отмена диалогов, внешние правки, восстановление, закрытие и пустой запуск.');
-} finally { rmSync(data, { recursive:true, force:true });rmSync(recentData,{recursive:true,force:true});rmSync(windowsData,{recursive:true,force:true}); }
+} finally { rmSync(languageData,{recursive:true,force:true});rmSync(data, { recursive:true, force:true });rmSync(recentData,{recursive:true,force:true});rmSync(windowsData,{recursive:true,force:true}); }

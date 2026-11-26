@@ -1,5 +1,6 @@
 // Фигуры: параметры остаются редактируемыми после фиксации и открытия SVG.
 // Парабола задаётся двумя жестами: концы, затем точка изгиба; Esc отменяет оба этапа.
+import { translate } from '../core/menu-text.ts';
 import type { App } from '../app.ts';
 import { arrowHeadStyle, inkDash, rebuildShape, shapeData, shapePoints, withShapeBounds, type ShapeKind, type ShapeData } from '../core/shapes.ts';
 import { makeStroke, type StrokeObj } from '../core/types.ts';
@@ -114,7 +115,7 @@ export class ShapeTool implements Tool {
   end():void {
     if(this.curveOriginal){this.app.history.endGroup(this.curveGroup);this.curveOriginal=null;this.app.renderer.busy=false;this.app.renderer.invalidateLive();return;}
     if(!this.start)return;
-    if(this.id==='parabola'&&this.stage===0){this.parabolaEnd={x:this.shape.length,y:this.shape.height};this.stage=1;this.app.renderer.busy=false;this.app.hud.toast(`Парабола · потяните изгиб${this.app.actions.hint('gesture.parabola')?' · '+this.app.actions.hint('gesture.parabola')+' — концы на одном уровне':''}`);return;}
+    if(this.id==='parabola'&&this.stage===0){this.parabolaEnd={x:this.shape.length,y:this.shape.height};this.stage=1;this.app.renderer.busy=false;this.app.hud.toast(`${translate('Парабола · потяните изгиб')}${this.app.actions.hint('gesture.parabola')?' · '+this.app.actions.hint('gesture.parabola')+translate(' — концы на одном уровне'):''}`);return;}
     this.finishPending();
   }
   finishPending():void {

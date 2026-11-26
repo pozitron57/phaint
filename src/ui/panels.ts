@@ -1,5 +1,7 @@
 // Выдвижные панели настроек рядом с панелью инструментов: «Кисть» и «Фон и сетка».
 // Панель не закрывается при рисовании: можно крутить ползунок и сразу пробовать штрих.
+import { translate } from '../core/menu-text.ts';
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { makeStroke } from '../core/types.ts';
 import { rebuildShape, withShapeBounds, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA } from '../core/shapes.ts';
@@ -10,11 +12,27 @@ export class Panel {
   private container!:HTMLElement;
   private syncs: Array<() => void> = [];
 
+  private labels:Array<()=>void>=[];
+  private label(message:string):Text {
+    const node=document.createTextNode(translate(message));
+    this.labels.push(()=>{node.data=translate(message);});
+    return node;
+  }
+  private attribute(node:HTMLElement,name:string,message:string):void {
+    const update=()=>node.setAttribute(name,translate(message));update();this.labels.push(update);
+  }
+  refreshLanguage():void {
+    for(const update of this.labels)update();
+    this.sync();
+  }
+
   constructor(title: string, onClose: () => void) {
+    const close=h('button', { class:'tb-btn small', onclick:onClose }, icon('close'));
+    this.attribute(close,'title','Закрыть (Esc)');
     this.el = h(
       'section',
       { class: 'panel', hidden: true },
-      h('div', { class: 'panel-head' }, h('span', null, title), h('button', { class: 'tb-btn small', title: 'Закрыть (Esc)', onclick: onClose }, icon('close'))),
+      h('div', { class: 'panel-head' }, h('span',null,this.label(title)), close),
     );
     this.container=this.el;
   }
@@ -36,7 +54,7 @@ export class Panel {
   slider(label: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, text: (v: number) => string,disabled=()=>false): void {
     const value = h('span');
     const input = h('input', { type: 'range', min: String(min), max: String(max), step: String(step) });
-    const row=h('label', { class: 'row' }, h('div', { class: 'row-label' }, h('span', null, label), value), input);
+    const row=h('label', { class: 'row' }, h('div', { class: 'row-label' }, h('span', null, this.label(label)), value), input);
     const sync = (): void => {
       input.value = String(get());
       value.textContent = text(get());
@@ -74,11 +92,12 @@ export class Panel {
     this.syncs.push(() => {
       input.checked = get(); input.disabled=disabled();
     });
-    this.container.append(h('label', { class: 'check' }, input, h('span', null, label)));
+    this.container.append(h('label', { class: 'check' }, input, h('span', null, this.label(label))));
   }
 
   number(label:string,min:number,max:number,get:()=>number,set:(value:number)=>void):void {
     const input=h('input',{type:'text',inputmode:'decimal','aria-label':label,class:'number-input'});
+    this.attribute(input,'aria-label',label);
     let editing=false;
     const start=()=>{if(editing)return;editing=true;input.dispatchEvent(new Event('editstart',{bubbles:true}));};
     const sync=()=>{if(document.activeElement!==input)input.value=String(Number(get().toPrecision(9)));};
@@ -90,11 +109,11 @@ export class Panel {
     });
     input.addEventListener('blur',()=>{editing=false;input.value=String(Number(get().toPrecision(9)));input.removeAttribute('aria-invalid');input.dispatchEvent(new Event('change',{bubbles:true}));});
     input.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();input.blur();}});
-    this.syncs.push(sync);this.container.append(h('label',{class:'row'},h('div',{class:'row-label'},label),input));
+    this.syncs.push(sync);this.container.append(h('label',{class:'row'},h('div',{class:'row-label'},this.label(label)),input));
   }
 
   button(label: string, run: () => void): void {
-    const el = h('button', { class: 'btn' }, label);
+    const el = h('button', { class: 'btn' }, this.label(label));
     el.addEventListener('click', () => {
       run();
       el.blur();
@@ -103,7 +122,7 @@ export class Panel {
   }
 
   section(title:string,visible:()=>boolean,build:()=>void,enabled=()=>true):void {
-    const parent=this.container,group=h('fieldset',null,h('legend',null,title));parent.append(group);this.container=group;
+    const parent=this.container,group=h('fieldset',null,h('legend',null,this.label(title)));parent.append(group);this.container=group;
     build();this.container=parent;this.syncs.push(()=>{group.hidden=!visible();group.disabled=!enabled();});
   }
   row(build:()=>void):void {
@@ -112,16 +131,17 @@ export class Panel {
   }
   choice(label:string,options:Record<string,string>,get:()=>string,set:(v:string)=>void):void {
     const group=h('div',{class:'choice-buttons',role:'group','aria-label':label});
+    this.attribute(group,'aria-label',label);
     for(const [value,name] of Object.entries(options)){
-      const button=h('button',{class:'btn','data-value':value,type:'button'},name);
+      const button=h('button',{class:'btn','data-value':value,type:'button'},this.label(name));
       button.addEventListener('click',()=>{set(value);this.sync();button.blur();});
       this.syncs.push(()=>{const active=get()===value;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
       group.append(button);
     }
-    this.container.append(h('div',{class:'row'},h('div',{class:'row-label'},label),group));
+    this.container.append(h('div',{class:'row'},h('div',{class:'row-label'},this.label(label)),group));
   }
   note(text: string | (() => string)): void {
-    const el=h('p',{class:'note'},typeof text==='string'?text:text());
+    const el=h('p',{class:'note'},typeof text==='string'?this.label(text):text());
     if(typeof text==='function')this.syncs.push(()=>{el.textContent=text();});
     this.container.append(el);
   }
@@ -195,7 +215,11 @@ export function brushPanel(app:App):Panel {
     p.slider('Непрозрачность',.05,.8,.01,()=>selected('marker')?.opacity??app.settings.marker.opacity,v=>{
       app.settings.marker.opacity=v;app.selection?.editShapes(o=>o.marker?{...o,opacity:v}:o,app.editGroup);changed();
     },percent);
-    p.note('Ctrl — прямая. Один проход не темнеет на пересечениях.');
+    p.note(()=>{
+      const key=app.actions.hint('gesture.marker');
+      const straight=key?t(`${key} — прямая. `,`Hold ${key} for a straight stroke. `):'';
+      return straight+translate('Один проход не темнеет на пересечениях.');
+    });
   });
   p.section('Синусоида',()=>active('sine'),()=>{
     p.slider('Амплитуда',0,240,1,()=>selected('sine')?.shape?.amplitude??app.settings.sine.amplitude,v=>app.changeSine('amplitude',v),v=>String(Math.round(v)));
@@ -206,7 +230,7 @@ export function brushPanel(app:App):Panel {
     p.checkbox('Сохранять толщину линий',()=>app.settings.selection.keepWidth,v=>{app.settings.selection.keepWidth=v;changed();});
     p.note(()=>{
       const free=app.actions.hint('gesture.resizeFree'),center=app.actions.hint('gesture.resizeCenter');
-      return ['Маркер и картинки масштабируются целиком.',free&&`${free} — свободные пропорции.`,center&&`${center} — от центра.`].filter(Boolean).join(' ');
+      return [translate('Маркер и картинки масштабируются целиком.'),free&&t(`${free} — свободные пропорции.`,`${free} resizes freely.`),center&&t(`${center} — от центра.`,`${center} resizes from the center.`)].filter(Boolean).join(' ');
     });
   });
   p.section('Ластик',()=>app.tool.id==='eraser',()=>{
@@ -230,7 +254,7 @@ export function backgroundPanel(app: App): Panel {
   p.checkbox('Привязывать картинки друг к другу',()=>app.settings.snapToImages,v=>{app.settings.snapToImages=v;app.settingsChanged();});
   p.note(()=>{
     const key=app.actions.hint('gesture.grid');
-    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. При работе с выделением ${key} отключает привязку при переносе объектов, изменении размера картинок и движении концов прямых и стрелок.`:'');
+    return translate('Привязка работает и при скрытой сетке.')+(key?t(` ${key} обращает привязку при рисовании фигур. При работе с выделением ${key} отключает привязку при переносе объектов, изменении размера картинок и движении концов прямых и стрелок.`,` ${key} reverses snapping while drawing shapes. Hold ${key} to disable snapping when moving objects, resizing images or dragging line and arrow endpoints.`):'');
   });
   return p;
 }

@@ -2,6 +2,7 @@
 // Сочетание — строка вида 'Cmd+Shift+KeyE': модификаторы в порядке Ctrl, Alt, Shift, Cmd
 // и физическая клавиша (KeyboardEvent.code), поэтому хоткеи не зависят от раскладки.
 
+import { t } from './language.ts';
 export interface ActionDef {
   id: string;
   title: string;
@@ -63,7 +64,7 @@ const KEY_NAMES: Record<string, string> = {
   NumpadSubtract: '−',
   Tab: 'Tab',
   Escape: 'Esc',
-  Space: 'Пробел',
+  get Space() { return t('Пробел','Space'); },
   Backspace: '⌫',
   Delete: 'Del',
   Enter: '↩',

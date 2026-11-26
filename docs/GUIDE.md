@@ -4,7 +4,9 @@
 
 ## Install on a Mac
 
-Download the universal DMG, open it and drag **Phaint** onto **Applications**. Eject the disk image and launch Phaint from Applications. The same download runs natively on Apple silicon and Intel Macs with macOS 13 Ventura or later. A mouse or trackpad works too. Pen pressure was tested with a Wacom CTL-672. The app interface is in Russian. [GitHub Releases](https://github.com/pozitron57/phaint/releases/latest)
+Download the universal DMG, open it and drag **Phaint** onto **Applications**. Eject the disk image and launch Phaint from Applications. The same download runs natively on Apple silicon and Intel Macs with macOS 13 Ventura or later. A mouse or trackpad works too. Pen pressure was tested with a Wacom CTL-672. [GitHub Releases](https://github.com/pozitron57/phaint/releases/latest)
+
+On first launch, choose **English** or **Русский**. To change the language for all windows, open **Phaint → Settings…** (**⌘,**), choose a language and click **Save**.
 
 The release uses an ad-hoc signature and has no Apple notarization. If macOS blocks the first launch and you trust this download, try opening Phaint once, then go to **System Settings → Privacy & Security → Open Anyway** and confirm. Managed Macs may restrict this option. [Apple’s first-launch instructions](https://support.apple.com/en-us/102445)
 
@@ -29,7 +31,7 @@ The release uses an ad-hoc signature and has no Apple notarization. If macOS blo
 
 **G** shows or hides the grid. **Shift+G** opens grid spacing, grid snapping and image snapping. A hidden grid can still snap. Option temporarily reverses grid snapping while drawing a shape. Press **V** to paste a clipboard image at the pointer, or **Option+V** for exact placement. Use **⌘C / ⌘V** to copy and paste selected objects.
 
-**⌘⇧V** makes room between parts of a lesson. Touch the canvas and drag vertically to move objects entirely below that point. **N** or **Shift+B** hides or shows the toolbar. **⌘,** opens the searchable shortcut editor. Select an assignment, press your preferred keys and click **Сохранить** (Save). Shortcuts follow physical key positions in any keyboard layout.
+**⌘⇧V** makes room between parts of a lesson. Touch the canvas and drag vertically to move objects entirely below that point. **N** or **Shift+B** hides or shows the toolbar. **⌘,** opens the searchable shortcut editor. Select an assignment, press your preferred keys and click **Save**. Shortcuts follow physical key positions in any keyboard layout.
 
 ## Save and share
 

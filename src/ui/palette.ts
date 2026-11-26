@@ -1,4 +1,5 @@
 // Быстрый выбор трёх цветов и полная палитра с запоминаемым произвольным цветом.
+import { translate } from '../core/menu-text.ts';
 import type { App } from '../app.ts';
 import { CYCLE } from '../core/settings.ts';
 import { h, icon } from './dom.ts';
@@ -17,6 +18,7 @@ export class Palette {
     app.settings.palette.forEach((color,i)=>{const b=h('button',{class:'color-btn',title:NAMES[i],'aria-label':NAMES[i],onclick:()=>{app.chooseColor(color);this.hide();b.blur();}});b.style.setProperty('--color',color);row.append(b);this.buttons.push(b);});
     const custom=h('input',{type:'color',title:'Другой цвет',class:'custom-color'});custom.addEventListener('input',()=>{app.settings.customColor=custom.value;app.chooseColor(custom.value);this.sync();});
     row.append(h('label',{class:'custom-picker',title:'Другой цвет'},icon('plus'),custom));this.el.append(row);
+    this.sync();
     window.addEventListener('pointerdown',e=>{if(this.open&&e.target instanceof Node&&!this.el.contains(e.target)&&!(e.target instanceof Element&&e.target.closest('[data-action="color.menu"]')))this.hide();});
     window.addEventListener('blur',()=>this.hide());
   }
@@ -33,15 +35,17 @@ export class Palette {
   sync():void {
     const at=this.app.settings.palette.indexOf(this.app.currentColor);
     (this.el.querySelector('.palette-label') as HTMLElement).hidden=!this.full;
-    this.buttons.forEach((b,i)=>{b.hidden=!this.full&&i>=3;b.classList.toggle('selected',i===at);b.setAttribute('aria-pressed',String(i===at));});
+    this.el.setAttribute('aria-label',translate('Цвет'));
+    this.buttons.forEach((b,i)=>{b.title=translate(NAMES[i]);b.setAttribute('aria-label',b.title);b.hidden=!this.full&&i>=3;b.classList.toggle('selected',i===at);b.setAttribute('aria-pressed',String(i===at));});
     (this.el.querySelector('.custom-picker') as HTMLElement).hidden=!this.full;
     const custom=this.el.querySelector('input') as HTMLInputElement;
     custom.value=this.app.settings.customColor;
     const picker=this.el.querySelector('.custom-picker') as HTMLElement;
+    custom.title=picker.title=translate('Другой цвет');
     picker.style.backgroundColor=custom.value;
     const rgb=custom.value.slice(1).match(/../g)!.map(n=>parseInt(n,16));
     picker.style.color=rgb[0]*.299+rgb[1]*.587+rgb[2]*.114<140?'white':'#353942';
-    this.label.textContent=at<0?'Другой цвет':NAMES[at];
+    this.label.textContent=translate(at<0?'Другой цвет':NAMES[at]);
   }
   hide():void{window.clearTimeout(this.timer);this.el.hidden=true;}
 }

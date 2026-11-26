@@ -1,4 +1,6 @@
 // Приложение: создаёт и связывает документ, вид, отрисовщик, ввод, действия и интерфейс.
+import { translate } from './core/menu-text.ts';
+import { language, setLanguage, t, type Language } from './core/language.ts';
 import { registerActions } from './actions-list.ts';
 import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
@@ -103,7 +105,7 @@ export class App {
     this.toolbar = new Toolbar(this);
     this.history.onTrim = oversized => {
       this.toolbar.update();
-      if(oversized)this.hud.toast('Действие слишком большое для истории отмены');
+      if(oversized)this.hud.toast(translate('Действие слишком большое для истории отмены'));
     };
     this.uiRoot.append(this.toolbar.el, this.panels.brush.el, this.panels.background.el, this.palette.el);
     this.files = new DocumentSession(this);
@@ -161,12 +163,23 @@ export class App {
     await this.platform.saveSettings(this.settings);
   }
 
+  changeLanguage(value:Language):void {
+    this.settings.language=value;
+    if(language===value)return;
+    setLanguage(value);document.documentElement.lang=value;
+    registerActions(this);
+    this.panels.brush.refreshLanguage();this.panels.background.refreshLanguage();
+    this.toolbar.update();this.palette.sync();this.hud.refreshLanguage();
+    this.files.refreshTitle();this.shortcuts.refreshLanguage();
+  }
+
   private syncShortcuts():void {
     this.platform.updateShortcuts(Object.fromEntries(this.actions.list().filter(d=>!d.kind||d.kind==='action').map(d=>[d.id,this.actions.keysOf(d.id)])));
   }
-  async applyShortcuts(keys:Record<string,string[]>):Promise<void> {
+  async applyShortcuts(keys:Record<string,string[]>, choice?:Language):Promise<void> {
     const copy=this.actions.preserveCustomBindings(keys);window.clearTimeout(this.saveTimer);this.saveTimer=0;
-    await this.platform.saveSettings({...this.settings,keys:copy});
+    await this.platform.saveSettings({...this.settings,keys:copy},choice);
+    if(choice)this.changeLanguage(choice);
     this.settings.keys=copy;this.actions.setOverrides(copy);this.input.clearModifiers();
     this.toolbar.update();this.syncShortcuts();
   }
@@ -177,7 +190,7 @@ export class App {
     const brush = this.tool.id === 'eraser' ? this.settings.eraser : this.widthSettings;
     brush.width = this.tool.id === 'eraser'
       ? Math.max(2,Math.min(120,Math.round(brush.width*(dir>0 ? 1.1 : 1/1.1)*10)/10)) : this.tool.id==='marker'?Math.max(2,Math.min(240,Math.round(brush.width*(dir>0?1.1:1/1.1)*10)/10)):stepWidth(brush.width,dir);
-    this.hud.toast(`${this.tool.id === 'eraser' ? 'Ластик' : 'Толщина'} ${brush.width}`);
+    this.hud.toast(`${this.tool.id === 'eraser' ? translate('Ластик') : translate('Толщина')} ${brush.width}`);
     this.panels.brush.sync();
     this.settingsChanged();
   }
@@ -197,7 +210,7 @@ export class App {
     if(on===this.settings.stylePerTool)return;
     this.settings.stylePerTool=on;this.settingsChanged();
     this.panels.brush.sync();this.toolbar.update();if(this.palette.open)this.palette.sync();
-    this.hud.toast(on?'ВКЛ · У каждого инструмента свой штрих и цвет':'ВЫКЛ · Штрих и цвет общие для всех инструментов',1800);
+    this.hud.toast(on?translate('ВКЛ · У каждого инструмента свой штрих и цвет'):translate('ВЫКЛ · Штрих и цвет общие для всех инструментов'),1800);
   }
   get selection():SelectTool|null {return this.tool instanceof SelectTool?this.tool:null;}
   get selectedStroke():StrokeObj|undefined {return this.selection?.objects.find((o):o is StrokeObj=>o.kind==='stroke');}
@@ -223,9 +236,9 @@ export class App {
     this.tool=id==='pen'||id==='marker'?new PenTool(this,id):id==='eraser'?new EraserTool(this):id==='select'?new SelectTool(this):id==='space'?new SpaceTool(this):new ShapeTool(this,id);
     this.palette.hide();this.panels.brush.sync();this.toolbar.update();this.updateCursor();
     const hint=(action:string,text:string)=>this.actions.hint(action)?` · ${this.actions.hint(action)} — ${text}`:'';
-    const snap=hint('gesture.grid',this.settings.snapToGrid?'без привязки':'сетка');
-    const names:Record<string,string>={pen:'Ручка',line:`Прямая${snap}`,arrow:`${this.settings.arrow.both?'Двусторонняя стрелка':'Стрелка'}${snap}`,coordinates:`Координаты · тяните между наконечниками${snap}`,ellipse:`Окружность${hint('gesture.ellipse','эллипс')}${snap}`,sine:`Синусоида${snap}`,parabola:`Парабола · задайте концы${snap}`,hyperbola:`Гипербола · направление жеста — четверть${snap}`,adiabat:`Адиабата · направление жеста — четверть${hint('ui.brush','γ')}${snap}`,marker:`Маркер${hint('gesture.marker','прямая')}`,eraser:'Ластик',select:'Выбор · углы — размер · ручка — поворот'};
-    names.space='Раздвижение · тяните вверх или вниз · прокрутка доступна';
+    const snap=hint('gesture.grid',this.settings.snapToGrid?translate('без привязки'):translate('сетка'));
+    const names:Record<string,string>={pen:translate('Ручка'),line:`${translate('Прямая')}${snap}`,arrow:`${this.settings.arrow.both?translate('Двусторонняя стрелка'):translate('Стрелка')}${snap}`,coordinates:`${translate('Координаты · тяните между наконечниками')}${snap}`,ellipse:`${translate('Окружность')}${hint('gesture.ellipse',translate('эллипс'))}${snap}`,sine:`${translate('Синусоида')}${snap}`,parabola:`${translate('Парабола · задайте концы')}${snap}`,hyperbola:`${translate('Гипербола · направление жеста — четверть')}${snap}`,adiabat:`${translate('Адиабата · направление жеста — четверть')}${hint('ui.brush','γ')}${snap}`,marker:`${translate('Маркер')}${hint('gesture.marker',translate('прямая'))}`,eraser:translate('Ластик'),select:translate('Выбор · углы — размер · ручка — поворот')};
+    names.space=translate('Раздвижение · тяните вверх или вниз · прокрутка доступна');
     if(id==='eraser'||id==='select'||id==='space')this.hud.toast(names[id]);else this.hud.drawingTool(names[id]);
   }
   /** Число наконечников задаётся явно; смена режима сохраняет последнюю стрелку для Безье. */
@@ -237,7 +250,7 @@ export class App {
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
     if(this.tool.id==='arrow'){
       const grid=this.actions.hint('gesture.grid');
-      this.hud.drawingTool((both?'Двусторонняя стрелка':'Стрелка')+(grid?` · ${grid} — ${this.settings.snapToGrid?'без привязки':'сетка'}`:''));
+      this.hud.drawingTool((both?translate('Двусторонняя стрелка'):translate('Стрелка'))+(grid?` · ${grid} — ${this.settings.snapToGrid?translate('без привязки'):translate('сетка')}`:''));
     }
   }
   get linePattern():LinePattern {
@@ -310,7 +323,7 @@ export class App {
       this.recentArrow=updated;
     }
     this.panels.brush.sync();
-    this.hud.toast(`${key==='headWidth'?'Ширина':'Длина'} головки × ${Number(value.toFixed(2))}`);
+    this.hud.toast(t(`${key==='headWidth'?'Ширина':'Длина'} головки × ${Number(value.toFixed(2))}`,`Arrowhead ${key==='headWidth'?'width':'length'} × ${Number(value.toFixed(2))}`));
   }
   changeSine(key:'period'|'amplitude',value:number):void {
     this.settings.sine[key]=value;
@@ -335,8 +348,8 @@ export class App {
     const gridStep=this.settings.snapToGrid?this.settings.grid.step:null, alignImages=this.settings.snapToImages;
     try {
       const image=await this.platform.clipboardImage();
-      if(!image) {this.hud.toast('В буфере нет картинки');return;}
-      if(!Number.isFinite(image.width)||!Number.isFinite(image.height)||image.width<=0||image.height<=0)throw new Error('Неверный размер картинки');
+      if(!image) {this.hud.toast(translate('В буфере нет картинки'));return;}
+      if(!Number.isFinite(image.width)||!Number.isFinite(image.height)||image.width<=0||image.height<=0)throw new Error(translate('Неверный размер картинки'));
       const decoded=makeImage(0,0,0,0,image.width/scale,image.height/scale,image.dataURL);
       await prepareObjects([decoded]);
       if(generation!==this.files.generation||this.input.blocked)return;
@@ -353,7 +366,7 @@ export class App {
   toggleOriginalEraser(): void {
     this.input.finishCurrent();this.settings.eraser.original=!this.settings.eraser.original;
     this.settingsChanged();this.toolbar.update();
-    this.hud.toast(this.settings.eraser.original?'Ластик: включая исходный SVG':'Ластик: только добавленные штрихи');
+    this.hud.toast(this.settings.eraser.original?translate('Ластик: включая исходный SVG'):translate('Ластик: только добавленные штрихи'));
   }
 
   deleteSelection(): void { if(this.tool instanceof SelectTool)this.tool.remove(); }
@@ -392,7 +405,7 @@ export class App {
   rotate(steps: number): void {
     if (this.input.drawing) return;
     this.view.rotate(steps);
-    this.hud.toast(`Поворот ${this.view.angle}°`);
+    this.hud.toast(t(`Поворот ${this.view.angle}°`,`Rotation ${this.view.angle}°`));
   }
 
   resetView(): void {

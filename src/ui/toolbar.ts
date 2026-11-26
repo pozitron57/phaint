@@ -1,4 +1,6 @@
 // Панель инструментов: кнопки, каждая запускает действие из реестра (core/actions.ts).
+import { translate } from '../core/menu-text.ts';
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { gammaLabel, h, icon } from './dom.ts';
 
@@ -39,7 +41,7 @@ export class Toolbar {
       h('div', { class: 'tb-sep' }),
       this.button('ui.brush', 'sliders', 'Настройки кисти'),
       this.button('ui.background', 'grid', 'Фон и сетка'),
-      this.button('ui.shortcuts','keyboard','Настройки клавиш'),
+      this.button('ui.shortcuts','keyboard','Настройки'),
       h('div', { class: 'tb-sep' }),
       this.button('edit.undo', 'undo', 'Отменить'),
       this.button('edit.redo', 'redo', 'Повторить'),
@@ -67,7 +69,7 @@ export class Toolbar {
       else if(b.action==='tool.hyperbola'){
         active=app.tool.id==='hyperbola'||app.tool.id==='adiabat';
         const mode=app.hyperbolaMode,label=gammaLabel(app.settings.hyperbola.gamma);
-        hintAction=`tool.${mode}`;title=mode==='adiabat'?`Адиабата · γ = ${label}`:'Гипербола';
+        hintAction=`tool.${mode}`;title=mode==='adiabat'?`${translate('Адиабата')} · γ = ${label}`:'Гипербола';
         if(b.el.dataset.mode!==mode||b.el.dataset.gamma!==label){
           b.el.dataset.mode=mode;b.el.dataset.gamma=label;
           b.el.replaceChildren(icon('hyperbola'));
@@ -81,7 +83,7 @@ export class Toolbar {
         active=app.linePattern!=='solid';
         const mode=app.linePattern;
         if(b.el.dataset.mode!==mode){b.el.dataset.mode=mode;b.el.replaceChildren(icon(mode==='solid'?'line':mode));}
-        title={solid:'Сплошная линия',dash:'Штриховая линия',dots:'Линия из точек'}[mode]+' · следующий вид';
+        title=translate({solid:'Сплошная линия',dash:'Штриховая линия',dots:'Линия из точек'}[mode])+translate(' · следующий вид');
       }
       else if (b.action === 'ui.brush') active = app.panels.brush.open;
       else if (b.action === 'ui.background') active = app.panels.background.open;
@@ -90,13 +92,13 @@ export class Toolbar {
       else if (b.action === 'view.fullscreen') active = app.fullscreen;
       b.el.classList.toggle('active', active);
       b.el.disabled = disabled;
-      const hint=app.actions.hint(hintAction);b.el.title=title+(hint?` (${hint})`:'');
+      const hint=app.actions.hint(hintAction);b.el.title=translate(title)+(hint?` (${hint})`:'');
       if(b.action==='edit.pasteImage'){
         const free=app.actions.hint('edit.pasteImageFree');
-        if(free)b.el.title+=` · ${free} — точно под курсором`;
+        if(free)b.el.title+=t(` · ${free} — точно под курсором`,` · ${free} pastes at the pointer`);
       }
-      if(b.action==='tool.line'&&active)b.el.title+=app.lineMode==='line'?' · ещё один щелчок — стрелка':' · ещё один щелчок — прямая';
-      if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+перетаскивание — Безье`;
+      if(b.action==='tool.line'&&active)b.el.title+=translate(app.lineMode==='line'?' · ещё один щелчок — стрелка':' · ещё один щелчок — прямая');
+      if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+${t('перетаскивание — Безье','drag for Bézier control points')}`;
     }
   }
 

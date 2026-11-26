@@ -1,4 +1,6 @@
 // Копия — обычный SVG с параметрами Phaint. Вставка получает новые id/z и один шаг отмены.
+import { translate } from '../core/menu-text.ts';
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { bboxUnion, matBBox } from '../core/geom.ts';
 import { inheritImage, prepareObjects } from '../view/draw.ts';
@@ -11,7 +13,7 @@ export class ObjectClipboard {
   async copy(cut=false):Promise<void>{
     if(this.busy||this.app.input.blocked)return;
     this.app.input.finishCurrent();const objects=this.app.selection?.objects;
-    if(!objects?.length){this.app.hud.toast('Сначала выделите объекты инструментом M');return;}
+    if(!objects?.length){this.app.hud.toast(translate('Сначала выделите объекты инструментом выбора'));return;}
     const generation=this.app.files.generation;
     this.busy=true;
     let done!:()=>void;this.copying=new Promise(resolve=>{done=resolve;});
@@ -25,7 +27,7 @@ export class ObjectClipboard {
         const removed=objects.filter(o=>this.app.doc.get(o.id)===o);
         if(removed.length)this.app.history.commit({added:[],removed});
       }
-      this.app.hud.toast(`${cut?'Вырезано':'Скопировано'} объектов: ${objects.length}`);
+      this.app.hud.toast(t(`${cut?'Вырезано':'Скопировано'} объектов: ${objects.length}`,`${cut?'Cut':'Copied'} objects: ${objects.length}`));
     }catch(error){await this.app.platform.files.error(String(error));}finally{this.app.platform.clipboardCopy(false);this.busy=false;this.copying=null;done();}
   }
   async paste():Promise<void>{

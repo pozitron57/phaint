@@ -1,6 +1,7 @@
 // Мост между страницей и главным процессом. Страница видит только window.phaintNative
 // (см. src/platform.ts) и не имеет доступа к Node.
 import { contextBridge, ipcRenderer } from 'electron';
+import type { Language } from '../src/core/language.ts';
 import type { FileApi } from '../src/files/api.ts';
 import type { ImageTextSource } from '../src/platform.ts';
 
@@ -52,7 +53,8 @@ contextBridge.exposeInMainWorld('phaintNative', {
   testWindows:(action:string,data:unknown={}):Promise<unknown>=>ipcRenderer.invoke('test:windows',action,data),
   testFiles: (action: string, data: unknown = {}): Promise<unknown> => ipcRenderer.invoke('test:files', action, data),
   loadSettings: (): Promise<unknown> => ipcRenderer.invoke('settings:load'),
-  saveSettings: (data: unknown): Promise<void> => ipcRenderer.invoke('settings:save', data),
+  onLanguage: (cb:(value:Language)=>void) => { ipcRenderer.on('settings:language', (_event, value) => cb(value)); },
+  saveSettings: (data: unknown, language?:Language): Promise<void> => ipcRenderer.invoke('settings:save', data, language),
   toggleFullscreen: (): Promise<void> => ipcRenderer.invoke('window:toggle-fullscreen'),
   isFullscreen: (): Promise<boolean> => ipcRenderer.invoke('window:is-fullscreen'),
   onFullscreen: (cb: (on: boolean) => void): void => {

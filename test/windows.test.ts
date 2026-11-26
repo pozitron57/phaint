@@ -10,7 +10,7 @@ import { recoverySlots } from '../electron/recovery.ts';
 test('окна: старый снимок настроек сохраняет независимые изменения соседнего окна', async () => {
   const root=await mkdtemp(join(tmpdir(),'phaint-windows-'));
   try {
-    const path=join(root,'settings.json'),store=new WindowSettings(path,true);
+    const path=join(root,'settings.json'),store=new WindowSettings(path);
     const a=await store.load(1),b=await store.load(2);
     a.pen.color='#c9514e';a.keys['tool.line']=['KeyJ'];await store.save(1,a);
     b.pen.width=8;b.keys['tool.ellipse']=['KeyK'];await store.save(2,b);
@@ -34,5 +34,23 @@ test('окна: восстановление подхватывает все р�
     assert.deepEqual(await recoverySlots(root),['recovery.json','recovery-abcd-1234.json']);
     await rm(join(root,'recovery.json'));
     assert.deepEqual(await recoverySlots(root),['recovery-abcd-1234.json']);
+  } finally { await rm(root,{recursive:true,force:true}); }
+});
+
+test('язык: прежний профиль, соседнее окно и повторный запуск', async () => {
+  const root=await mkdtemp(join(tmpdir(),'phaint-language-'));
+  try {
+    const path=join(root,'settings.json');
+    await writeFile(path,JSON.stringify({version:13,pen:{width:7},keys:{'file.save':['Cmd+KeyU']}}));
+    const store=new WindowSettings(path);
+    const first=await store.load(1),other=await store.load(2);
+    assert.equal(first.language,null);
+    await store.save(1,first,'en');
+    other.pen.width=8;
+    await store.save(2,other);
+    const saved=await new WindowSettings(path).load(3);
+    assert.equal(saved.language,'en');
+    assert.equal(saved.pen.width,8);
+    assert.deepEqual(saved.keys,{'file.save':['Cmd+KeyU']});
   } finally { await rm(root,{recursive:true,force:true}); }
 });

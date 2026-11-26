@@ -1,11 +1,13 @@
 // Мелкие помощники для сборки интерфейса без фреймворка.
 
+import { language } from '../core/language.ts';
+
 type Child = Node | string | null | undefined | false;
 
 /** Точные распространённые дроби; произвольный показатель — коротким десятичным числом. */
 export function gammaLabel(gamma:number):string {
   for(const [value,label] of [[5/3,'5/3'],[7/5,'7/5']] as const)if(Math.abs(gamma-value)<1e-9)return label;
-  return String(Math.round(gamma*1000)/1000).replace('.',',');
+  return String(Math.round(gamma*1000)/1000).replace('.',language==='ru'?',':'.');
 }
 
 /** Создать элемент: h('button', { class: 'x', onclick: fn }, 'текст'). */

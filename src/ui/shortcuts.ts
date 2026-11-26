@@ -1,4 +1,6 @@
 // Настройки клавиш: черновик до сохранения, запись нажатием, явное разрешение конфликтов.
+import { language, t, type Language } from '../core/language.ts';
+import { translate } from '../core/menu-text.ts';
 import type { App } from '../app.ts';
 import { comboLabel, comboOf, modifierCombo, modifierName, normalizeCombo, shortcutSearchBindings, validCombo, type ActionDef } from '../core/actions.ts';
 import { SHORTCUT_GROUPS } from '../core/shortcut-info.ts';
@@ -18,6 +20,7 @@ export class ShortcutSettings {
   private search!:HTMLInputElement;
   private save!:HTMLButtonElement;
   private busy=false;
+  private languageChoice?:Language;
   private recording:{def:ActionDef;index:number;combo:string}|null=null;
   constructor(app:App){this.app=app;}
   get open():boolean {return !!this.dialog?.open;}
@@ -25,29 +28,49 @@ export class ShortcutSettings {
     if(this.open){this.search.focus();return;}
     this.app.input.finishCurrent();this.app.closePanels();this.app.input.clearModifiers();
     this.draft=structuredClone(this.app.settings.keys);this.group='all';this.filter='';this.changedOnly=false;
-    const dialog=h('dialog',{class:'shortcut-dialog','aria-label':'Настройки клавиш'});this.dialog=dialog;
-    const title=h('div',{},h('h2',{},'Настройки'),h('p',{},'Клавиши и сочетания'));
-    const close=h('button',{class:'shortcut-close',title:'Закрыть без сохранения','aria-label':'Закрыть без сохранения',onclick:()=>this.close()},icon('close'));
-    dialog.append(h('header',{class:'shortcut-header'},title,close));
-    this.search=h('input',{type:'search',placeholder:'Найти действие или сочетание…','aria-label':'Поиск сочетаний',oninput:()=>{this.filter=this.search.value;this.rows.scrollTop=0;this.renderRows();}});
-    const changed=h('input',{type:'checkbox',onchange:()=>{this.changedOnly=changed.checked;this.rows.scrollTop=0;this.renderRows();}});
-    const filters=h('div',{class:'shortcut-filters'},this.search,h('label',{},changed,'Только изменённые'));
-    const nav=h('nav',{'aria-label':'Группы действий',class:'shortcut-nav'});
+    this.languageChoice=undefined;
+    this.buildDialog();
+  }
+  /** Из соседнего окна может прийти новый язык, пока пользователь правит черновик. */
+  refreshLanguage():void {
+    if(!this.open||this.busy)return;
+    const recording=this.recording,scroll=this.rows.scrollTop;
+    this.close();
+    this.buildDialog();
+    this.rows.scrollTop=scroll;
+    if(recording) {
+      const def=this.app.actions.list().find(action=>action.id===recording.def.id);
+      if(def) { this.record(def,recording.index);this.recording!.combo=recording.combo;this.renderRecording(); }
+    }
+  }
+  private buildDialog():void {
+    const dialog=h('dialog',{class:'shortcut-dialog','aria-label':translate('Настройки')});this.dialog=dialog;
+    const title=h('div',{},h('h2',{},translate('Настройки')),h('p',{},translate('Клавиши и сочетания')));
+    const close=h('button',{class:'shortcut-close',title:translate('Закрыть без сохранения'),'aria-label':translate('Закрыть без сохранения'),onclick:()=>this.close()},icon('close'));
+    const select=h('select',{onchange:()=>{this.languageChoice=select.value as Language;}},
+      h('option',{value:'ru',lang:'ru'},'Русский'),h('option',{value:'en',lang:'en'},'English'));
+    select.value=this.languageChoice??language;
+    const languages=h('label',{class:'settings-language'},translate('Язык'),select);
+    dialog.append(h('header',{class:'shortcut-header'},title,languages,close));
+    this.search=h('input',{type:'search',value:this.filter,placeholder:translate('Найти действие или сочетание…'),'aria-label':translate('Поиск сочетаний'),oninput:()=>{this.filter=this.search.value;this.rows.scrollTop=0;this.renderRows();}});
+    const changed=h('input',{type:'checkbox',checked:this.changedOnly,onchange:()=>{this.changedOnly=changed.checked;this.rows.scrollTop=0;this.renderRows();}});
+    const filters=h('div',{class:'shortcut-filters'},this.search,h('label',{},changed,translate('Только изменённые')));
+    const nav=h('nav',{'aria-label':translate('Группы действий'),class:'shortcut-nav'});
     for(const [id,label] of Object.entries({all:'Все действия',...SHORTCUT_GROUPS})){
       const count=id==='all'?this.app.actions.list().length:this.app.actions.list().filter(d=>d.group===id).length;
-      const button=h('button',{'data-group':id,'aria-pressed':String(id==='all'),onclick:()=>{
+      const button=h('button',{'data-group':id,'aria-pressed':String(id===this.group),onclick:()=>{
         this.group=id;for(const el of nav.querySelectorAll('button'))el.setAttribute('aria-pressed',String(el===button));this.rows.scrollTop=0;this.renderRows();
-      }},label,h('span',{},String(count)));nav.append(button);
+      }},translate(label),h('span',{},String(count)));nav.append(button);
     }
-    this.rows=h('div',{class:'shortcut-rows','aria-label':'Назначения клавиш'});
-    const table=h('section',{class:'shortcut-table'},h('div',{class:'shortcut-columns'},h('span',{},'Действие'),h('span',{},'Сочетания клавиш')),this.rows);
+    this.rows=h('div',{class:'shortcut-rows','aria-label':translate('Назначения клавиш')});
+    const table=h('section',{class:'shortcut-table'},h('div',{class:'shortcut-columns'},h('span',{},translate('Действие')),h('span',{},translate('Сочетания клавиш'))),this.rows);
     this.body=h('div',{class:'shortcut-body'},filters,h('div',{class:'shortcut-layout'},nav,table));
     this.editor=h('section',{class:'shortcut-editor',hidden:true,'aria-live':'polite'});
-    this.status=h('span',{class:'shortcut-status','aria-live':'polite'},'Нажмите сочетание в списке, чтобы изменить его.');
-    const reset=h('button',{class:'btn shortcut-reset',onclick:()=>this.resetAll()},'Вернуть стандартные');
-    const cancel=h('button',{class:'btn',onclick:()=>this.close()},'Отмена');
-    this.save=h('button',{class:'btn primary',onclick:()=>{void this.commit();}},'Сохранить');
-    dialog.append(this.body,this.editor,h('p',{class:'shortcut-note'},'Клавиши работают в любой раскладке. В текстовых полях сохраняются обычные команды редактирования.'),
+    this.status=h('span',{class:'shortcut-status','aria-live':'polite'},translate('Нажмите сочетание в списке, чтобы изменить его.'));
+    const reset=h('button',{class:'btn shortcut-reset',onclick:()=>this.resetAll()},translate('Вернуть стандартные'));
+    const cancel=h('button',{class:'btn',onclick:()=>this.close()},translate('Отмена'));
+    this.save=h('button',{class:'btn primary',onclick:()=>{void this.commit();}},translate('Сохранить'));
+    dialog.append(this.body,this.editor,h('p',{class:'shortcut-note'},translate('Клавиши работают в любой раскладке. В текстовых полях сохраняются обычные команды редактирования.')),
       h('footer',{},h('div',{class:'shortcut-footer-left'},reset,this.status),cancel,this.save));
     dialog.addEventListener('cancel',e=>{e.preventDefault();if(!this.editor.hidden)this.endEditor();else this.close();});
     window.addEventListener('keydown',this.capture,true);
@@ -64,26 +87,26 @@ export class ShortcutSettings {
     this.rows.replaceChildren();
     for(const def of this.app.actions.list()){
       if((this.group!=='all'&&def.group!==this.group)||(this.changedOnly&&!this.changed(def)))continue;
-      const keys=this.keys(def),description=[def.title,def.description,SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS]].join(' ');
+      const keys=this.keys(def),description=[def.title,def.description,translate(SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS]??'')].join(' ');
       const visible=shortcutSearchBindings(keys,description,this.filter);
       if(visible===null)continue;
       const bindings=h('div',{class:'shortcut-bindings'});
       for(const key of visible){
         const index=keys.indexOf(key);
-        const edit=h('button',{class:'shortcut-key','aria-label':`Изменить: ${def.title} — ${comboLabel(key)}`,onclick:()=>this.record(def,index)},comboLabel(key));
-        const remove=h('button',{class:'shortcut-key-remove',title:'Убрать сочетание','aria-label':`Убрать ${comboLabel(key)} у «${def.title}»`,onclick:()=>{this.put(def,keys.filter((_,i)=>i!==index));this.renderRows();}},'×');
+        const edit=h('button',{class:'shortcut-key','aria-label':t(`Изменить: ${def.title} — ${comboLabel(key)}`,`Change ${def.title} — ${comboLabel(key)}`),onclick:()=>this.record(def,index)},comboLabel(key));
+        const remove=h('button',{class:'shortcut-key-remove',title:translate('Убрать сочетание'),'aria-label':t(`Убрать ${comboLabel(key)} у «${def.title}»`,`Remove ${comboLabel(key)} from ${def.title}`),onclick:()=>{this.put(def,keys.filter((_,i)=>i!==index));this.renderRows();}},'×');
         bindings.append(h('span',{class:'shortcut-chip'},edit,remove));
       }
-      if(!keys.length)bindings.append(h('span',{class:'shortcut-unassigned'},'Не назначено'));
-      bindings.append(h('button',{class:'shortcut-add',title:'Добавить сочетание','aria-label':`Добавить: ${def.title}`,onclick:()=>this.record(def,-1)},icon('plus')));
-      if(this.changed(def))bindings.append(h('button',{class:'shortcut-default',title:'Вернуть стандартные для этого действия','aria-label':`Сбросить: ${def.title}`,onclick:()=>this.resetOne(def)},icon('undo')));
-      const title=h('div',{class:'shortcut-title'},def.title,this.changed(def)?h('span',{class:'shortcut-changed',title:'Изменено'},'•'):null);
-      this.rows.append(h('div',{class:'shortcut-row','data-shortcut-id':def.id},h('div',{},title,h('p',{},def.description||SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS])),bindings));
+      if(!keys.length)bindings.append(h('span',{class:'shortcut-unassigned'},translate('Не назначено')));
+      bindings.append(h('button',{class:'shortcut-add',title:translate('Добавить сочетание'),'aria-label':t(`Добавить: ${def.title}`,`Add shortcut for ${def.title}`),onclick:()=>this.record(def,-1)},icon('plus')));
+      if(this.changed(def))bindings.append(h('button',{class:'shortcut-default',title:translate('Вернуть стандартные для этого действия'),'aria-label':t(`Сбросить: ${def.title}`,`Reset ${def.title}`),onclick:()=>this.resetOne(def)},icon('undo')));
+      const title=h('div',{class:'shortcut-title'},def.title,this.changed(def)?h('span',{class:'shortcut-changed',title:translate('Изменено')},'•'):null);
+      this.rows.append(h('div',{class:'shortcut-row','data-shortcut-id':def.id},h('div',{},title,h('p',{},def.description||translate(SHORTCUT_GROUPS[def.group as keyof typeof SHORTCUT_GROUPS]??''))),bindings));
     }
-    if(!this.rows.childElementCount)this.rows.append(h('p',{class:'shortcut-empty'},'Ничего не найдено. Попробуйте другое название или сочетание.'));
+    if(!this.rows.childElementCount)this.rows.append(h('p',{class:'shortcut-empty'},translate('Ничего не найдено. Попробуйте другое название или сочетание.')));
     this.rows.scrollTop=scroll;
     const count=this.app.actions.list().filter(d=>this.changed(d)).length;
-    this.status.textContent=count?`Изменено действий: ${count}`:'Нажмите сочетание, чтобы изменить его.';
+    this.status.textContent=count?t(`Изменено действий: ${count}`,`Modified actions: ${count}`):translate('Нажмите сочетание, чтобы изменить его.');
   }
   private record(def:ActionDef,index:number):void {
     this.recording={def,index,combo:''};this.body.inert=true;this.save.disabled=true;this.editor.classList.add('recording');this.editor.hidden=false;this.renderRecording();
@@ -101,15 +124,15 @@ export class ShortcutSettings {
     const record=this.recording!;const {def,combo}=record;
     const valid=validCombo(combo,def.kind),conflicts=valid?this.app.actions.conflicts(def.id,combo,this.draft):[];
     const heading=h('h3',{},def.title);
-    const instruction=def.kind==='modifier'?'Нажмите Ctrl, Alt, Shift или Cmd; можно несколько вместе.':'Нажмите нужное сочетание. Esc, Tab и Enter тоже можно назначить.';
-    const display=h('div',{class:'shortcut-recorded','data-recorded':combo},combo?comboLabel(combo):'Нажмите клавиши…');
-    const message=combo&&!valid?(def.kind==='modifier'?'Для этого жеста нужны только модификаторы.':'Это сочетание недоступно. Нажмите другую клавишу.'):conflicts.length?`Уже назначено: ${conflicts.map(d=>d.title).join('; ')}. Переназначение уберёт это сочетание у перечисленных действий.`:'Прежнее назначение изменится только после сохранения настроек.';
+    const instruction=def.kind==='modifier'?translate('Нажмите Ctrl, Alt, Shift или Cmd; можно несколько вместе.'):translate('Нажмите нужное сочетание. Esc, Tab и Enter тоже можно назначить.');
+    const display=h('div',{class:'shortcut-recorded','data-recorded':combo},combo?comboLabel(combo):translate('Нажмите клавиши…'));
+    const message=combo&&!valid?(def.kind==='modifier'?translate('Для этого жеста нужны только модификаторы.'):translate('Это сочетание недоступно. Нажмите другую клавишу.')):conflicts.length?t(`Уже назначено: ${conflicts.map(d=>d.title).join('; ')}. Переназначение уберёт это сочетание у перечисленных действий.`,`Already assigned to ${conflicts.map(d=>d.title).join(', ')}. Reassigning removes the shortcut from those actions.`):translate('Прежнее назначение изменится только после сохранения настроек.');
     const apply=h('button',{class:'btn primary',disabled:!valid,onclick:()=>{
       for(const other of conflicts)this.put(other,this.keys(other).filter(k=>normalizeCombo(k)!==normalizeCombo(combo)));
       const keys=[...this.keys(def)];if(record.index<0)keys.push(combo);else keys[record.index]=combo;
       this.put(def,keys);this.endEditor();this.renderRows();
-    }},conflicts.length?'Переназначить':'Назначить');
-    const cancel=h('button',{class:'btn',onclick:()=>this.endEditor()},'Отмена записи');
+    }},conflicts.length?translate('Переназначить'):translate('Назначить'));
+    const cancel=h('button',{class:'btn',onclick:()=>this.endEditor()},translate('Отмена записи'));
     this.editor.replaceChildren(h('div',{class:'shortcut-recording-content'},heading,h('p',{},instruction),display,h('p',{class:conflicts.length?'shortcut-conflict':''},message)),h('div',{class:'shortcut-editor-buttons'},cancel,apply));
     this.editor.tabIndex=-1;this.editor.focus();
   }
@@ -117,23 +140,23 @@ export class ShortcutSettings {
   private resetAll():void {
     this.recording=null;
     this.body.inert=true;this.save.disabled=true;this.editor.hidden=false;
-    this.editor.replaceChildren(h('h3',{},'Вернуть все стандартные сочетания?'),h('p',{},'Изменения останутся черновиком, пока вы не нажмёте «Сохранить».'),h('div',{class:'shortcut-editor-buttons'},
-      h('button',{class:'btn',onclick:()=>this.endEditor()},'Отмена'),h('button',{class:'btn primary',onclick:()=>{this.draft={};this.endEditor();this.renderRows();}},'Вернуть стандартные')));
+    this.editor.replaceChildren(h('h3',{},translate('Вернуть все стандартные сочетания?')),h('p',{},translate('Изменения останутся черновиком, пока вы не нажмёте «Сохранить».')),h('div',{class:'shortcut-editor-buttons'},
+      h('button',{class:'btn',onclick:()=>this.endEditor()},translate('Отмена')),h('button',{class:'btn primary',onclick:()=>{this.draft={};this.endEditor();this.renderRows();}},translate('Вернуть стандартные'))));
   }
   private resetOne(def:ActionDef):void {
     const conflicts=def.keys.flatMap(key=>this.app.actions.conflicts(def.id,key,this.draft).map(other=>({other,key})));
     if(!conflicts.length){delete this.draft[def.id];this.renderRows();return;}
     this.body.inert=true;this.save.disabled=true;this.editor.hidden=false;
-    this.editor.replaceChildren(h('h3',{},`Стандартные: ${def.title}`),h('p',{},`Эти клавиши сейчас заняты: ${[...new Set(conflicts.map(c=>c.other.title))].join('; ')}.`),h('div',{class:'shortcut-editor-buttons'},
-      h('button',{class:'btn',onclick:()=>this.endEditor()},'Отмена'),h('button',{class:'btn primary',onclick:()=>{
+    this.editor.replaceChildren(h('h3',{},t(`Стандартные: ${def.title}`,`Defaults for ${def.title}`)),h('p',{},t(`Эти клавиши сейчас заняты: ${[...new Set(conflicts.map(c=>c.other.title))].join('; ')}.`,`These keys are assigned to ${[...new Set(conflicts.map(c=>c.other.title))].join(', ')}.`)),h('div',{class:'shortcut-editor-buttons'},
+      h('button',{class:'btn',onclick:()=>this.endEditor()},translate('Отмена')),h('button',{class:'btn primary',onclick:()=>{
         for(const {other,key} of conflicts)this.put(other,this.keys(other).filter(k=>normalizeCombo(k)!==normalizeCombo(key)));
         delete this.draft[def.id];this.endEditor();this.renderRows();
-      }},'Вернуть и переназначить')));
+      }},translate('Вернуть и переназначить'))));
   }
   private async commit():Promise<void> {
     if(this.recording||this.busy)return;this.busy=true;this.save.disabled=true;
-    try{await this.app.applyShortcuts(this.draft);this.busy=false;this.close();this.app.hud.toast('Сочетания клавиш сохранены');}
-    catch(error){this.status.textContent=`Не удалось сохранить: ${String(error)}`;this.busy=false;this.save.disabled=false;}
+    try{await this.app.applyShortcuts(this.draft,this.languageChoice);this.busy=false;this.close();this.app.hud.toast(translate('Настройки сохранены'));}
+    catch(error){this.status.textContent=t(`Не удалось сохранить: ${String(error)}`,`Could not save settings: ${String(error)}`);this.busy=false;this.save.disabled=false;}
   }
   private close():void {
     if(this.busy)return;this.recording=null;window.removeEventListener('keydown',this.capture,true);

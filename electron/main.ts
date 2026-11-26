@@ -9,12 +9,14 @@
 //   --size=1280x820                    размер окна
 // Сценарий может сам делать снимки: await phaintNative.shot('имя') → файл.имя.png.
 // Результат печатается строкой «RESULT {json}».
-import { app, clipboard, nativeImage, BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions, type Rectangle, screen } from 'electron';
+import { translate } from '../src/core/menu-text.ts';
+import { app, dialog, clipboard, nativeImage, BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions, type Rectangle, screen } from 'electron';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { installFiles } from './files.ts';
 import { installClipboard, type TextRecognitionNative } from './clipboard.ts';
+import { isLanguage, language, setLanguage } from '../src/core/language.ts';
 import { WindowSettings } from './settings.ts';
 import { recoverySlots } from './recovery.ts';
 import { cascadeBounds } from './window-position.ts';
@@ -74,7 +76,7 @@ let quitting: Promise<void> | null = null;
 let quitAllowed = false;
 
 const settingsFile = (): string => join(app.getPath('userData'), 'settings.json');
-const settings = new WindowSettings(settingsFile(), testing);
+const settings = new WindowSettings(settingsFile());
 
 function openWindow(): BrowserWindow | undefined {
   // Начальная активация macOS не должна создавать второй холст при первом запуске.
@@ -129,7 +131,7 @@ function buildMenu(shortcuts:Record<string,string[]>={}): void {
       label: 'Phaint',
       submenu: [
         { id:'app.about', label: 'О программе Phaint',click:()=>app.showAboutPanel() },
-        { id:'ui.shortcuts',label:'Настройки клавиш…',accelerator:'Cmd+,',click:()=>action('ui.shortcuts') },
+        { id:'ui.shortcuts',label:'Настройки…',accelerator:'Cmd+,',click:()=>action('ui.shortcuts') },
         { type: 'separator' },
         { id:'app.hide',label:'Скрыть Phaint',accelerator:'Cmd+H',click:()=>app.hide() },
         { id:'app.hideOthers',label:'Скрыть остальные',accelerator:'Alt+Cmd+H',click:()=>Menu.sendActionToFirstResponder('hideOtherApplications:') },
@@ -192,6 +194,7 @@ function buildMenu(shortcuts:Record<string,string[]>={}): void {
   }
   const apply=(items:MenuItemConstructorOptions[]):void=>{
     for(const item of items){
+      if(item.label)item.label=translate(item.label);
       if(item.id&&Object.hasOwn(shortcuts,item.id)){
         const combo=shortcuts[item.id].find(key=>menuAccelerator(key));item.accelerator=combo?menuAccelerator(combo):undefined;
       }
@@ -303,6 +306,10 @@ function createWindow(recoverySlot?: string): BrowserWindow {
 ipcMain.handle('test:keys',(event,action:string,data:{id?:string;input?:unknown})=>{
   if(!testing)return null;
   if(action==='settings')return readFile(settingsFile(),'utf8').then(JSON.parse);
+  if(action==='menuLabels') {
+    const labels=(menu:Menu):string[]=>menu.items.flatMap(item=>[item.label,...(item.submenu?labels(item.submenu):[])]);
+    const menu=Menu.getApplicationMenu();return menu?labels(menu):[];
+  }
   if(action==='menu')return Menu.getApplicationMenu()?.getMenuItemById(data.id??'')?.accelerator??null;
   if(action==='input'){event.sender.sendInputEvent(data.input as Parameters<typeof event.sender.sendInputEvent>[0]);return true;}
   return null;
@@ -382,7 +389,15 @@ ipcMain.handle('clipboard:image', async () => {
   return null;
 });
 ipcMain.handle('settings:load', event => settings.load(event.sender.id));
-ipcMain.handle('settings:save', (event, data: unknown) => settings.save(event.sender.id, data));
+ipcMain.handle('settings:save', async (event, data: unknown, choice: unknown) => {
+  const selected = isLanguage(choice) ? choice : undefined;
+  await settings.save(event.sender.id, data, selected);
+  if (selected && selected !== language) {
+    setLanguage(selected);
+    buildMenu(menuWindow ? windowShortcuts.get(menuWindow) : undefined);
+    for (const win of documentWindows) win.webContents.send('settings:language', selected);
+  }
+});
 ipcMain.handle('window:toggle-fullscreen', (event) => {
   const win = windowOf(event);
   if (!win) return;
@@ -420,6 +435,23 @@ app.on('window-all-closed', () => { if (!quitting) app.quit(); });
 
 void app.whenReady().then(async () => {
   if (!singleInstance) return;
+  const profile = await settings.load(0);
+  if (profile.language) setLanguage(profile.language);
+  else {
+    const selected = testing ? (arg('choose-language') === 'en' ? 'en' : 'ru') :
+      (dialog.showMessageBoxSync({
+        type: 'question', title: 'Phaint', message: 'Выберите язык / Choose your language',
+        detail: 'Позже язык можно изменить в настройках (⌘,).\nYou can change the language later in Settings (⌘,).',
+        buttons: ['Русский', 'English'], defaultId: app.getLocale().startsWith('ru') ? 0 : 1, noLink: true,
+      }) === 0 ? 'ru' : 'en');
+    try { await settings.save(0, profile, selected); }
+    catch (error) {
+      dialog.showErrorBox('Не удалось сохранить язык / Could not save language', String(error));
+      app.quit(); return;
+    }
+    setLanguage(selected);
+  }
+  settings.forget(0);
   files = installFiles(testing, arg('recover') !== undefined);
   installClipboard(testing,native);
   buildMenu();

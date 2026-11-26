@@ -395,7 +395,7 @@ input[type='range'] {
 .shortcut-recorded { text-align:center; padding:20px; margin:18px 0; min-height:70px; background:#f1f5fb; border:1px dashed #99b0d2; border-radius:8px; font-size:22px; font-weight:600; color:#315ca8; }
 .shortcut-editor .shortcut-conflict { color:#9c5419; background:#fff5e8; padding:10px 12px; border-radius:7px; }
 .shortcut-editor-buttons { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
-.shortcut-dialog button:focus-visible,.shortcut-dialog input:focus-visible { outline:2px solid #6c93d0; outline-offset:2px; }
+.shortcut-dialog button:focus-visible,.shortcut-dialog input:focus-visible,.shortcut-dialog select:focus-visible { outline:2px solid #6c93d0; outline-offset:2px; }
 @media (max-width:650px) {
  .shortcut-dialog { width:calc(100vw - 16px); height:calc(100vh - 16px); }
  .shortcut-header { padding:14px 16px; }
@@ -434,3 +434,6 @@ input[type='range'] {
 }
 .file-progress span { overflow-wrap: anywhere; }
 .file-progress button { flex-shrink: 0; }
+
+.settings-language { margin-left:auto; margin-right:16px; display:flex; align-items:center; gap:8px; }
+.settings-language select { font:inherit; color:inherit; background:#fff; border:1px solid var(--ui-border); border-radius:6px; padding:5px 8px; }

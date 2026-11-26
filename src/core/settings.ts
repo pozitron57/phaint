@@ -1,4 +1,5 @@
 // Настройки инструментов и интерфейса. Старые файлы настроек дополняются новыми значениями.
+import { isLanguage, type Language } from './language.ts';
 import type { PenSettings } from './brush.ts';
 import { DEFAULT_ARROW_HEAD, DEFAULT_GAMMA, MIN_GAMMA, MAX_GAMMA, type ArrowHeadStyle, type ShapeKind } from './shapes.ts';
 import { validCombo, normalizeCombo } from './actions.ts';
@@ -10,6 +11,7 @@ export interface InkSettings extends InkStyle { width:number }
 export type DrawingTool = 'pen' | 'marker' | ShapeKind;
 export interface Settings {
   version:number;
+  language:Language|null;
   stylePerTool:boolean;
   sharedStyle:InkStyle;
   pen:PenSettings & InkSettings;
@@ -41,7 +43,7 @@ export const CYCLE=PALETTE.slice(0,3);
 const style=():InkStyle=>({color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
 const ink=():InkSettings=>({width:2.6,...style()});
 export function defaultSettings():Settings {
-  return {version:13,stylePerTool:false,sharedStyle:style(),coordinates:{...style(),...DEFAULT_ARROW_HEAD},adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+  return {version:13,language:null,stylePerTool:false,sharedStyle:style(),coordinates:{...style(),...DEFAULT_ARROW_HEAD},adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
     line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
     eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
@@ -54,6 +56,7 @@ export function mergeSettings(raw:unknown):Settings {
   // До версии 12 у стрелок был один набор головок. Обе копии начинают с прежних значений.
   merge(base.arrow.doubleHead,profile?.arrow);
   merge(base,raw);base.version=13;
+  base.language=isLanguage(profile?.language)?profile.language:null;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
     const step=base.grid.step>0?base.grid.step:DEFAULT_GRID_STEP;

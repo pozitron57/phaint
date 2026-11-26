@@ -1,5 +1,7 @@
 // Файловые диалоги и IPC. Рендерер получает непрозрачные идентификаторы выбранных файлов.
 // У каждого окна своя резервная копия; закрытие и его отмена отвечают главному процессу.
+import { translate } from '../src/core/menu-text.ts';
+import { t } from '../src/core/language.ts';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { ExportHistory } from './export-history.ts';
 import { exportFormat, exportName, repeatExportName, workingName } from '../src/files/names.ts';
@@ -58,26 +60,26 @@ export function installFiles(testing: boolean, recoverForTest = false) {
   };
   const openPath=async(path:string):Promise<OpenFile>=>{
     const ref=await register(path),extension=path.split('.').pop()!.toLowerCase();
-    if((await stat(path)).size>MAX_FILE_BYTES)throw new Error('Файл больше 256 МБ.');
+    if((await stat(path)).size>MAX_FILE_BYTES)throw new Error(translate('Файл больше 256 МБ.'));
     const content=extension==='svg'?{type:'svg' as const,text:await readLimited(path)}:extension==='pdf'
       ?{type:'pdf' as const,mime:'application/pdf',bytes:new Uint8Array(await readFile(path))}
       :{type:'image' as const,mime:imageTypes[extension],bytes:new Uint8Array(await readFile(path))};
-    if(content.type==='image'&&!content.mime)throw new Error('Этот формат изображения не поддерживается.');
-    if(await stamp(path)!==entries.get(ref.handle)!.stamp)throw new Error('Файл изменился во время чтения. Откройте его ещё раз.');
+    if(content.type==='image'&&!content.mime)throw new Error(translate('Этот формат изображения не поддерживается.'));
+    if(await stamp(path)!==entries.get(ref.handle)!.stamp)throw new Error(translate('Файл изменился во время чтения. Откройте его ещё раз.'));
     return {...ref,...content};
   };
 
   ipcMain.handle('files:recent',async()=>queue.run(async()=>{
     const text=await readOptional(recentPath);if(!text)return null;
     const value=JSON.parse(text);
-    if(!value||typeof value.path!=='string'||!isAbsolute(value.path)||value.path.includes('\0'))throw new Error('Не удалось прочитать путь последнего файла. Откройте рисунок через Cmd+O.');
+    if(!value||typeof value.path!=='string'||!isAbsolute(value.path)||value.path.includes('\0'))throw new Error(translate('Не удалось прочитать путь последнего файла. Откройте рисунок через Cmd+O.'));
     return register(value.path);
   }));
   ipcMain.handle('files:read',async(_e,ref:FileRef)=>{
-    const entry=entries.get(ref?.handle);if(!entry)throw new Error('Не найден выбранный файл.');
+    const entry=entries.get(ref?.handle);if(!entry)throw new Error(translate('Не найден выбранный файл.'));
     try{return await openPath(entry.path);}
     catch(error){
-      if((error as NodeJS.ErrnoException).code==='ENOENT')throw new Error(`Файл «${basename(entry.path)}» перемещён или удалён. Найдите его через Cmd+O.`);
+      if((error as NodeJS.ErrnoException).code==='ENOENT')throw new Error(t(`Файл «${basename(entry.path)}» перемещён или удалён. Найдите его через Cmd+O.`,`“${basename(entry.path)}” was moved or deleted. Locate it with Cmd+O.`));
       throw error;
     }
   });
@@ -91,7 +93,7 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     let path: string | undefined;
     if (testing) { const name = choices.opens?.shift(); if (name) path = testPath(name); }
     else {
-      const result = await dialog.showOpenDialog(win, { title: 'Открыть рисунок или PDF', buttonLabel: 'Открыть', filters: [{ name: 'Рисунки и PDF', extensions: ['svg','pdf',...Object.keys(imageTypes)] },{name:'SVG',extensions:['svg']},{name:'Картинки',extensions:Object.keys(imageTypes)},{name:'PDF',extensions:['pdf']}], properties: ['openFile'] });
+      const result = await dialog.showOpenDialog(win, { title: translate('Открыть рисунок или PDF'), buttonLabel: translate('Открыть'), filters: [{ name: translate('Рисунки и PDF'), extensions: ['svg','pdf',...Object.keys(imageTypes)] },{name:'SVG',extensions:['svg']},{name:translate('Картинки'),extensions:Object.keys(imageTypes)},{name:'PDF',extensions:['pdf']}], properties: ['openFile'] });
       if (!result.canceled) path = result.filePaths[0];
     }
     if (!path) return null;
@@ -106,14 +108,14 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     let path: string | undefined;
     if (testing) { const name = choices.saves?.shift(); if (name) path = testPath(name); }
     else {
-      const result = await dialog.showSaveDialog(win, { title: selection?'Сохранить выделение в отдельный SVG':'Сохранить рисунок', buttonLabel: 'Сохранить', defaultPath, filters: [{ name: 'Рисунок SVG', extensions: ['svg'] }], properties: ['createDirectory', 'showOverwriteConfirmation'] });
+      const result = await dialog.showSaveDialog(win, { title: selection?translate('Сохранить выделение в отдельный SVG'):translate('Сохранить рисунок'), buttonLabel: translate('Сохранить'), defaultPath, filters: [{ name: translate('Рисунок SVG'), extensions: ['svg'] }], properties: ['createDirectory', 'showOverwriteConfirmation'] });
       if (!result.canceled) path = result.filePath;
     }
     if (!path) return null;
     if (!/\.svg$/i.test(path)) path += '.svg';
     if(selection&&previous){
       const [target,source]=await Promise.all([realpath(path).catch(()=>resolve(path!)),realpath(previous).catch(()=>resolve(previous))]);
-      if(target===source)throw new Error('Для выделения выберите другое имя: полный открытый рисунок должен остаться в исходном файле.');
+      if(target===source)throw new Error(translate('Для выделения выберите другое имя: полный открытый рисунок должен остаться в исходном файле.'));
     }
     return register(path);
   });
@@ -139,14 +141,14 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     let path:string|undefined;
     if(testing){const name=choices.saves?.shift();if(name)path=testPath(name);}
     else{
-      const result=await dialog.showSaveDialog(win,{title:'Экспорт рисунка',buttonLabel:'Экспортировать',defaultPath,filters:[{name:format.toUpperCase(),extensions:[format]}],properties:['createDirectory','showOverwriteConfirmation']});
+      const result=await dialog.showSaveDialog(win,{title:translate('Экспорт рисунка'),buttonLabel:translate('Экспортировать'),defaultPath,filters:[{name:format.toUpperCase(),extensions:[format]}],properties:['createDirectory','showOverwriteConfirmation']});
       if(!result.canceled)path=result.filePath;
     }
     if(!path)return null;
     if(!path.toLowerCase().endsWith(`.${format}`))path+=`.${format}`;
     if(previous&&format===previous.split('.').pop()?.toLowerCase()){
       const [target,source]=await Promise.all([realpath(path).catch(()=>resolve(path!)),realpath(previous).catch(()=>resolve(previous))]);
-      if(target===source)throw new Error('Для экспорта выберите другое имя: исходный файл должен остаться без изменений.');
+      if(target===source)throw new Error(translate('Для экспорта выберите другое имя: исходный файл должен остаться без изменений.'));
     }
     return register(path);
   });
@@ -171,11 +173,11 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     const entry=entries.get(ref?.handle);
     if(!entry||!(/\.(pdf|png|jpg)$/i.test(entry.path)))throw new Error('Сначала выберите файл для экспорта.');
     if(!(bytes instanceof Uint8Array)||bytes.byteLength>MAX_FILE_BYTES)throw new Error('Слишком большой файл.');
-    if(await stamp(entry.path)!==entry.stamp)throw new Error('Файл изменён другой программой. Выберите другое имя.');
+    if(await stamp(entry.path)!==entry.stamp)throw new Error(translate('Файл изменён другой программой. Выберите другое имя.'));
     const writer=await AtomicWriter.create(entry.path);
     try{
       await writer.write(bytes);
-      if(await stamp(entry.path)!==entry.stamp)throw new Error('Во время экспорта файл изменён другой программой. Выберите другое имя.');
+      if(await stamp(entry.path)!==entry.stamp)throw new Error(translate('Во время экспорта файл изменён другой программой. Выберите другое имя.'));
       await writer.commit();entry.stamp=await stamp(entry.path);
     }finally{await writer.abort();}
   }));
@@ -183,14 +185,14 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     const entry = entries.get(ref?.handle);
     if (!entry) throw new Error('Сначала выберите файл для сохранения.');
     if (typeof text !== 'string' || Buffer.byteLength(text) > MAX_FILE_BYTES) throw new Error('SVG больше 256 МБ.');
-    if (await stamp(entry.path) !== entry.stamp) throw new Error('Файл изменён другой программой. Откройте его заново или выберите «Сохранить как…», чтобы сохранить свою копию.');
+    if (await stamp(entry.path) !== entry.stamp) throw new Error(translate('Файл изменён другой программой. Откройте его заново или выберите «Сохранить как…», чтобы сохранить свою копию.'));
     await atomicWrite(entry.path, text);
     entry.stamp = await stamp(entry.path);
   }));
   ipcMain.handle('files:write-begin', async (e, ref: FileRef) => queue.run(async () => {
     const entry = entries.get(ref?.handle);
     if (!entry) throw new Error('Сначала выберите файл для сохранения.');
-    if (await stamp(entry.path) !== entry.stamp) throw new Error('Файл изменён другой программой. Откройте его заново или выберите «Сохранить как…».');
+    if (await stamp(entry.path) !== entry.stamp) throw new Error(translate('Файл изменён другой программой. Откройте его заново или выберите «Сохранить как…».'));
     const ticket = randomUUID();
     writers.set(ticket, { writer: await AtomicWriter.create(entry.path), entry, initialStamp: entry.stamp, owner: e.sender });
     return ticket;
@@ -213,7 +215,7 @@ export function installFiles(testing: boolean, recoverForTest = false) {
     const task = writers.get(ticket);
     if (!task || task.owner !== e.sender) throw new Error('Нет активного сохранения.');
     try {
-      if (await stamp(task.entry.path) !== task.initialStamp) throw new Error('Во время сохранения файл изменился в другой программе. Используйте «Сохранить как…».');
+      if (await stamp(task.entry.path) !== task.initialStamp) throw new Error(translate('Во время сохранения файл изменился в другой программе. Используйте «Сохранить как…».'));
       if (task.recovery) await task.writer.write(new TextEncoder().encode('}'));
       await task.writer.commit();
       task.entry.stamp = await stamp(task.entry.path);
@@ -225,16 +227,16 @@ export function installFiles(testing: boolean, recoverForTest = false) {
   }));
   ipcMain.handle('files:confirm-unsaved', async (e, name: string): Promise<UnsavedChoice> => {
     if (testing) return choices.unsaved?.shift() ?? 'cancel';
-    const { response } = await dialog.showMessageBox(windowOf(e), { type: 'question', message: `Сохранить изменения в «${name}»?`, detail: 'Без сохранения изменения будут потеряны.', buttons: ['Сохранить', 'Не сохранять', 'Отмена'], defaultId: 0, cancelId: 2, noLink: true });
+    const { response } = await dialog.showMessageBox(windowOf(e), { type: 'question', message: t(`Сохранить изменения в «${name}»?`,`Save changes to “${name}”?`), detail: translate('Без сохранения изменения будут потеряны.'), buttons: [translate('Сохранить'), translate('Не сохранять'), translate('Отмена')], defaultId: 0, cancelId: 2, noLink: true });
     return (['save', 'discard', 'cancel'] as const)[response];
   });
   ipcMain.handle('files:recovery-read', async e => queue.run(async (): Promise<RecoveryFile | null> => {
     const text = await readOptional(recoveryPath(e));
     if (!text) return null;
     const raw: unknown = JSON.parse(text);
-    if (!raw || typeof raw !== 'object') throw new Error('Повреждена резервная копия.');
+    if (!raw || typeof raw !== 'object') throw new Error(translate('Повреждена резервная копия.'));
     const o = raw as { data?: unknown; name?: unknown; savedAt?: unknown };
-    if ((!o.data || (typeof o.data !== 'string' && typeof o.data !== 'object')) || typeof o.name !== 'string' || typeof o.savedAt !== 'string') throw new Error('Повреждена резервная копия.');
+    if ((!o.data || (typeof o.data !== 'string' && typeof o.data !== 'object')) || typeof o.name !== 'string' || typeof o.savedAt !== 'string') throw new Error(translate('Повреждена резервная копия.'));
     return { name: o.name, savedAt: o.savedAt, data: typeof o.data === 'string' ? o.data : JSON.stringify(o.data) };
   }));
   ipcMain.handle('files:recovery-defer',e=>queue.run(async()=>{
@@ -249,7 +251,7 @@ export function installFiles(testing: boolean, recoverForTest = false) {
   }));
   ipcMain.handle('files:confirm-recovery', async (e, file: RecoveryFile) => {
     if (testing) return choices.recovery ?? false;
-    const { response } = await dialog.showMessageBox(windowOf(e), { type: 'question', message: 'Найдены изменения после незавершённой работы', detail: `«${file.name}». Восстановить рисунок из резервной копии?`, buttons: ['Восстановить', 'Начать с пустого холста'], defaultId: 0, cancelId: 1, noLink: true });
+    const { response } = await dialog.showMessageBox(windowOf(e), { type: 'question', message: translate('Найдены изменения после незавершённой работы'), detail: t(`«${file.name}». Восстановить рисунок из резервной копии?`,`Restore “${file.name}” from its backup?`), buttons: [translate('Восстановить'), translate('Начать с пустого холста')], defaultId: 0, cancelId: 1, noLink: true });
     return response === 0;
   });
   ipcMain.on('files:status', (e, name: string, dirty: boolean) => {
@@ -260,7 +262,7 @@ export function installFiles(testing: boolean, recoverForTest = false) {
   });
   ipcMain.handle('files:error', async (e, message: string) => {
     if (testing) { errors.push(message); return; }
-    await dialog.showMessageBox(windowOf(e), { type: 'error', message: 'Не удалось выполнить действие', detail: message, buttons: ['Понятно'] });
+    await dialog.showMessageBox(windowOf(e), { type: 'error', message: translate('Не удалось выполнить действие'), detail: message, buttons: [translate('Понятно')] });
   });
   ipcMain.on('files:close-ready', (e, ready = true) => {
     const win = windowOf(e);

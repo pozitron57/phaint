@@ -1,7 +1,7 @@
 {
   "name": "phaint",
   "productName": "Phaint",
-  "version": "0.6.61",
+  "version": "0.6.62",
   "description": "Векторная рисовалка для онлайн-уроков на графическом планшете",
   "license": "AGPL-3.0-or-later",
   "private": true,

@@ -1,5 +1,6 @@
 // Общие настройки на диске: окно записывает только свои изменения относительно прочитанного снимка.
 // Так закрытие старого окна не возвращает чужие цвета, толщины и назначения клавиш назад.
+import { isLanguage, type Language } from '../src/core/language.ts';
 import { mergeSettings, type Settings } from '../src/core/settings.ts';
 import { atomicWrite, readOptional, WriteQueue } from './storage.ts';
 
@@ -24,9 +25,9 @@ export class WindowSettings {
   private snapshots = new Map<number, Settings>();
   private queue = new WriteQueue();
 
-  constructor(file: string, testing: boolean) {
+  constructor(file: string) {
     this.file = file;
-    this.current = (testing ? Promise.resolve(null) : readOptional(file).then(text => text ? JSON.parse(text) : null))
+    this.current = readOptional(file).then(text => text ? JSON.parse(text) : null)
       .catch(() => null).then(mergeSettings);
   }
 
@@ -38,11 +39,13 @@ export class WindowSettings {
     });
   }
 
-  save(owner: number, data: unknown): Promise<void> {
+  save(owner: number, data: unknown, language?: Language): Promise<void> {
     return this.queue.run(async () => {
       const current = await this.current, before = this.snapshots.get(owner) ?? current;
       const after = mergeSettings(data);
       const next = mergeSettings(mergeWindowSettings(current, before, after));
+      // Только явный выбор языка может изменить его для всего приложения.
+      next.language = isLanguage(language) ? language : current.language;
       await atomicWrite(this.file, JSON.stringify(next, null, 2));
       this.current = Promise.resolve(next);
       this.snapshots.set(owner, after);
