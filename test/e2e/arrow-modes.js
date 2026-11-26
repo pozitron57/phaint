@@ -80,14 +80,14 @@ for(const [row,[reference,preset]] of cases.entries()){
   };
   choose();const drawn=await draw(730),w=preset.headWidth,l=preset.headLength;
   assert(matchesHead(drawn.shape,preset),'новая фигура использует свой набор из меню');
-  test.key('F2',{shiftKey:true});test.key('F1',{ctrlKey:true});
+  test.key('F2',{shiftKey:true});test.key('Comma',{ctrlKey:true});
   const edited=app.doc.get(drawn.id);
   assert(edited.shape.headWidth===w+.25&&edited.shape.headLength===l-.25,'ширина и длина сразу после отрыва');
   assert(Number(headWidth.value)===w&&Number(headLength.value)===l&&app.doc.get(reference.id)===reference,'после правки недавней фигуры меню и соседняя фигура сохраняют свои размеры');
   test.key('KeyG');
   test.key('F1',{shiftKey:true});assert(app.doc.get(drawn.id)===edited,'другая команда завершает правку последней фигуры');
   app.selectTool('select',false);app.selection.show(reference);
-  test.key('F1',{shiftKey:true});test.key('F2',{ctrlKey:true});
+  test.key('F1',{shiftKey:true});test.key('Period',{ctrlKey:true});
   const resized=app.selection.selected;
   assert(resized.shape.headWidth===w-.25&&resized.shape.headLength===l+.25,'клавиши меняют размеры выбранной фигуры');
   test.key('KeyZ');assert(app.selection.selected.shape.headLength===l,'отмена длины');test.key('KeyY');

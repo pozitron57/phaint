@@ -104,30 +104,30 @@ await drag([350,400],[450,400]);assert(byId(marker.id),'пустота внут�
 await drag([300,100],[300,300]);assert(app.doc.size===0,'быстрый проход удаляет весь штрих маркера');
 test.key('KeyZ');assert(app.doc.size===1&&byId(marker.id)===marker,'Undo возвращает исходный маркер целиком');
 
-// Cmd+касание переводит ручку/ластик в обычный M. Отпускание Cmd не сбрасывает выбор.
+// Cmd+касание переводит ручку/ластик в обычный X. Отпускание Cmd не сбрасывает выбор.
 await reset();tool('line');await drag([220,220],[560,220]);const line=last();tool('pen');
 test.key('MetaLeft');assert(live.style.cursor==='pointer','Cmd показывает курсор pointer');
 await drag([350,220],[350,220]);assert(app.tool.id==='select'&&app.selection.selected.id===line.id&&app.doc.size===1,'Cmd+тап выбирает без штриха ручки');
 const color=app.selection.selected.color;test.key('Tab',{metaKey:true});assert(app.selection.selected.color!==color,'Tab работает, пока Cmd ещё удерживается');
-keyup('MetaLeft');assert(app.tool.id==='select'&&app.selection.selected.id===line.id,'отпускание Cmd сохраняет M и выбранный объект');
-assert(document.querySelector('[data-action="tool.select"]').classList.contains('active'),'кнопка M остаётся активной после отпускания Cmd');
+keyup('MetaLeft');assert(app.tool.id==='select'&&app.selection.selected.id===line.id,'отпускание Cmd сохраняет X и выбранный объект');
+assert(document.querySelector('[data-action="tool.select"]').classList.contains('active'),'кнопка X остаётся активной после отпускания Cmd');
 await test.shot('ctrl-selection');
-test.key('KeyM');assert(app.tool.id==='pen','M возвращает ручку после Cmd+тапа');
+test.key('KeyX');assert(app.tool.id==='pen','X возвращает ручку после Cmd+тапа');
 tool('eraser');test.key('MetaLeft');pointer('pointerdown',350,220);pointer('pointermove',420,260);
-keyup('MetaLeft');assert(app.tool.id==='select'&&app.input.drawing&&app.doc.size===1,'Cmd отпущен во время переноса: M продолжает жест без стирания');
+keyup('MetaLeft');assert(app.tool.id==='select'&&app.input.drawing&&app.doc.size===1,'Cmd отпущен во время переноса: X продолжает жест без стирания');
 pointer('pointermove',440,280);pointer('pointerup',440,280);assert(close(byId(line.id).oy,280)&&!app.input.drawing,'перенос продолжается после отпускания Cmd');
-test.key('KeyM');assert(app.tool.id==='eraser','M возвращает ластик после переноса');
-test.key('MetaLeft');await drag([440,280],[440,280]);window.dispatchEvent(new Event('blur'));assert(app.tool.id==='select'&&app.selection.selected.id===line.id&&!app.input.meta,'потеря фокуса сохраняет M и выбранный объект');
-test.key('KeyM');assert(app.tool.id==='eraser','после потери фокуса M также возвращает ластик');
+test.key('KeyX');assert(app.tool.id==='eraser','X возвращает ластик после переноса');
+test.key('MetaLeft');await drag([440,280],[440,280]);window.dispatchEvent(new Event('blur'));assert(app.tool.id==='select'&&app.selection.selected.id===line.id&&!app.input.meta,'потеря фокуса сохраняет X и выбранный объект');
+test.key('KeyX');assert(app.tool.id==='eraser','после потери фокуса X также возвращает ластик');
 test.key('MetaLeft');pointer('pointerdown',440,280,{button:2,buttons:2,metaKey:true});
 pointer('pointermove',470,300,{buttons:2,metaKey:true});pointer('pointerup',470,300,{button:2,metaKey:true});keyup('MetaLeft');
-assert(app.tool.id==='select'&&app.doc.size===1&&close(byId(line.id).oy,300),'Касание с модификатором с правой кнопкой переносит объект и сохраняет M');
-test.key('MetaLeft');await drag([470,300],[470,300]);keyup('MetaLeft');test.key('KeyM');
-assert(app.tool.id==='eraser','повторный Cmd+тап в M не теряет предыдущий инструмент');
+assert(app.tool.id==='select'&&app.doc.size===1&&close(byId(line.id).oy,300),'Касание с модификатором с правой кнопкой переносит объект и сохраняет X');
+test.key('MetaLeft');await drag([470,300],[470,300]);keyup('MetaLeft');test.key('KeyX');
+assert(app.tool.id==='eraser','повторный Cmd+тап в X не теряет предыдущий инструмент');
 tool('pen');pointer('pointerdown',750,400);test.key('MetaLeft');pointer('pointermove',780,430);pointer('pointerup',810,405);keyup('MetaLeft');
 assert(app.tool.id==='pen'&&app.doc.size===2,'Cmd посреди обычного письма не переключает инструмент');
 test.key('KeyL');test.key('KeyL');assert(app.tool.id==='pen','возврат предыдущего инструмента сохраняется');
-test.key('MetaLeft');await drag([1100,650],[1100,650]);keyup('MetaLeft');assert(app.tool.id==='select'&&!app.selection.objects.length&&app.doc.size===2,'Cmd+тап по пустому месту включает M без нового штриха');
-test.key('KeyM');assert(app.tool.id==='pen','M возвращает ручку и после выбора пустого места');
+test.key('MetaLeft');await drag([1100,650],[1100,650]);keyup('MetaLeft');assert(app.tool.id==='select'&&!app.selection.objects.length&&app.doc.size===2,'Cmd+тап по пустому месту включает X без нового штриха');
+test.key('KeyX');assert(app.tool.id==='pen','X возвращает ручку и после выбора пустого места');
 await test.shot('ctrl');
 return {ok:true,arrows:native.objects.length,sineCycles:sineNative.objects[0].shape.cycles};

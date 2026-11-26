@@ -1,10 +1,10 @@
-// Регрессии последнего отрезка, курсора, F9 и перемещения холста пробелом.
+// Регрессии последнего отрезка, курсора, N и перемещения холста пробелом.
 const { app, test } = window.__phaint;
 const assert = (ok, message) => { if (!ok) throw new Error(message); };
 const live = document.getElementById('live');
-test.key('KeyB'); test.key('F12'); test.key('F9');
-assert(app.toolbar.el.hidden && !app.panels.brush.open && !app.panels.background.open && !app.settings.ui.debug, 'F9 закрывает весь интерфейс');
-test.key('F9'); assert(!app.toolbar.el.hidden, 'повторный F9 показывает панель');
+test.key('KeyB'); test.key('F12'); test.key('KeyN');
+assert(app.toolbar.el.hidden && !app.panels.brush.open && !app.panels.background.open && !app.settings.ui.debug, 'N закрывает весь интерфейс');
+test.key('KeyB',{shiftKey:true}); assert(!app.toolbar.el.hidden, 'Shift+B снова показывает панель');
 test.pointer('pointerdown',180,180,.4);
 assert(getComputedStyle(live).cursor !== 'none', 'курсор виден при рисовании');
 test.pointer('pointermove',230,180,.7);

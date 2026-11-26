@@ -1,0 +1,256 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1302" height="722" viewBox="0 0 1302 722" role="img" aria-labelledby="title desc">
+<title id="title">Phaint · Горячие клавиши</title><desc id="desc">Стандартные назначения на клавиатуре Mac.</desc>
+<g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect x="0" y="0" width="1302" height="722" rx="18" fill="#f8fafc" stroke="none"/>
+<text x="36" y="49" font-size="34" fill="#315ca8" font-weight="750">Phaint</text>
+<text x="160" y="49" font-size="32" fill="#192e48" font-weight="650">Горячие клавиши</text>
+<text x="36" y="81" font-size="18" fill="#526576" font-weight="500">Назначения привязаны к физическим клавишам при любой раскладке.</text>
+<text x="1131" y="48" font-size="16" fill="#526576" font-weight="600">macOS · QWERTY</text>
+<rect x="36" y="104" width="118" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="45" y="121" font-size="15" fill="#192e48" font-weight="650">esc</text>
+<text x="45" y="135" font-size="11.5" fill="#526576" font-weight="500">Отмена</text>
+<rect x="159" y="104" width="77" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="168" y="121" font-size="15" fill="#192e48" font-weight="650">F1</text>
+<text x="168" y="135" font-size="11.5" fill="#526576" font-weight="500">Тоньше</text>
+<rect x="241" y="104" width="77" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="250" y="121" font-size="15" fill="#192e48" font-weight="650">F2</text>
+<text x="250" y="135" font-size="11.5" fill="#526576" font-weight="500">Толще</text>
+<rect x="323" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="332" y="121" font-size="15" fill="#6b7988" font-weight="650">F3</text>
+<rect x="405" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="414" y="121" font-size="15" fill="#6b7988" font-weight="650">F4</text>
+<rect x="487" y="104" width="77" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="496" y="121" font-size="15" fill="#192e48" font-weight="650">F5</text>
+<text x="496" y="135" font-size="11.5" fill="#526576" font-weight="500">Стили</text>
+<rect x="569" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="578" y="121" font-size="15" fill="#6b7988" font-weight="650">F6</text>
+<rect x="651" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="660" y="121" font-size="15" fill="#6b7988" font-weight="650">F7</text>
+<rect x="733" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="742" y="121" font-size="15" fill="#6b7988" font-weight="650">F8</text>
+<rect x="815" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="824" y="121" font-size="15" fill="#6b7988" font-weight="650">F9</text>
+<rect x="897" y="104" width="77" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="906" y="121" font-size="15" fill="#6b7988" font-weight="650">F10</text>
+<rect x="979" y="104" width="77" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="988" y="121" font-size="15" fill="#192e48" font-weight="650">F11</text>
+<text x="988" y="135" font-size="11.5" fill="#526576" font-weight="500">Весь экран</text>
+<rect x="1061" y="104" width="77" height="39" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1070" y="121" font-size="15" fill="#192e48" font-weight="650">F12</text>
+<text x="1070" y="135" font-size="11.5" fill="#526576" font-weight="500">Отладка</text>
+<rect x="1143" y="104" width="118" height="39" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="1152" y="121" font-size="15" fill="#6b7988" font-weight="650">◉</text>
+<rect x="36" y="149" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="45" y="173" font-size="20" fill="#6b7988" font-weight="650">`</text>
+<rect x="118" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="127" y="173" font-size="20" fill="#192e48" font-weight="650">1</text>
+<g transform="translate(163 154)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L20 4"/></g>
+<text x="127" y="197" font-size="12" fill="#526576" font-weight="500">Сплошная</text>
+<rect x="200" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="209" y="173" font-size="20" fill="#192e48" font-weight="650">2</text>
+<g transform="translate(245 154)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l4-2m3-1l4-2m3-1l4-2"/></g>
+<text x="209" y="197" font-size="13" fill="#526576" font-weight="500">Штрихи</text>
+<rect x="282" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="291" y="173" font-size="20" fill="#192e48" font-weight="650">3</text>
+<g transform="translate(327 154)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h.01M7.5 14.5h.01M12 12h.01M16.5 9.5h.01M21 7h.01" stroke-width="2.8"/></g>
+<text x="291" y="197" font-size="13" fill="#526576" font-weight="500">Точки</text>
+<rect x="364" y="149" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="373" y="173" font-size="20" fill="#192e48" font-weight="650">4</text>
+<g transform="translate(409 154)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l9-10 5 5-9 10zM6 14l5 5-7 2z"/></g>
+<text x="373" y="197" font-size="13" fill="#234678" font-weight="500">Маркер</text>
+<rect x="446" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="455" y="173" font-size="20" fill="#192e48" font-weight="650">5</text>
+<g transform="translate(491 154)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h.01M7.5 14.5h.01M12 12h.01M16.5 9.5h.01M21 7h.01" stroke-width="2.8"/></g>
+<text x="455" y="197" font-size="12" fill="#526576" font-weight="500">Вкл. точки</text>
+<rect x="528" y="149" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="537" y="173" font-size="20" fill="#6b7988" font-weight="650">6</text>
+<rect x="610" y="149" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="619" y="173" font-size="20" fill="#6b7988" font-weight="650">7</text>
+<rect x="692" y="149" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="701" y="173" font-size="20" fill="#6b7988" font-weight="650">8</text>
+<rect x="774" y="149" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="783" y="173" font-size="20" fill="#6b7988" font-weight="650">9</text>
+<rect x="856" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="865" y="173" font-size="20" fill="#192e48" font-weight="650">0</text>
+<text x="865" y="197" font-size="13" fill="#526576" font-weight="500">Сброс</text>
+<rect x="938" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="947" y="173" font-size="20" fill="#192e48" font-weight="650">−</text>
+<text x="947" y="197" font-size="13" fill="#526576" font-weight="500">Мельче</text>
+<rect x="1020" y="149" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1029" y="173" font-size="20" fill="#192e48" font-weight="650">=</text>
+<text x="1029" y="197" font-size="13" fill="#526576" font-weight="500">Крупнее</text>
+<rect x="1102" y="149" width="159" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1111" y="173" font-size="14" fill="#192e48" font-weight="650">delete</text>
+<text x="1111" y="197" font-size="13" fill="#526576" font-weight="500">Удалить выделение</text>
+<rect x="36" y="211" width="118" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="45" y="235" font-size="20" fill="#192e48" font-weight="650">tab</text>
+<text x="45" y="259" font-size="13" fill="#526576" font-weight="500">След. цвет</text>
+<rect x="159" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="168" y="235" font-size="20" fill="#192e48" font-weight="650">Q</text>
+<g transform="translate(204 216)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
+<text x="168" y="259" font-size="13" fill="#526576" font-weight="500">Синий</text>
+<rect x="241" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="250" y="235" font-size="20" fill="#192e48" font-weight="650">W</text>
+<g transform="translate(286 216)" fill="none" color="#c9514e" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
+<text x="250" y="259" font-size="13" fill="#526576" font-weight="500">Красный</text>
+<rect x="323" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="332" y="235" font-size="20" fill="#192e48" font-weight="650">E</text>
+<g transform="translate(368 216)" fill="none" color="#79ad65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
+<text x="332" y="259" font-size="13" fill="#526576" font-weight="500">Зелёный</text>
+<rect x="405" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="414" y="235" font-size="20" fill="#6b7988" font-weight="650">R</text>
+<rect x="487" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="496" y="235" font-size="20" fill="#6b7988" font-weight="650">T</text>
+<rect x="569" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="578" y="235" font-size="20" fill="#192e48" font-weight="650">Y</text>
+<g transform="translate(614 216)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 13l4-4-4-4"/><path d="M20 9H10a5.5 5.5 0 000 11h3"/></g>
+<text x="578" y="259" font-size="13" fill="#526576" font-weight="500">Повтор</text>
+<rect x="651" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="660" y="235" font-size="20" fill="#6b7988" font-weight="650">U</text>
+<rect x="733" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="742" y="235" font-size="20" fill="#6b7988" font-weight="650">I</text>
+<rect x="815" y="211" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="824" y="235" font-size="20" fill="#192e48" font-weight="650">O</text>
+<g transform="translate(860 216)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="7"/></g>
+<text x="824" y="259" font-size="13" fill="#234678" font-weight="500">Круг</text>
+<rect x="897" y="211" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="906" y="235" font-size="20" fill="#192e48" font-weight="650">P</text>
+<g transform="translate(942 216)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20Q12-12 21 20"/></g>
+<text x="906" y="259" font-size="12" fill="#234678" font-weight="500">Парабола</text>
+<rect x="979" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="988" y="235" font-size="20" fill="#192e48" font-weight="650">[</text>
+<text x="988" y="259" font-size="13" fill="#526576" font-weight="500">−90°</text>
+<rect x="1061" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1070" y="235" font-size="20" fill="#192e48" font-weight="650">]</text>
+<text x="1070" y="259" font-size="13" fill="#526576" font-weight="500">+90°</text>
+<rect x="1143" y="211" width="118" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="1152" y="235" font-size="20" fill="#6b7988" font-weight="650">\</text>
+<rect x="36" y="273" width="138.5" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="45" y="297" font-size="14" fill="#6b7988" font-weight="650">caps lock</text>
+<rect x="179.5" y="273" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="188.5" y="297" font-size="20" fill="#192e48" font-weight="650">A</text>
+<g transform="translate(224.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L20 4M10 4h10v10"/></g>
+<text x="188.5" y="321" font-size="13" fill="#234678" font-weight="500">Стрелка</text>
+<rect x="261.5" y="273" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="270.5" y="297" font-size="20" fill="#192e48" font-weight="650">S</text>
+<g transform="translate(306.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C5-1 8-1 12 12S19 25 22 12"/></g>
+<text x="270.5" y="321" font-size="12" fill="#234678" font-weight="500">Синусоида</text>
+<rect x="343.5" y="273" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="352.5" y="297" font-size="20" fill="#192e48" font-weight="650">D</text>
+<g transform="translate(388.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.2-4.4L16.6 4.2a2 2 0 012.8 0l.4.4a2 2 0 010 2.8L8.4 18.8 4 20z"/><path d="M14.5 6.3l3.2 3.2"/></g>
+<text x="352.5" y="321" font-size="13" fill="#234678" font-weight="500">Ручка</text>
+<rect x="425.5" y="273" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="434.5" y="297" font-size="20" fill="#6b7988" font-weight="650">F</text>
+<rect x="507.5" y="273" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="516.5" y="297" font-size="20" fill="#192e48" font-weight="650">G</text>
+<g transform="translate(552.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/></g>
+<text x="516.5" y="321" font-size="13" fill="#526576" font-weight="500">Сетка</text>
+<rect x="589.5" y="273" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="598.5" y="297" font-size="20" fill="#192e48" font-weight="650">H</text>
+<g transform="translate(634.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3C4.8 16 8 19.2 21 20"/></g>
+<text x="598.5" y="321" font-size="12" fill="#234678" font-weight="500">Гипербола</text>
+<rect x="671.5" y="273" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="680.5" y="297" font-size="20" fill="#6b7988" font-weight="650">J</text>
+<rect x="753.5" y="273" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="762.5" y="297" font-size="20" fill="#6b7988" font-weight="650">K</text>
+<rect x="835.5" y="273" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="844.5" y="297" font-size="20" fill="#192e48" font-weight="650">L</text>
+<g transform="translate(880.5 278)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L20 4"/></g>
+<text x="844.5" y="321" font-size="13" fill="#234678" font-weight="500">Прямая</text>
+<rect x="917.5" y="273" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="926.5" y="297" font-size="20" fill="#6b7988" font-weight="650">;</text>
+<rect x="999.5" y="273" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="1008.5" y="297" font-size="20" fill="#6b7988" font-weight="650">'</text>
+<rect x="1081.5" y="273" width="179.5" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="1090.5" y="297" font-size="14" fill="#6b7988" font-weight="650">return</text>
+<rect x="36" y="335" width="179.5" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="45" y="359" font-size="14" fill="#6b7988" font-weight="650">⇧ shift</text>
+<rect x="220.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="229.5" y="359" font-size="20" fill="#192e48" font-weight="650">Z</text>
+<g transform="translate(265.5 340)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13L4 9l4-4"/><path d="M4 9h10a5.5 5.5 0 010 11h-3"/></g>
+<text x="229.5" y="383" font-size="13" fill="#526576" font-weight="500">Отмена</text>
+<rect x="302.5" y="335" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="311.5" y="359" font-size="20" fill="#192e48" font-weight="650">X</text>
+<g transform="translate(347.5 340)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 10-7 1-3 7z"/></g>
+<text x="311.5" y="383" font-size="13" fill="#234678" font-weight="500">Выбор</text>
+<rect x="384.5" y="335" width="77" height="56" rx="7" fill="#e6efff" stroke="#a6bddf"/>
+<text x="393.5" y="359" font-size="20" fill="#192e48" font-weight="650">C</text>
+<g transform="translate(429.5 340)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V3m-3 3 3-3 3 3M5 20h16m-3-3 3 3-3 3"/></g>
+<text x="393.5" y="383" font-size="13" fill="#234678" font-weight="500">Оси</text>
+<rect x="466.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="475.5" y="359" font-size="20" fill="#192e48" font-weight="650">V</text>
+<g transform="translate(511.5 340)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="M3 18l6-6 4 4 4-5 4 5"/></g>
+<text x="475.5" y="383" font-size="12" fill="#526576" font-weight="500">Картинка</text>
+<rect x="548.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="557.5" y="359" font-size="20" fill="#192e48" font-weight="650">B</text>
+<g transform="translate(593.5 340)" fill="none" color="#315ca8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></g>
+<text x="557.5" y="383" font-size="12" fill="#526576" font-weight="500">Параметры</text>
+<rect x="630.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="639.5" y="359" font-size="20" fill="#192e48" font-weight="650">N</text>
+<text x="639.5" y="383" font-size="13" fill="#526576" font-weight="500">Панель</text>
+<rect x="712.5" y="335" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="721.5" y="359" font-size="20" fill="#6b7988" font-weight="650">M</text>
+<rect x="794.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="803.5" y="359" font-size="20" fill="#192e48" font-weight="650">,</text>
+<text x="803.5" y="383" font-size="13" fill="#526576" font-weight="500">−15°</text>
+<rect x="876.5" y="335" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="885.5" y="359" font-size="20" fill="#192e48" font-weight="650">.</text>
+<text x="885.5" y="383" font-size="13" fill="#526576" font-weight="500">+15°</text>
+<rect x="958.5" y="335" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="967.5" y="359" font-size="20" fill="#6b7988" font-weight="650">/</text>
+<rect x="1040.5" y="335" width="220.5" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="1049.5" y="359" font-size="14" fill="#6b7988" font-weight="650">⇧ shift</text>
+<rect x="36" y="397" width="77" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="45" y="421" font-size="20" fill="#6b7988" font-weight="650">fn</text>
+<rect x="118" y="397" width="77" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="127" y="421" font-size="14" fill="#6b7988" font-weight="650">⌃ control</text>
+<rect x="200" y="397" width="97.5" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="209" y="421" font-size="14" fill="#6b7988" font-weight="650">⌥ option</text>
+<rect x="302.5" y="397" width="97.5" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="311.5" y="421" font-size="14" fill="#6b7988" font-weight="650">⌘ command</text>
+<rect x="405" y="397" width="425.5" height="51" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="414" y="421" font-size="14" fill="#192e48" font-weight="650">space</text>
+<text x="414" y="440" font-size="13" fill="#526576" font-weight="500">Удерживать и двигать холст</text>
+<rect x="835.5" y="397" width="97.5" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="844.5" y="421" font-size="14" fill="#6b7988" font-weight="650">⌘ command</text>
+<rect x="938" y="397" width="77" height="51" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
+<text x="947" y="421" font-size="14" fill="#6b7988" font-weight="650">⌥ option</text>
+<rect x="1020" y="397" width="77" height="51" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1029" y="421" font-size="20" fill="#192e48" font-weight="650">←</text>
+<text x="1029" y="440" font-size="13" fill="#526576" font-weight="500">Сдвиг</text>
+<rect x="1102" y="397" width="77" height="23" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1111" y="414" font-size="15" fill="#192e48" font-weight="650">↑</text>
+<rect x="1102" y="424" width="77" height="24" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1111" y="441" font-size="15" fill="#192e48" font-weight="650">↓</text>
+<rect x="1184" y="397" width="77" height="51" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
+<text x="1193" y="421" font-size="20" fill="#192e48" font-weight="650">→</text>
+<text x="1193" y="440" font-size="13" fill="#526576" font-weight="500">Сдвиг</text>
+<rect x="36" y="481" width="1225" height="1" rx="0" fill="#c3cfdb" stroke="none"/>
+<text x="36" y="519" font-size="23" fill="#192e48" font-weight="650">Фигуры</text>
+<text x="36" y="554" font-size="20" fill="#315ca8" font-weight="650">⇧A</text>
+<text x="130" y="554" font-size="17" fill="#192e48" font-weight="500">Двусторонняя стрелка</text>
+<text x="36" y="591" font-size="20" fill="#315ca8" font-weight="650">⇧H</text>
+<text x="130" y="591" font-size="17" fill="#192e48" font-weight="500">Адиабата</text>
+<text x="36" y="628" font-size="20" fill="#315ca8" font-weight="650">O → ⇧</text>
+<text x="130" y="628" font-size="17" fill="#192e48" font-weight="500">Держать Shift для эллипса</text>
+<text x="36" y="665" font-size="20" fill="#315ca8" font-weight="650">⌃, / ⌃.</text>
+<text x="130" y="665" font-size="17" fill="#192e48" font-weight="500">Короче / длиннее наконечник</text>
+<text x="481" y="519" font-size="23" fill="#192e48" font-weight="650">Холст</text>
+<text x="481" y="554" font-size="20" fill="#315ca8" font-weight="650">⇧⌘E</text>
+<text x="575" y="554" font-size="17" fill="#192e48" font-weight="500">Ластик</text>
+<text x="481" y="591" font-size="20" fill="#315ca8" font-weight="650">⇧G</text>
+<text x="575" y="591" font-size="17" fill="#192e48" font-weight="500">Сетка и привязка</text>
+<text x="481" y="628" font-size="20" fill="#315ca8" font-weight="650">⇧B</text>
+<text x="575" y="628" font-size="17" fill="#192e48" font-weight="500">Показать / скрыть панель</text>
+<text x="481" y="665" font-size="20" fill="#315ca8" font-weight="650">⇧⌘V</text>
+<text x="575" y="665" font-size="17" fill="#192e48" font-weight="500">Раздвинуть по вертикали</text>
+<text x="882" y="519" font-size="23" fill="#192e48" font-weight="650">Файлы и настройки</text>
+<text x="882" y="554" font-size="20" fill="#315ca8" font-weight="650">⌘O</text>
+<text x="976" y="554" font-size="17" fill="#192e48" font-weight="500">Открыть SVG, картинку, PDF</text>
+<text x="882" y="591" font-size="20" fill="#315ca8" font-weight="650">⌘S</text>
+<text x="976" y="591" font-size="17" fill="#192e48" font-weight="500">Сохранить SVG</text>
+<text x="882" y="628" font-size="20" fill="#315ca8" font-weight="650">⌘E</text>
+<text x="976" y="628" font-size="17" fill="#192e48" font-weight="500">Экспорт</text>
+<text x="882" y="665" font-size="20" fill="#315ca8" font-weight="650">⌘,</text>
+<text x="976" y="665" font-size="17" fill="#192e48" font-weight="500">Настроить клавиши</text>
+</g></svg>

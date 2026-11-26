@@ -12,7 +12,7 @@ const draw=async(kind,from,to,controls)=>{
     test.pointer('pointerup',x,y,0,'pen',{ctrlKey:true});
   }
   const obj=[...app.doc.values()].at(-1);
-  test.key('KeyM');app.selection.show(obj);
+  test.key('KeyX');app.selection.show(obj);
   return obj;
 };
 app.setStylePerTool(true);

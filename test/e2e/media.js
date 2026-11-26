@@ -32,7 +32,7 @@ assert(app.tool.id==='select','вставка выделена');
 const imagePoint=app.view.toScreen(image.ox+image.width/2,image.oy+image.height/2);
 test.key('KeyE',{metaKey:true,shiftKey:true});await test.pen([[imagePoint.x,imagePoint.y,.5]],3);await test.idle();
 assert(at(imagePoint.x,imagePoint.y)[0]===201,'ластик не трогает картинку');
-test.key('KeyM');await test.pen([[imagePoint.x,imagePoint.y,.5]],2);test.key('Backspace');assert(![...app.doc.values()].some(o=>o.kind==='image'),'M и Delete удаляют картинку');
+test.key('KeyX');await test.pen([[imagePoint.x,imagePoint.y,.5]],2);test.key('Backspace');assert(![...app.doc.values()].some(o=>o.kind==='image'),'X и Delete удаляют картинку');
 test.key('KeyZ',{metaKey:true});await test.idle();assert([...app.doc.values()].some(o=>o.kind==='image'),'отмена удаления');
 app.selectTool('select',false);test.key('AltLeft');await test.pen([[imagePoint.x,imagePoint.y,.5],[imagePoint.x+40,imagePoint.y+30,.5]],3);
 window.dispatchEvent(new KeyboardEvent('keyup',{code:'AltLeft',bubbles:true}));await test.idle();

@@ -28,7 +28,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-const ICONS: Record<string, string> = {
+export const ICONS: Record<string, string> = {
   keyboard:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"/>',
   arrow:'<path d="M4 20L20 4M10 4h10v10"/>',
   arrowBoth:'<path d="M4 20L20 4M10 4h10v10M4 10v10h10"/>',

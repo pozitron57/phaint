@@ -54,6 +54,6 @@ assert(app.currentColor===colors[1],'цвет выбирается нажати�
 test.pointer('pointerdown',900,200,.5); test.pointer('pointermove',1000,220,.5);
 test.key('Tab'); test.pointer('pointerup',1050,220,0);
 assert([...app.doc.values()].at(-1).color===colors[1] && app.currentColor===colors[2],'цвет меняется со следующего штриха');
-test.key('F9'); assert(!app.palette.open && app.toolbar.el.hidden,'F9 закрывает палитру вместе с интерфейсом');
-test.key('F9'); await test.idle();
+test.key('KeyN'); assert(!app.palette.open && app.toolbar.el.hidden,'N закрывает палитру вместе с интерфейсом');
+test.key('KeyN'); await test.idle();
 return {ok:true,objects:app.doc.size,colors};

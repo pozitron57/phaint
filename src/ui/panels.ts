@@ -200,7 +200,7 @@ export function brushPanel(app:App):Panel {
   p.section('Синусоида',()=>active('sine'),()=>{
     p.slider('Амплитуда',0,240,1,()=>selected('sine')?.shape?.amplitude??app.settings.sine.amplitude,v=>app.changeSine('amplitude',v),v=>String(Math.round(v)));
     p.slider('Период',12,600,1,()=>selected('sine')?.shape?.period??app.settings.sine.period,v=>app.changeSine('period',v),v=>String(Math.round(v)));
-    p.note('M: оранжевые ручки — амплитуда, период и число волн.');
+    p.note('Выберите синусоиду и тяните оранжевые ручки, чтобы изменить амплитуду, период и число волн.');
   });
   p.section('Выделение',()=>app.tool.id==='select',()=>{
     p.checkbox('Сохранять толщину линий',()=>app.settings.selection.keepWidth,v=>{app.settings.selection.keepWidth=v;changed();});
@@ -230,7 +230,7 @@ export function backgroundPanel(app: App): Panel {
   p.checkbox('Привязывать картинки друг к другу',()=>app.settings.snapToImages,v=>{app.settings.snapToImages=v;app.settingsChanged();});
   p.note(()=>{
     const key=app.actions.hint('gesture.grid');
-    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. В M ${key} отключает привязку при переносе объектов, изменении размера картинок и движении концов прямых и стрелок.`:'');
+    return 'Привязка работает и при скрытой сетке.'+(key?` ${key} обращает привязку при рисовании фигур. При работе с выделением ${key} отключает привязку при переносе объектов, изменении размера картинок и движении концов прямых и стрелок.`:'');
   });
   return p;
 }

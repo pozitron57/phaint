@@ -65,7 +65,7 @@ export const GESTURES:ActionDef[]=[
   gesture('gesture.zoom','Масштаб колёсиком','Ctrl','Удерживайте модификатор при прокрутке. Щипок трекпада сохраняется.',['wheel']),
   gesture('gesture.select','Выбрать объект при рисовании','Cmd','Касание в любом инструменте рисования переключает на выделение.',['pen','eraser','line','arrow','coordinates','marker','ellipse','sine','parabola','hyperbola','adiabat']),
   gesture('gesture.angle','Угол прямой и стрелки с шагом 15°','Shift','При рисовании и изменении конца выбранной линии или стрелки.',['line','arrow','endpoint']),
-  gesture('gesture.grid','Временно изменить привязку','Alt','При рисовании фигур обращает привязку к сетке. В M отключает привязки при переносе объектов, изменении размера картинок и перетаскивании концов прямых и стрелок.',['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','select.move','resize','endpoint']),
+  gesture('gesture.grid','Временно изменить привязку','Alt','При рисовании фигур обращает привязку к сетке. При работе с выделением отключает привязки при переносе объектов, изменении размера картинок и перетаскивании концов прямых и стрелок.',['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','select.move','resize','endpoint']),
   gesture('gesture.bezier','Создать точку Безье','Ctrl','Касание или перетаскивание у последней либо выбранной прямой/стрелки. Ручки рамки имеют приоритет.',['line','arrow','select.begin']),
   gesture('gesture.marker','Рисовать прямым маркером','Shift','Прямой штрих с углом через 15°.',['marker']),
   gesture('gesture.ellipse','Эллипс вместо окружности','Shift','Независимые полуоси при рисовании от центра.',['ellipse']),

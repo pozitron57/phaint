@@ -40,7 +40,7 @@ export function registerActions(app: App): void {
   add('style.previous','Предыдущий вид линии',['Shift+Digit2'],()=>app.cycleLinePattern(-1));
   add('style.dots','Включить или выключить точки',['Digit5'],()=>app.toggleDash('dots'));
   add('style.perTool','Штрих и цвет привязаны к инструменту',['F5'],()=>app.setStylePerTool(!app.settings.stylePerTool));
-  add('tool.select', 'Выбор объекта', ['KeyM'], () => app.selectTool('select'));
+  add('tool.select', 'Выбор объекта', ['KeyX'], () => app.selectTool('select'));
   add('tool.space','Раздвижение',['Cmd+Shift+KeyV'],()=>app.selectTool('space'));
   add('edit.pasteImage', 'Вставить картинку', ['KeyV'], () => {void app.pasteImage();});
   add('edit.pasteImageFree', 'Вставить картинку точно под курсором', ['Alt+KeyV'], () => {void app.pasteImage('free');});
@@ -82,8 +82,8 @@ export function registerActions(app: App): void {
 
   add('arrowHead.narrower','Уменьшить ширину головки',['Shift+F1'],()=>app.stepArrowHead('headWidth',-1),true);
   add('arrowHead.wider','Увеличить ширину головки',['Shift+F2'],()=>app.stepArrowHead('headWidth',1),true);
-  add('arrowHead.shorter','Уменьшить длину головки',['Ctrl+F1'],()=>app.stepArrowHead('headLength',-1),true);
-  add('arrowHead.longer','Увеличить длину головки',['Ctrl+F2'],()=>app.stepArrowHead('headLength',1),true);
+  add('arrowHead.shorter','Уменьшить длину головки',['Ctrl+F1','Ctrl+Comma'],()=>app.stepArrowHead('headLength',-1),true);
+  add('arrowHead.longer','Увеличить длину головки',['Ctrl+F2','Ctrl+Period'],()=>app.stepArrowHead('headLength',1),true);
 
   add('view.zoomIn', 'Увеличить', ['Equal','Shift+Equal','Ctrl+Equal', 'Ctrl+Shift+Equal', 'Ctrl+NumpadAdd'], () => app.zoomStep(1), true);
   add('view.zoomOut', 'Уменьшить', ['Minus','Ctrl+Minus', 'Ctrl+Shift+Minus', 'Ctrl+NumpadSubtract'], () => app.zoomStep(-1), true);
@@ -98,7 +98,7 @@ export function registerActions(app: App): void {
     add(`selection.move${direction}`,`Сдвинуть выделение ${title} на 2 клетки`,[],key=>app.moveSelection(dx,dy,key,true),true);
   add('view.fullscreen', 'Полный экран', ['F11'], () => app.platform.toggleFullscreen());
 
-  add('ui.toolbar', 'Показать или скрыть панель', ['F9'], () => app.toggleToolbar());
+  add('ui.toolbar', 'Показать или скрыть панель', ['KeyN','Shift+KeyB'], () => app.toggleToolbar());
   add('ui.brush', 'Настройки инструмента или выделения', ['KeyB'], () => app.togglePanel('brush'));
   add('ui.background', 'Фон и сетка', ['Shift+KeyG'], () => app.togglePanel('background'));
   add('ui.shortcuts','Настройки клавиш…',['Cmd+Comma'],()=>app.shortcuts.show());

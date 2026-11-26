@@ -28,7 +28,7 @@ export function buildNative() {
   mkdirSync(dirname(OUT), { recursive: true });
   execFileSync(
     'clang',
-    ['-fobjc-arc', '-O2', '-bundle', '-undefined', 'dynamic_lookup', '-arch', 'arm64', '-mmacosx-version-min=12.0',
+    ['-fobjc-arc', '-O2', '-bundle', '-undefined', 'dynamic_lookup', '-arch', 'arm64', '-arch', 'x86_64', '-mmacosx-version-min=13.0',
       '-I', include, '-framework', 'AppKit', '-framework', 'Vision', '-framework', 'ImageIO', '-o', OUT, ...SOURCES],
     { stdio: 'inherit' },
   );
