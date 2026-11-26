@@ -64,7 +64,7 @@ const groups = [
   [['Files & settings', 'Файлы и настройки'], [
     ['file.open', 'Open SVG, image or PDF', 'Открыть SVG, картинку, PDF'],
     ['file.save', 'Save SVG', 'Сохранить SVG'], ['file.export', 'Export', 'Экспорт'],
-    ['ui.shortcuts', 'Customise shortcuts', 'Настроить клавиши'],
+    ['ui.shortcuts', 'Shortcuts and Tab colors', 'Клавиши и цвета Tab'],
   ]],
 ];
 const keyLabel = key => symbols[key] ?? key.replace(/^(Key|Digit)/, '');

@@ -60,8 +60,8 @@ export function registerActions(app: App): void {
   add('eraser.original', 'Стирать также исходный SVG', [], () => app.toggleOriginalEraser());
   add('color.menu','Все цвета',['Shift+Tab'],()=>app.palette.toggle());
   add('color.blue','Синий',['KeyQ'],()=>app.palette.pick(QUICK_COLORS.blue));
-  add('color.red','Красный',['KeyW'],()=>app.palette.pick(QUICK_COLORS.red));
-  add('color.green','Зелёный',['KeyE'],()=>app.palette.pick(QUICK_COLORS.green));
+  add('color.green','Зелёный',['KeyW'],()=>app.palette.pick(QUICK_COLORS.green));
+  add('color.red','Красный',['KeyE'],()=>app.palette.pick(QUICK_COLORS.red));
   add('color.palette', 'Следующий цвет', ['Tab'], () => app.palette.advance());
 
   add('view.grid', 'Показать или скрыть сетку', ['KeyG'], () => {

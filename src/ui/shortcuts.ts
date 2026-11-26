@@ -5,11 +5,14 @@ import type { App } from '../app.ts';
 import { comboLabel, comboOf, modifierCombo, modifierName, normalizeCombo, shortcutSearchBindings, validCombo, type ActionDef } from '../core/actions.ts';
 import { SHORTCUT_GROUPS } from '../core/shortcut-info.ts';
 import { h, icon } from './dom.ts';
+import { colorCycleEditor } from './color-cycle.ts';
 
 export class ShortcutSettings {
   private app:App;
   private dialog:HTMLDialogElement|null=null;
   private draft:Record<string,string[]>={};
+  private colors:string[]=[];
+  private section:'keys'|'colors'='keys';
   private group='all';
   private filter='';
   private changedOnly=false;
@@ -25,9 +28,10 @@ export class ShortcutSettings {
   constructor(app:App){this.app=app;}
   get open():boolean {return !!this.dialog?.open;}
   show():void {
-    if(this.open){this.search.focus();return;}
+    if(this.open){if(this.section==='keys')this.search.focus();return;}
     this.app.input.finishCurrent();this.app.closePanels();this.app.input.clearModifiers();
     this.draft=structuredClone(this.app.settings.keys);this.group='all';this.filter='';this.changedOnly=false;
+    this.colors=[...this.app.settings.colorCycle];this.section='keys';
     this.languageChoice=undefined;
     this.buildDialog();
   }
@@ -45,7 +49,7 @@ export class ShortcutSettings {
   }
   private buildDialog():void {
     const dialog=h('dialog',{class:'shortcut-dialog','aria-label':translate('Настройки')});this.dialog=dialog;
-    const title=h('div',{},h('h2',{},translate('Настройки')),h('p',{},translate('Клавиши и сочетания')));
+    const title=h('h2',{},translate('Настройки'));
     const close=h('button',{class:'shortcut-close',title:translate('Закрыть без сохранения'),'aria-label':translate('Закрыть без сохранения'),onclick:()=>this.close()},icon('close'));
     const select=h('select',{onchange:()=>{this.languageChoice=select.value as Language;}},
       h('option',{value:'ru',lang:'ru'},'Русский'),h('option',{value:'en',lang:'en'},'English'));
@@ -64,17 +68,32 @@ export class ShortcutSettings {
     }
     this.rows=h('div',{class:'shortcut-rows','aria-label':translate('Назначения клавиш')});
     const table=h('section',{class:'shortcut-table'},h('div',{class:'shortcut-columns'},h('span',{},translate('Действие')),h('span',{},translate('Сочетания клавиш'))),this.rows);
-    this.body=h('div',{class:'shortcut-body'},filters,h('div',{class:'shortcut-layout'},nav,table));
+    const layout=h('div',{class:'shortcut-layout'},nav,table);
+    const colors=colorCycleEditor(this.colors);
+    const sections=h('nav',{class:'settings-sections','aria-label':translate('Настройки')});
+    this.body=h('div',{class:'shortcut-body'},sections,filters,layout,colors);
     this.editor=h('section',{class:'shortcut-editor',hidden:true,'aria-live':'polite'});
     this.status=h('span',{class:'shortcut-status','aria-live':'polite'},translate('Нажмите сочетание в списке, чтобы изменить его.'));
     const reset=h('button',{class:'btn shortcut-reset',onclick:()=>this.resetAll()},translate('Вернуть стандартные'));
     const cancel=h('button',{class:'btn',onclick:()=>this.close()},translate('Отмена'));
     this.save=h('button',{class:'btn primary',onclick:()=>{void this.commit();}},translate('Сохранить'));
-    dialog.append(this.body,this.editor,h('p',{class:'shortcut-note'},translate('Клавиши работают в любой раскладке. В текстовых полях сохраняются обычные команды редактирования.')),
+    const note=h('p',{class:'shortcut-note'},translate('Клавиши работают в любой раскладке. В текстовых полях сохраняются обычные команды редактирования.'));
+    for(const [id,label] of [['keys','Клавиши и сочетания'],['colors','Цвета Tab']] as const){
+      sections.append(h('button',{type:'button','data-section':id,onclick:()=>{this.section=id;showSection();}},translate(label)));
+    }
+    const showSection=():void=>{
+      const editingColors=this.section==='colors';
+      for(const button of sections.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.section===this.section));
+      filters.hidden=layout.hidden=note.hidden=reset.hidden=this.status.hidden=editingColors;
+      colors.hidden=!editingColors;
+    };
+    showSection();
+    dialog.append(this.body,this.editor,note,
       h('footer',{},h('div',{class:'shortcut-footer-left'},reset,this.status),cancel,this.save));
     dialog.addEventListener('cancel',e=>{e.preventDefault();if(!this.editor.hidden)this.endEditor();else this.close();});
     window.addEventListener('keydown',this.capture,true);
-    document.body.append(dialog);this.renderRows();dialog.showModal();this.search.focus();
+    document.body.append(dialog);this.renderRows();dialog.showModal();
+    if(this.section==='keys')this.search.focus();else sections.querySelector<HTMLButtonElement>('[aria-pressed=true]')?.focus();
   }
   private keys(def:ActionDef):string[]{return this.draft[def.id]??def.keys;}
   private changed(def:ActionDef):boolean {return JSON.stringify(this.keys(def).map(normalizeCombo))!==JSON.stringify(def.keys.map(normalizeCombo));}
@@ -155,8 +174,8 @@ export class ShortcutSettings {
   }
   private async commit():Promise<void> {
     if(this.recording||this.busy)return;this.busy=true;this.save.disabled=true;
-    try{await this.app.applyShortcuts(this.draft,this.languageChoice);this.busy=false;this.close();this.app.hud.toast(translate('Настройки сохранены'));}
-    catch(error){this.status.textContent=t(`Не удалось сохранить: ${String(error)}`,`Could not save settings: ${String(error)}`);this.busy=false;this.save.disabled=false;}
+    try{await this.app.applyShortcuts(this.draft,this.languageChoice,this.colors);this.busy=false;this.close();this.app.hud.toast(translate('Настройки сохранены'));}
+    catch(error){this.status.hidden=false;this.status.textContent=t(`Не удалось сохранить: ${String(error)}`,`Could not save settings: ${String(error)}`);this.busy=false;this.save.disabled=false;}
   }
   private close():void {
     if(this.busy)return;this.recording=null;window.removeEventListener('keydown',this.capture,true);

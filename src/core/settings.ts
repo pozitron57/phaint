@@ -27,6 +27,7 @@ export interface Settings {
   eraser:{width:number;original:boolean};
   selection:{keepWidth:boolean};
   palette:string[];
+  colorCycle:string[];
   customColor:string;
   grid:GridSettings;
   snapToGrid:boolean;
@@ -39,14 +40,14 @@ export interface Settings {
 export const QUICK_COLORS={blue:'#315ca8',red:'#c9514e',green:'#79ad65'};
 const MAX_HEAD_SETTING=30;
 export const PALETTE=[QUICK_COLORS.blue,QUICK_COLORS.green,QUICK_COLORS.red,'#000000','#ffffff','#cf914d','#946bb0'];
-export const CYCLE=PALETTE.slice(0,3);
+export const DEFAULT_COLOR_CYCLE=PALETTE.slice(0,3);
 const style=():InkStyle=>({color:PALETTE[0],dashed:false,dotted:false,dotSpacing:3,dashLength:4,dashGap:3,round:true});
 const ink=():InkSettings=>({width:2.6,...style()});
 export function defaultSettings():Settings {
-  return {version:13,language:null,stylePerTool:false,sharedStyle:style(),coordinates:{...style(),...DEFAULT_ARROW_HEAD},adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
+  return {version:14,language:null,stylePerTool:false,sharedStyle:style(),coordinates:{...style(),...DEFAULT_ARROW_HEAD},adiabat:style(),pen:{...ink(),pressure:.5,curve:0,smoothing:.25,taper:0,speed:0},
     line:ink(),arrow:{...ink(),...DEFAULT_ARROW_HEAD,both:false,doubleHead:{...DEFAULT_ARROW_HEAD}},ellipse:ink(),
     sine:{...ink(),amplitude:72,period:192},parabola:ink(),hyperbola:{...ink(),gamma:DEFAULT_GAMMA},marker:{...ink(),width:48,color:PALETTE[1],opacity:.5},
-    eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],customColor:'#ffffff',
+    eraser:{width:24,original:false},selection:{keepWidth:true},palette:[...PALETTE],colorCycle:[...DEFAULT_COLOR_CYCLE],customColor:'#ffffff',
     grid:{enabled:true,step:DEFAULT_GRID_STEP,save:true},snapToGrid:true,snapToImages:true,input:{predict:false},ui:{toolbar:true,debug:false},keys:{},export:defaultExportSettings()};
 }
 export function mergeSettings(raw:unknown):Settings {
@@ -55,7 +56,10 @@ export function mergeSettings(raw:unknown):Settings {
   merge(base.sharedStyle,profile?.pen);merge(base.coordinates,profile?.arrow);merge(base.adiabat,profile?.hyperbola);
   // До версии 12 у стрелок был один набор головок. Обе копии начинают с прежних значений.
   merge(base.arrow.doubleHead,profile?.arrow);
-  merge(base,raw);base.version=13;
+  merge(base,raw);base.version=14;
+  const cycle=Array.isArray(profile?.colorCycle)
+    ?profile.colorCycle.filter(color=>typeof color==='string'&&/^#[\da-f]{6}$/i.test(color)).map(color=>color.toLowerCase()):[];
+  base.colorCycle=cycle.length?cycle:[...DEFAULT_COLOR_CYCLE];
   base.language=isLanguage(profile?.language)?profile.language:null;
   // Новые исходные размеры один раз применяются и к прежнему профилю, в его клетках.
   if(!raw||typeof raw!=='object'||Number((raw as {version?:number}).version??0)<10){
@@ -68,7 +72,8 @@ export function mergeSettings(raw:unknown):Settings {
   const old:Record<string,string>={'#3f6fb5':PALETTE[0],'#4d9160':PALETTE[1],'#2f3136':'#000000'};
   for(const id of ['sharedStyle','pen','line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','marker'] as const){
     const b=base[id];if('width' in b)b.width=Math.min(id==='marker'?240:60,Math.max(.3,b.width));
-    b.color=old[b.color]??b.color;if(!/^#[\da-f]{6}$/i.test(b.color))b.color=PALETTE[0];
+    if((profile?.version??0)<14)b.color=old[b.color]??b.color;
+    if(!/^#[\da-f]{6}$/i.test(b.color))b.color=PALETTE[0];
     b.dashLength=Math.min(40,Math.max(.5,b.dashLength));b.dashGap=Math.min(40,Math.max(.5,b.dashGap));
     b.dotSpacing=Math.min(20,Math.max(1.25,b.dotSpacing));
   }

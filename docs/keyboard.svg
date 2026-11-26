@@ -91,12 +91,12 @@
 <text x="168" y="259" font-size="13" fill="#526576" font-weight="500">Blue</text>
 <rect x="241" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
 <text x="250" y="235" font-size="20" fill="#192e48" font-weight="650">W</text>
-<g transform="translate(286 216)" fill="none" color="#c9514e" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
-<text x="250" y="259" font-size="13" fill="#526576" font-weight="500">Red</text>
+<g transform="translate(286 216)" fill="none" color="#79ad65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
+<text x="250" y="259" font-size="13" fill="#526576" font-weight="500">Green</text>
 <rect x="323" y="211" width="77" height="56" rx="7" fill="#ffffff" stroke="#ccd5dd"/>
 <text x="332" y="235" font-size="20" fill="#192e48" font-weight="650">E</text>
-<g transform="translate(368 216)" fill="none" color="#79ad65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
-<text x="332" y="259" font-size="13" fill="#526576" font-weight="500">Green</text>
+<g transform="translate(368 216)" fill="none" color="#c9514e" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></g>
+<text x="332" y="259" font-size="13" fill="#526576" font-weight="500">Red</text>
 <rect x="405" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
 <text x="414" y="235" font-size="20" fill="#6b7988" font-weight="650">R</text>
 <rect x="487" y="211" width="77" height="56" rx="7" fill="#eff2f5" stroke="#ccd5dd"/>
@@ -252,5 +252,5 @@
 <text x="882" y="628" font-size="20" fill="#315ca8" font-weight="650">⌘E</text>
 <text x="976" y="628" font-size="17" fill="#192e48" font-weight="500">Export</text>
 <text x="882" y="665" font-size="20" fill="#315ca8" font-weight="650">⌘,</text>
-<text x="976" y="665" font-size="17" fill="#192e48" font-weight="500">Customise shortcuts</text>
+<text x="976" y="665" font-size="17" fill="#192e48" font-weight="500">Shortcuts and Tab colors</text>
 </g></svg>

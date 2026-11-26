@@ -22,7 +22,7 @@ for(const [key,mode] of [['Digit3','dots'],['Digit1','solid'],['Digit2','dash']]
   test.key(key);assert(app.linePattern===mode&&app.tool.id==='select','прямой выбор штриха в X');
   const state=app.history.state;test.key(key);assert(app.history.state===state,'повтор не меняет выделение');
 }
-for(const [key,color] of [['KeyW','#c9514e'],['KeyQ','#315ca8'],['KeyE','#79ad65']]){
+for(const [key,color] of [['KeyW','#79ad65'],['KeyQ','#315ca8'],['KeyE','#c9514e']]){
   test.key(key);assert(app.selection.selected.color===color,'цвет выделенной фигуры');
   const state=app.history.state;test.key(key);assert(app.history.state===state,'повтор цвета сохраняет историю');
 }
@@ -35,6 +35,6 @@ const dash=JSON.stringify(app.selection.selected.dash);test.key('Digit2',{shiftK
 app.selectTool('arrow',false);pointer('pointerdown',250,450);pointer('pointermove',700,500);
 test.key('Digit2',{altKey:true});test.key('KeyW',{altKey:true});
 const preview=app.tool.object(0,0);
-assert(preview.color==='#c9514e'&&preview.dash&&!preview.dash.dots&&preview.shape.kind==='arrow','прямой выбор до отрыва с удерживаемой привязкой');
+assert(preview.color==='#79ad65'&&preview.dash&&!preview.dash.dots&&preview.shape.kind==='arrow','прямой выбор до отрыва с удерживаемой привязкой');
 test.key('KeyU');assert(app.tool.object(0,0).dash.dots,'цикл работает в незавершённой стрелке');pointer('pointerup',700,500);
 await test.idle();await test.shot('scheme');return {ok:true};

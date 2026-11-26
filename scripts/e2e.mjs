@@ -23,6 +23,7 @@ const run = (name, extra = [], close = false) => {
 try {
   run('language',[`--test-data=${languageData}`,'--choose-language=en']);
   run('language',[`--test-data=${languageData}`]);
+  run('color-cycle',['--size=520x650']);
   run('pen'); run('pen-taps'); run('pen-pressure'); run('files'); run('file-cancel'); run('input'); run('stroke-lifecycle'); run('tools'); run('line'); run('ink-styles'); run('media'); run('features'); run('sine'); run('editing'); run('refinements'); run('polish'); run('geometry-tools'); run('bezier'); run('coordinates'); run('adiabat'); run('grid-crop');
   run('clipboard-export'); run('image-snap'); run('image-text'); run('windows'); run('windows-files'); run('export-quality'); run('shortcuts'); run('shortcut-gestures'); run('shortcut-layout',['--size=520x650']);
   run('modifier-scheme');for(const path of run('pdf-grid').paths)await verifyVectorPdf(path);await verifyVectorPdf(run('pdf-eraser').path);await verifyVectorPdf(run('contour-curves',['--size=520x650']).path);run('raster-options');run('svg-minify');

@@ -239,3 +239,17 @@ test('цвет и штрих: перенос старых пресетов и н
   assert.equal(s.hyperbola.dashLength, 8);
   assert.deepEqual(mergeSettings(JSON.parse(JSON.stringify(s))), s);
 });
+
+test('цикл цветов: прежние настройки, разная длина и точные оттенки после записи', () => {
+  const defaults=defaultSettings().colorCycle;
+  assert.deepEqual(mergeSettings({version:13}).colorCycle,defaults);
+  assert.deepEqual(mergeSettings({colorCycle:[null,'white']}).colorCycle,defaults);
+  for(const colors of [['#4d9160'],['#abcdef','#444444','#abcdef','#111111','#000000']]){
+    const profile={...defaultSettings(),colorCycle:colors.map(c=>c.toUpperCase())};
+    profile.sharedStyle.color=colors[0];
+    const merged=mergeSettings(profile);
+    assert.deepEqual(merged.colorCycle,colors);
+    assert.equal(merged.sharedStyle.color,colors[0]);
+    assert.deepEqual(mergeSettings(merged),merged);
+  }
+});

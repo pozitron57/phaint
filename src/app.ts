@@ -176,12 +176,14 @@ export class App {
   private syncShortcuts():void {
     this.platform.updateShortcuts(Object.fromEntries(this.actions.list().filter(d=>!d.kind||d.kind==='action').map(d=>[d.id,this.actions.keysOf(d.id)])));
   }
-  async applyShortcuts(keys:Record<string,string[]>, choice?:Language):Promise<void> {
+  async applyShortcuts(keys:Record<string,string[]>, choice?:Language, colors=this.settings.colorCycle):Promise<void> {
     const copy=this.actions.preserveCustomBindings(keys);window.clearTimeout(this.saveTimer);this.saveTimer=0;
-    await this.platform.saveSettings({...this.settings,keys:copy},choice);
+    const colorCycle=[...colors];
+    await this.platform.saveSettings({...this.settings,keys:copy,colorCycle},choice);
+    this.settings.colorCycle=colorCycle;
     if(choice)this.changeLanguage(choice);
     this.settings.keys=copy;this.actions.setOverrides(copy);this.input.clearModifiers();
-    this.toolbar.update();this.syncShortcuts();
+    this.toolbar.update();this.syncShortcuts();this.palette.sync();
   }
 
   /** Сделать линию тоньше (-1) или толще (+1). */

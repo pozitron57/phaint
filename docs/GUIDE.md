@@ -14,7 +14,7 @@ The release uses an ad-hoc signature and has no Apple notarization. If macOS blo
 
 1. Press **C**. Start where the vertical arrow should end and drag down and right to the tip of the horizontal arrow. Phaint draws both axes in one gesture.
 2. Press **S** and drag sideways to draw a sine wave, or **P** for a parabola. For a parabola, drag between its endpoints, lift the pen, then drag again to set the bend.
-3. Press **D** to write labels by hand. **Q**, **W** and **E** choose blue, red and green. **4** selects the highlighter. **Z** undoes the last change and **Y** redoes it.
+3. Press **D** to write labels by hand. **Q**, **W** and **E** choose blue, green and red. **4** selects the highlighter. **Z** undoes the last change and **Y** redoes it.
 4. Hold **Space** and move the pointer to pan. Pinch the trackpad or hold **Control** while scrolling to zoom. **0** resets the zoom and rotation.
 
 | Key | What it draws |
@@ -26,6 +26,8 @@ The release uses an ad-hoc signature and has no Apple notarization. If macOS blo
 | ⌘⇧E | Eraser. Undo restores a whole erasing gesture. |
 
 ## Adjust the board
+
+**Tab** cycles through your drawing colors in order. Open **⌘, → Tab colors** to change a swatch, add or remove colors, or move them up and down. Click **Save** to apply the list. **Shift+Tab** opens the full palette.
 
 **X** selects an object. Drag a box around several objects, or ⌘-click to add or remove one. Drag inside the selection to move it, use a corner to resize or flip it, and drag the round handle to rotate. The arrow keys nudge selected objects. When the selection is empty, they pan the canvas. The coloured handles adjust shape parameters, such as the period of a sine wave. Press **B** for the current tool or selection settings.
 

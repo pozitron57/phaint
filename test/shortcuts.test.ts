@@ -10,7 +10,7 @@ const key=(code:string,mods={})=>({code,ctrlKey:false,altKey:false,shiftKey:fals
 test('прямые клавиши цвета и штриха совместимы с пользовательскими назначениями перебора',()=>{
   const actions=new Actions();
   registerActions({actions} as App);
-  const bindings={KeyQ:'color.blue',KeyW:'color.red',KeyE:'color.green',Digit1:'style.solid',Digit2:'style.dashed',Digit3:'style.dotted',
+  const bindings={KeyQ:'color.blue',KeyW:'color.green',KeyE:'color.red',Digit1:'style.solid',Digit2:'style.dashed',Digit3:'style.dotted',
     KeyA:'tool.arrow','Shift+KeyA':'tool.arrowBoth','Ctrl+KeyA':'selection.flipArrowHead',KeyH:'tool.hyperbola','Shift+KeyH':'tool.adiabat',
     KeyD:'tool.pen','Cmd+Shift+KeyE':'tool.eraser','Cmd+KeyA':'edit.selectAll',Tab:'color.palette'};
   for(const [combo,id] of Object.entries(bindings)){
