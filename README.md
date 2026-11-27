@@ -4,6 +4,8 @@
 
 Phaint (physical paint) is a vector whiteboard inspired by MyPaint and Xournal++. Its drawing tools are designed for teaching physics.
 
+https://github.com/user-attachments/assets/f194643c-255f-449e-9235-20c16f131eb0
+
 - Draw on an infinite canvas.
 - Assign your preferred keyboard shortcut to any tool.
 - Open and edit SVGs from other apps. Move, rotate or stretch individual objects.
@@ -12,6 +14,10 @@ Phaint (physical paint) is a vector whiteboard inspired by MyPaint and Xournal++
 - Adjust the grid spacing and snap objects to grid intersections.
 - Annotate PDFs.
 - Export the whole board or a selection to SVG, PDF, PNG or JPG. Adjust SVG and PDF compression to keep files small.
+
+| Adding velocities | A wheel rolling without slipping |
+| --- | --- |
+| [![A vector diagram and calculations for crossing a river](docs/screenshots/relative-velocity.png)](docs/screenshots/relative-velocity.png) | [![Velocity vectors at four points on the rim of a wheel](docs/screenshots/rolling-wheel.png)](docs/screenshots/rolling-wheel.png) |
 
 **Installation.** Phaint runs on Apple silicon and Intel Macs with macOS 13 Ventura or later.
 Open the DMG and drag Phaint into Applications.
