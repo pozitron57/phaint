@@ -51,6 +51,20 @@ npm ci
 npm start
 ```
 
-`npm run dmg` creates the universal DMG in `release/<version>/`. To check a build, run `npm run typecheck`, `npm test` and `npm run e2e`. Regenerate both shortcut images with `npm run keyboard`.
+`npm run dmg` creates the universal DMG in `release/<version>/`. To check a build, run `npm run typecheck`, `npm test` and `npm run e2e`.
 
 Phaint is distributed under the GNU Affero General Public License, version 3 or any later version. Each release links to its matching source. The Mac app includes third-party notices in `Contents/Resources/Licenses`. The bundled MuPDF 1.28.6 source includes the WebAssembly build scripts in `platform/wasm`. [Phaint license](../LICENSE) · [MuPDF source and submodules](https://github.com/ArtifexSoftware/mupdf/tree/1.28.6)
+
+## Add a language
+
+1. From the repository root, copy `src/locales/en.json` into the same directory using the new language code, such as `fr.json` or `pt-BR.json`. Set `name` to the language’s own name, such as `Français`. The next build adds it to the first-launch dialog and Settings.
+2. Translate each value in `messages` and keep the keys. For example, `file.saved` could read `«{name}» enregistré`. Keep the placeholder names and braces. You can change the order of words and placeholders.
+3. Run `npm run check:locales`. It reports the language and key for missing, empty or extra entries and for placeholder errors. To find text that may still be in English, run the command below with your language code in place of `fr`. Review the matches by hand. Format names and keyboard shortcuts may legitimately match.
+
+   ```sh
+   node -e 'const en = require("./src/locales/en.json").messages;
+   for (const [key, text] of Object.entries(require("./src/locales/fr.json").messages))
+     if (text === en[key]) console.log(key, text)'
+   ```
+
+4. Run `npm start`, select the language in **⌘,** and save a drawing. Check the menu wording and the filename in the save notification. Run `npm run keyboard` to regenerate the keyboard cheat sheets and check their layout.
