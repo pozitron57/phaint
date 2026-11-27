@@ -1,6 +1,7 @@
 // Формат документа: обычные векторные пути SVG + точные данные штрихов в metadata.
 // Хеш видимого SVG защищает внешние правки: при несовпадении читается сам SVG, а не старая metadata.
 // Всё тяжёлое (контуры, JSON, хеш) вызывается в Worker, без остановки пера.
+import { t } from '../core/language.ts';
 import { maskedSvg } from '../core/svg-mask.ts';
 import { vectorErasedSvg } from './eraser-clip.ts';
 import { bboxUnion, matBBox, type Mat, type BBox } from '../core/geom.ts';
@@ -41,12 +42,12 @@ function encodeBytes(bytes:Uint8Array):string {
 }
 function decodePoints(s: string): Float32Array {
   const raw = atob(s);
-  if (raw.length % 12 || raw.length === 0) throw new Error('Повреждены точки штриха.');
+  if (raw.length % 12 || raw.length === 0) throw new Error(t('error.strokePoints'));
   const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
   const pts = new Float32Array(bytes.buffer);
   for (let i = 0; i < pts.length; i++) {
     if (!Number.isFinite(pts[i]) || Math.abs(pts[i]) > 1e12 || (i % 3 === 2 && (pts[i] <= 0 || pts[i] > 1e6))) {
-      throw new Error('Недопустимые координаты или толщина штриха.');
+      throw new Error(t('error.strokeCoordinates'));
     }
   }
   return pts;
@@ -65,11 +66,11 @@ export function encodeData(data: DocumentData, references = false, vectorPrefix=
 }
 
 function finite(v: unknown, min = -1e12, max = 1e12): number {
-  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) throw new Error('Некорректное число в документе.');
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) throw new Error(t('error.documentNumber'));
   return v;
 }
 function object(v: unknown): Record<string, unknown> {
-  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Повреждён документ Phaint.');
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error(t('error.documentDamaged'));
   return v as Record<string, unknown>;
 }
 
@@ -79,29 +80,29 @@ function readArrowHead(s: Record<string, unknown>): ArrowHeadStyle {
 }
 
 export function decodeData(text: string): DocumentData {
-  if (text.length > MAX_FILE_BYTES) throw new Error('Документ слишком большой (предел 256 МБ).');
+  if (text.length > MAX_FILE_BYTES) throw new Error(t('error.documentSize'));
   const raw = object(JSON.parse(text));
-  if (typeof raw.version!=='number'||![1,2,3,4,5,6].includes(raw.version)) throw new Error('Версия документа не поддерживается этой Phaint.');
-  if (!Array.isArray(raw.objects) || raw.objects.length > 500000) throw new Error('Некорректный список объектов.');
+  if (typeof raw.version!=='number'||![1,2,3,4,5,6].includes(raw.version)) throw new Error(t('error.documentVersion'));
+  if (!Array.isArray(raw.objects) || raw.objects.length > 500000) throw new Error(t('error.objectList'));
   const ids = new Set<number>();
   let pointBytes = 0;
   const objects = raw.objects.map((item): Obj => {
     const o = object(item);
     const id = finite(o.id, 1, Number.MAX_SAFE_INTEGER - 1);
     const z = finite(o.z, 0, Number.MAX_SAFE_INTEGER - 1);
-    if (!Number.isInteger(id) || !Number.isInteger(z) || ids.has(id)) throw new Error('Повторяющийся или неверный номер объекта.');
+    if (!Number.isInteger(id) || !Number.isInteger(z) || ids.has(id)) throw new Error(t('error.objectId'));
     ids.add(id);
     const x = finite(o.ox), y = finite(o.oy);
     const clipped=<T extends Obj>(value:T):T=>{
       if(o.clip===undefined)return value;
-      if(!Array.isArray(o.clip)||o.clip.length<3||o.clip.length>256)throw new Error('Неверная область обрезки.');
+      if(!Array.isArray(o.clip)||o.clip.length<3||o.clip.length>256)throw new Error(t('error.crop'));
       const clip=o.clip.map(p=>{const point=object(p);return {x:finite(point.x),y:finite(point.y)};});
-      if(Math.abs(polygonArea(clip))<1e-8||!clip.every(p=>insideClip(clip,p)))throw new Error('Неверная область обрезки.');
+      if(Math.abs(polygonArea(clip))<1e-8||!clip.every(p=>insideClip(clip,p)))throw new Error(t('error.crop'));
       return withClipBounds({...value,clip});
     };
     if (o.kind === 'stroke' && typeof o.pts === 'string' && typeof o.color === 'string' && /^#[\da-f]{3,8}$/i.test(o.color)) {
       pointBytes += o.pts.length;
-      if (pointBytes > MAX_FILE_BYTES) throw new Error('Слишком много точек в документе.');
+      if (pointBytes > MAX_FILE_BYTES) throw new Error(t('error.pointLimit'));
       const stroke=makeStroke(id,z,x,y,decodePoints(o.pts),o.color);
       const extra:{-readonly [K in keyof StrokeObj]?:StrokeObj[K]}={};
       if(o.opacity!==undefined)extra.opacity=finite(o.opacity,.01,1);
@@ -110,7 +111,7 @@ export function decodeData(text: string): DocumentData {
       if(o.erasures!==undefined)extra.erasures=marks(o.erasures);
       if(o.dash!==undefined){const d=object(o.dash);extra.dash={length:finite(d.length,.001,1e6),gap:finite(d.gap,.01,1e6),round:d.round!==false,...(d.dots===true?{dots:true}:{}),...(d.offset===undefined?{}:{offset:finite(d.offset)})};}
       if(o.shape!==undefined){const s=object(o.shape);
-        if(!['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat'].includes(String(s.kind)))throw new Error('Неверная фигура.');
+        if(!['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat'].includes(String(s.kind)))throw new Error(t('error.shape'));
         extra.shape={kind:s.kind as ShapeData['kind'],frame:matrix(s.frame),length:finite(s.length),height:finite(s.height),bend:finite(s.bend),amplitude:finite(s.amplitude,0,1e9),period:finite(s.period,.01,1e9),cycles:finite(s.cycles,0,1000),...readArrowHead(s),both:s.both===true};
         if(s.headGridStep!==undefined&&(s.kind==='arrow'||s.kind==='line'||s.kind==='coordinates'))extra.shape.headGridStep=finite(s.headGridStep,1,10000);
         if((s.kind==='arrow'||s.kind==='line')&&s.otherHead!==undefined)extra.shape.otherHead=readArrowHead(object(s.otherHead));
@@ -118,7 +119,7 @@ export function decodeData(text: string): DocumentData {
         if(s.kind==='line'&&s.savedHeadStyle===true)extra.shape.savedHeadStyle=true;
         if(s.kind==='adiabat')extra.shape.gamma=finite(s.gamma,MIN_GAMMA,MAX_GAMMA);
         if(s.controls!==undefined){
-          if(!['line','arrow'].includes(String(s.kind))||!Array.isArray(s.controls)||s.controls.length<1||s.controls.length>2)throw new Error('Неверные точки Безье.');
+          if(!['line','arrow'].includes(String(s.kind))||!Array.isArray(s.controls)||s.controls.length<1||s.controls.length>2)throw new Error(t('error.bezier'));
           extra.shape.controls=s.controls.map(value=>{const p=object(value);return {x:finite(p.x),y:finite(p.y)};});
         }
       }
@@ -138,11 +139,11 @@ export function decodeData(text: string): DocumentData {
       const pageRef=<T extends SvgObj|ImageObj>(value:T):T=>{
         if(o.pdfPage===undefined)return value;
         const page=object(o.pdfPage),index=finite(page.index,0,9999);
-        if(!Number.isInteger(index)||o.matrix||o.clip||o.erasures)throw new Error('Неверная страница PDF.');
+        if(!Number.isInteger(index)||o.matrix||o.clip||o.erasures)throw new Error(t('error.pdfPage'));
         return {...value,pdfPage:{index,transform:matrix(page.transform)}};
       };
       if(o.kind==='image') {
-        if(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(o.source)) throw new Error('Неверная картинка.');
+        if(!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(o.source)) throw new Error(t('error.image'));
         return pageRef(clipped(withMatrix(makeImage(id,z,x,y,width,height,o.source),o.matrix)));
       }
       const svg=withMatrix(makeSvg(id,z,x,y,width,height,o.source),o.matrix);
@@ -151,19 +152,19 @@ export function decodeData(text: string): DocumentData {
       }
       return pageRef(clipped(svg));
     }
-    throw new Error('Неизвестный или повреждённый объект.');
+    throw new Error(t('error.object'));
   });
   const grid = object(raw.grid), view = object(raw.view);
   let pdf:PdfSource|undefined;
   if(raw.pdf!==undefined){
     const source=object(raw.pdf);
-    if(typeof source.name!=='string'||typeof source.data!=='string'||source.data.length>MAX_FILE_BYTES||source.data.length%4||!/^[A-Za-z0-9+/]+={0,2}$/.test(source.data)||!/%PDF-[12]\.\d/.test(atob(source.data.slice(0,1368))))throw new Error('Повреждён исходный PDF.');
+    if(typeof source.name!=='string'||typeof source.data!=='string'||source.data.length>MAX_FILE_BYTES||source.data.length%4||!/^[A-Za-z0-9+/]+={0,2}$/.test(source.data)||!/%PDF-[12]\.\d/.test(atob(source.data.slice(0,1368))))throw new Error(t('error.pdfSource'));
     pdf={name:source.name,data:source.data};
   }
-  if(objects.some(isPdfPage)&&!pdf)throw new Error('Не найден исходный PDF для страниц.');
-  if (typeof grid.enabled !== 'boolean') throw new Error('Некорректные настройки сетки.');
+  if(objects.some(isPdfPage)&&!pdf)throw new Error(t('error.pdfPageSource'));
+  if (typeof grid.enabled !== 'boolean') throw new Error(t('error.gridSettings'));
   const rotSteps = finite(view.rotSteps, 0, 15);
-  if (!Number.isInteger(rotSteps)) throw new Error('Некорректный поворот.');
+  if (!Number.isInteger(rotSteps)) throw new Error(t('error.rotation'));
   return { objects, ...(pdf?{pdf}:{}), ...(raw.emptyBounds?{emptyBounds:box(raw.emptyBounds)}:{}), ...(raw.baseScale === undefined ? {} : {baseScale:finite(raw.baseScale,0.05,32)}), grid: { enabled: grid.enabled, step: finite(grid.step, 1, 10000), ...(grid.save===undefined?{}:{save:grid.save===true}) },
     view: { scale: finite(view.scale, 0.05, 32), rotSteps, x: finite(view.x), y: finite(view.y) } };
 }
@@ -173,11 +174,11 @@ function matrix(v:unknown):Mat {
 }
 function box(v:unknown):BBox {const b=object(v);return {minX:finite(b.minX),minY:finite(b.minY),maxX:finite(b.maxX),maxY:finite(b.maxY)};}
 function paint(v:unknown):string {
-  if(typeof v!=='string'||! /^(none|transparent|[a-z]+|#[\da-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(v))throw new Error('Неверный цвет SVG.');return v;
+  if(typeof v!=='string'||! /^(none|transparent|[a-z]+|#[\da-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(v))throw new Error(t('error.svgColor'));return v;
 }
 function marks(v:unknown):number[][] {
-  if(!Array.isArray(v)||v.length>500000)throw new Error('Неверный след ластика.');
-  return v.map(mark=>{if(!Array.isArray(mark)||(mark.length!==5&&mark.length!==11))throw new Error('Неверный след ластика.');return mark.map((x,i)=>finite(x,i===4?.001:-1e12,i===4?1e6:1e12));});
+  if(!Array.isArray(v)||v.length>500000)throw new Error(t('error.eraserPath'));
+  return v.map(mark=>{if(!Array.isArray(mark)||(mark.length!==5&&mark.length!==11))throw new Error(t('error.eraserPath'));return mark.map((x,i)=>finite(x,i===4?.001:-1e12,i===4?1e6:1e12));});
 }
 function withMatrix<T extends Exclude<Obj,StrokeObj|VectorObj>>(o:T,value:unknown):T {
   if(value===undefined)return o;const next={...o,matrix:matrix(value)};

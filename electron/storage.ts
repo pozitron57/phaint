@@ -1,5 +1,6 @@
 // Надёжная запись: отдельный временный файл, fsync, атомарная замена. Старый файл жив до rename.
 // Очередь предотвращает гонки сохранения настроек и резервных копий.
+import { t } from '../src/core/language.ts';
 import { open, rename, rm, mkdir, stat } from 'node:fs/promises';
 import { dirname, basename, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -26,13 +27,13 @@ export class AtomicWriter {
 
   async write(data: Uint8Array): Promise<void> {
     this.bytes += data.byteLength;
-    if (this.bytes > MAX_FILE_BYTES) throw new Error('SVG больше 256 МБ.');
-    if (!this.handle) throw new Error('Запись файла уже завершена.');
+    if (this.bytes > MAX_FILE_BYTES) throw new Error(t('error.svgTooLarge'));
+    if (!this.handle) throw new Error(t('error.writeFinished'));
     await this.handle.writeFile(data);
   }
 
   async commit(): Promise<void> {
-    if (!this.handle) throw new Error('Запись файла уже завершена.');
+    if (!this.handle) throw new Error(t('error.writeFinished'));
     await this.handle.sync(); await this.handle.close(); this.handle = null;
     await rename(this.temp, this.file);
   }
@@ -58,7 +59,7 @@ export async function atomicWrite(file: string, data: string): Promise<void> {
 export async function readLimited(file: string): Promise<string> {
   const handle = await open(file, 'r');
   try {
-    if ((await handle.stat()).size > MAX_FILE_BYTES) throw new Error('Файл больше 256 МБ.');
+    if ((await handle.stat()).size > MAX_FILE_BYTES) throw new Error(t('file.theFileIsLargerThan256Mb'));
     return await handle.readFile('utf8');
   } finally { await handle.close(); }
 }

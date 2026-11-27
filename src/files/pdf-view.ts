@@ -1,5 +1,6 @@
 // Чёткие видимые страницы PDF: обновление после остановки вида, до трёх изображений
 // по 8 Мп. Во время письма новые операции откладываются. Документ и история не меняются.
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import type { PdfSource } from './pdf-types.ts';
 import { isPdfPage, type PdfPageObj } from '../core/types.ts';
@@ -38,7 +39,7 @@ export class PdfView {
         old?.image.close();this.cache.set(o,{image:bitmap,density});setPdfImage(o,bitmap);
         renderer.tiles.onChange({added:[o],removed:[o],top:false});renderer.invalidateScene();
       }
-    }catch(error){if(!this.stopped)console.warn('Предпросмотр PDF: '+String(error));}
+    }catch(error){if(!this.stopped)console.warn(t('debug.pdfPreview',{error:String(error)}));}
     finally{this.busy=false;}
   }
 }

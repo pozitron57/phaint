@@ -1,7 +1,6 @@
 // Жизненный цикл документа: сохранить/открыть/закрыть, признак изменений и резервная копия.
 // Запись снимка не помечает более поздние штрихи сохранёнными. Автокопия только при изменениях,
 // через 5 с тишины, максимум через минуту; тяжёлая сериализация идёт в Worker.
-import { translate } from '../core/menu-text.ts';
 import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import type { ExportFormats, FileRef, OpenFile, RecoveryFile } from './api.ts';
@@ -67,7 +66,7 @@ export class DocumentSession {
     this.ready = this.initialize();
   }
 
-  get name(): string { return this.file?.name ?? translate('Без названия'); }
+  get name(): string { return this.file?.name ?? t('file.untitled'); }
   refreshTitle():void { this.app.platform.files.status(this.name, this.dirty); }
   get dirty(): boolean { return this.app.history.state !== this.savedState || this.gridKey() !== this.savedGrid; }
   private gridKey(): string { return `${this.app.settings.grid.enabled}:${this.app.settings.grid.step}:${!!this.app.settings.grid.save}`; }
@@ -128,7 +127,7 @@ export class DocumentSession {
   private backupError(error: unknown): void {
     if (this.backupErrorShown) return;
     this.backupErrorShown = true;
-    this.app.hud.toast(translate('Не удалось записать резервную копию. Сохраните рисунок через Cmd+S.'));
+    this.app.hud.toast(t('file.backupWriteFailure'));
     console.error(error);
   }
 
@@ -173,7 +172,7 @@ export class DocumentSession {
     if(format==='svg')data={...data,exportOptions:{...choice.svg}};
     if(format==='pdf')data={...data,exportOptions:{...choice.pdf,editable:false,grid:'paths',vectorMasks:true}};
     if(format==='pdf'&&!api.pdf){
-      await this.process(translate('Подготовка PDF…'), async op => {
+      await this.process(t('file.preparingPdf'), async op => {
         const svg=await op.worker.run<string>('visual',data,op.signal);
         await browserPdf(svg,width,height,op.signal);
       });
@@ -182,7 +181,7 @@ export class DocumentSession {
     const file = svgOnly ? await api.chooseSave(this.file, true, true)
       : await api.chooseExport(this.file, format, !!selected, this.exportTargets[scope]);
     if (!file) return false;
-    return this.process(translate('Экспорт…'), async op => {
+    return this.process(t('file.exporting'), async op => {
       if(data.pdf&&format!=='svg'&&(format!=='pdf'||!api.annotatedPdf)){
         const density=format==='png'||format==='jpg'?choice[format].width/width:Math.min(3,VECTOR_QUALITY[vectorOptions(choice[format]).quality].pixelsPerUnit);
         data=await (await import('./pdf-render.ts')).pdfExportImages(data,density,op.signal);
@@ -209,7 +208,7 @@ export class DocumentSession {
         if (this.file) await this.persistExport(this.file, !!selected, file);
       }
       this.lastWrite={...stats,name:file.name,action:'export'};
-      this.rememberExport(choice,svgOnly);this.app.hud.toast(t(`Экспортировано: ${file.name}`,`Exported: ${file.name}`));return true;
+      this.rememberExport(choice,svgOnly);this.app.hud.toast(t('file.exported', {name:file.name}));return true;
     });
   }
 
@@ -247,7 +246,7 @@ export class DocumentSession {
     if (!file) return false;
     const state = this.app.history.state, grid = this.gridKey();
     const data = this.snapshot();
-    const stats=await this.process(translate('Сохранение…'), op=>this.write(file,data,op));
+    const stats=await this.process(t('file.saving'), op=>this.write(file,data,op));
     this.lastWrite={...stats,name:file.name,action:'save'};
     if (!this.file) {
       for (const scope of ['drawing', 'selection'] as const) {
@@ -263,7 +262,7 @@ export class DocumentSession {
     if (!this.dirty) await this.clearRecovery();
     this.changed();
     await this.rememberFile(file);
-    this.app.hud.toast(this.dirty ? translate('Снимок сохранён; есть новые изменения') : t(`Сохранено: ${file.name}`,`Saved: ${file.name}`));
+    this.app.hud.toast(this.dirty ? t('file.savedWithNewChanges') : t('file.saved', {name:file.name}));
     return true;
   }
   private async write(file:FileRef,data:DocumentData,op:FileProcessing):Promise<FileWriteStats> {
@@ -287,26 +286,26 @@ export class DocumentSession {
 
   private async readExportFormats(file: FileRef): Promise<ExportFormats> {
     try { return await this.app.platform.files.exportFormats?.(file) ?? {}; }
-    catch (error) { console.warn('Не удалось прочитать форматы экспорта', error); return {}; }
+    catch (error) { console.warn(t('debug.exportFormats'), error); return {}; }
   }
 
   private async persistExport(source: FileRef, selected: boolean, target: FileRef): Promise<void> {
     try { await this.app.platform.files.rememberExport?.(source, selected, target); }
-    catch (error) { console.warn('Не удалось запомнить путь экспорта', error); }
+    catch (error) { console.warn(t('debug.exportPath'), error); }
   }
 
   private async rememberFile(file:FileRef):Promise<void> {
     // Ошибка вспомогательной истории не превращает удачное сохранение в неудачное.
-    try{await this.app.platform.files.remember?.({handle:file.handle,name:file.name});}catch(error){console.warn('Последний файл не запомнен: '+String(error));}
+    try{await this.app.platform.files.remember?.({handle:file.handle,name:file.name});}catch(error){console.warn(t('debug.recentFile',{error:String(error)}));}
   }
 
   open(recent=false): Promise<boolean> {
     return this.run(async () => {
       const api=this.app.platform.files;let file:OpenFile|null;
       if(recent){
-        if(!api.recent||!api.read){this.app.hud.toast(translate('В браузере выберите файл через Cmd+O.'));return false;}
+        if(!api.recent||!api.read){this.app.hud.toast(t('file.useCmdOToChooseAFileIn'));return false;}
         const ref=await api.recent();
-        if(!ref){this.app.hud.toast(translate('Пока нет недавнего файла. Откройте или сохраните рисунок.'));return false;}
+        if(!ref){this.app.hud.toast(t('file.noRecentFileYetOpenOrSaveA'));return false;}
         // Выбор файла фиксируем до сохранения текущего, содержимое читаем после:
         // Cmd+R того же документа не должен вернуть старую версию сразу после Cmd+S.
         if(!await this.canLeave())return false;
@@ -316,7 +315,7 @@ export class DocumentSession {
       const { view, settings } = this.app;
       // Сначала читаем и проверяем новый файл. При ошибке текущий рисунок остаётся на месте.
       const w=view.width/view.dpr,h=view.height/view.dpr;
-      const data=await this.process(translate('Открытие файла…'), async op=>{
+      const data=await this.process(t('file.openingFile'), async op=>{
         const data=file.type==='pdf'
           ?await (await import('./pdf-render.ts')).openPdf(file.bytes,file.name,settings.grid,w,h,text=>op.update(text),op.signal)
           :file.type==='image'?await openImage(file.bytes,file.mime,settings.grid,w,h,op.signal)
@@ -400,7 +399,7 @@ export class DocumentSession {
     const task = (async () => {
       try { return await fn(); }
       catch (error) {
-        if (isCancelled(error)) { this.app.hud.toast(translate('Обработка отменена')); return false; }
+        if (isCancelled(error)) { this.app.hud.toast(t('file.operationCanceled')); return false; }
         const message = (error instanceof Error ? error.message : String(error)).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
         await this.app.platform.files.error(message);
         return false;
@@ -444,7 +443,7 @@ export class DocumentSession {
       const recovery: RecoveryFile | null = await this.app.platform.files.recoveryRead();
       if (recovery) {
         if (await this.app.platform.files.confirmRecovery(recovery)) {
-          const data = await this.process(translate('Восстановление рисунка…'), async op => {
+          const data = await this.process(t('file.restoringDrawing'), async op => {
             const data=await op.worker.run<DocumentData>('decode',recovery.data,op.signal);
             const objects:Obj[]=[];
             for(const o of data.objects){
@@ -454,15 +453,15 @@ export class DocumentSession {
             data.objects=objects;await prepareObjects(data.objects,op.signal);return data;
           });
           this.replace(data, null, true);
-          this.app.hud.toast(translate('Рисунок восстановлен. Сохраните его через Cmd+S.'));
+          this.app.hud.toast(t('file.restoredDrawing'));
         } else await this.clearRecovery();
       }
     } catch (error) {
       if(isCancelled(error)){
         await this.app.platform.files.deferRecovery?.();
-        this.app.hud.toast(translate('Восстановление отменено; резервная копия сохранена'));
+        this.app.hud.toast(t('file.recoveryDeferred'));
       }
-      else await this.app.platform.files.error(t(`Не удалось прочитать резервную копию. ${String(error)}`,`Could not read the backup. ${String(error)}`));
+      else await this.app.platform.files.error(t('file.readBackup', {error:String(error)}));
     }
     finally {
       this.initializing = false;

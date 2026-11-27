@@ -1,13 +1,12 @@
 // Панель инструментов: кнопки, каждая запускает действие из реестра (core/actions.ts).
-import { translate } from '../core/menu-text.ts';
-import { t } from '../core/language.ts';
+import { t, type LabelKey } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { gammaLabel, h, icon } from './dom.ts';
 
 interface Button {
   el: HTMLButtonElement;
   action: string;
-  title:string;
+  title:LabelKey;
 }
 
 export class Toolbar {
@@ -20,33 +19,33 @@ export class Toolbar {
     this.el = h(
       'aside',
       { class: 'toolbar' },
-      this.button('tool.pen', 'pen', 'Ручка'),
-      this.button('tool.line', 'line', 'Прямая'),
-      this.button('tool.coordinates','coordinates','Координаты'),
-      this.button('tool.marker','marker','Маркер'),
-      this.button('tool.ellipse','ellipse','Окружность / эллипс'),
-      this.button('tool.sine','sine','Синусоида'),
-      this.button('tool.parabola','parabola','Парабола'),
-      this.button('tool.hyperbola','hyperbola','Гипербола'),
-      this.button('style.dash','dash','Штриховая линия'),
-      this.button('tool.eraser','eraser','Ластик'),
-      this.button('eraser.original','original','Стирать также исходный SVG'),
-      this.button('tool.select', 'select', 'Выбор объекта'),
-      this.button('tool.space','space','Раздвижение'),
-      this.button('edit.pasteImage', 'image', 'Вставить картинку'),
-      this.button('color.menu', 'color', 'Цвет'),
+      this.button('tool.pen', 'pen', 'action.tool.pen'),
+      this.button('tool.line', 'line', 'action.tool.line'),
+      this.button('tool.coordinates','coordinates','action.tool.coordinates'),
+      this.button('tool.marker','marker','action.tool.marker'),
+      this.button('tool.ellipse','ellipse','action.tool.ellipse'),
+      this.button('tool.sine','sine','action.tool.sine'),
+      this.button('tool.parabola','parabola','action.tool.parabola'),
+      this.button('tool.hyperbola','hyperbola','action.tool.hyperbola'),
+      this.button('style.dash','dash','action.style.dashed'),
+      this.button('tool.eraser','eraser','action.tool.eraser'),
+      this.button('eraser.original','original','action.eraser.original'),
+      this.button('tool.select', 'select', 'action.tool.select'),
+      this.button('tool.space','space','action.tool.space'),
+      this.button('edit.pasteImage', 'image', 'action.edit.pasteImage'),
+      this.button('color.menu', 'color', 'panel.color'),
       h('div', { class: 'tb-sep' }),
-      this.button('file.open', 'open', 'Открыть SVG'),
-      this.button('file.save', 'save', 'Сохранить SVG'),
+      this.button('file.open', 'open', 'panel.openSvg'),
+      this.button('file.save', 'save', 'action.file.save'),
       h('div', { class: 'tb-sep' }),
-      this.button('ui.brush', 'sliders', 'Настройки кисти'),
-      this.button('ui.background', 'grid', 'Фон и сетка'),
-      this.button('ui.shortcuts','keyboard','Настройки'),
+      this.button('ui.brush', 'sliders', 'panel.brushSettings'),
+      this.button('ui.background', 'grid', 'action.ui.background'),
+      this.button('ui.shortcuts','keyboard','panel.settings'),
       h('div', { class: 'tb-sep' }),
-      this.button('edit.undo', 'undo', 'Отменить'),
-      this.button('edit.redo', 'redo', 'Повторить'),
+      this.button('edit.undo', 'undo', 'action.edit.undo'),
+      this.button('edit.redo', 'redo', 'action.edit.redo'),
       h('div', { class: 'tb-sep' }),
-      this.button('view.fullscreen', 'fullscreen', 'Полный экран'),
+      this.button('view.fullscreen', 'fullscreen', 'action.view.fullscreen'),
     );
     this.update();
   }
@@ -55,13 +54,13 @@ export class Toolbar {
   update(): void {
     const { app } = this;
     for (const b of this.buttons) {
-      let hintAction=b.action,title=b.title;
+      let hintAction=b.action,title=t(b.title);
       let active = false;
       let disabled = false;
       if(b.action==='tool.line'){
         active=app.tool.id==='line'||app.tool.id==='arrow';
         const mode=app.lineMode==='line'?'line':app.settings.arrow.both?'arrowBoth':'arrow';
-        hintAction=`tool.${mode}`;title=mode==='line'?'Прямая':mode==='arrowBoth'?'Двусторонняя стрелка':'Стрелка';
+        hintAction=`tool.${mode}`;title=t(mode==='line'?'action.tool.line':mode==='arrowBoth'?'action.tool.arrowBoth':'action.tool.arrow');
         if(b.el.dataset.mode!==mode){
           b.el.dataset.mode=mode;b.el.replaceChildren(icon(mode));
         }
@@ -69,7 +68,7 @@ export class Toolbar {
       else if(b.action==='tool.hyperbola'){
         active=app.tool.id==='hyperbola'||app.tool.id==='adiabat';
         const mode=app.hyperbolaMode,label=gammaLabel(app.settings.hyperbola.gamma);
-        hintAction=`tool.${mode}`;title=mode==='adiabat'?`${translate('Адиабата')} · γ = ${label}`:'Гипербола';
+        hintAction=`tool.${mode}`;title=mode==='adiabat'?`${t('action.tool.adiabat')} · γ = ${label}`:t('action.tool.hyperbola');
         if(b.el.dataset.mode!==mode||b.el.dataset.gamma!==label){
           b.el.dataset.mode=mode;b.el.dataset.gamma=label;
           b.el.replaceChildren(icon('hyperbola'));
@@ -83,7 +82,7 @@ export class Toolbar {
         active=app.linePattern!=='solid';
         const mode=app.linePattern;
         if(b.el.dataset.mode!==mode){b.el.dataset.mode=mode;b.el.replaceChildren(icon(mode==='solid'?'line':mode));}
-        title=translate({solid:'Сплошная линия',dash:'Штриховая линия',dots:'Линия из точек'}[mode])+translate(' · следующий вид');
+        title=t(({solid:'action.style.solid',dash:'action.style.dashed',dots:'panel.dottedLine'} as const)[mode])+t('panel.nextStyle');
       }
       else if (b.action === 'ui.brush') active = app.panels.brush.open;
       else if (b.action === 'ui.background') active = app.panels.background.open;
@@ -92,24 +91,24 @@ export class Toolbar {
       else if (b.action === 'view.fullscreen') active = app.fullscreen;
       b.el.classList.toggle('active', active);
       b.el.disabled = disabled;
-      const hint=app.actions.hint(hintAction);b.el.title=translate(title)+(hint?` (${hint})`:'');
+      const hint=app.actions.hint(hintAction);b.el.title=title+(hint?` (${hint})`:'');
       if(b.action==='edit.pasteImage'){
         const free=app.actions.hint('edit.pasteImageFree');
-        if(free)b.el.title+=t(` · ${free} — точно под курсором`,` · ${free} pastes at the pointer`);
+        if(free)b.el.title+=t('tool.pasteAtPointer', {shortcut:free});
       }
-      if(b.action==='tool.line'&&active)b.el.title+=translate(app.lineMode==='line'?' · ещё один щелчок — стрелка':' · ещё один щелчок — прямая');
-      if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+${t('перетаскивание — Безье','drag for Bézier control points')}`;
+      if(b.action==='tool.line'&&active)b.el.title+=t(app.lineMode==='line'?'panel.clickAgainForAnArrow':'panel.clickAgainForALine');
+      if(['tool.line','tool.select'].includes(b.action)&&app.actions.hint('gesture.bezier'))b.el.title+=` · ${app.actions.hint('gesture.bezier')}+${t('toolbar.dragForBezierControlPoints')}`;
     }
   }
 
-  private button(action: string, iconName: string, title: string): HTMLButtonElement {
+  private button(action: string, iconName: string, title: LabelKey): HTMLButtonElement {
     const hint = this.app.actions.hint(action);
     const el = h(
       'button',
       {
         class: 'tb-btn',
         'data-action':action,
-        title: hint ? `${title} (${hint})` : title,
+        title: hint ? `${t(title)} (${hint})` : t(title),
         onclick: () => {
           if(action==='tool.line'){
             const current=this.app.tool.id;

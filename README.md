@@ -19,4 +19,6 @@ Open the DMG and drag Phaint into Applications.
 
 ![Default Mac shortcuts, with the drawing tools illustrated on their keys](docs/keyboard.svg)
 
+To add a language, copy `src/locales/en.json` to a file named after the language code (for example, `fr.json`). Set `name` to the language’s own name, translate the messages and run `npm run check:locales`. The app discovers the new language at build time.
+
 [User guide](docs/GUIDE.md) · [Technical specification in Russian](docs/SPEC.md) · [AGPL-3.0-or-later](LICENSE)

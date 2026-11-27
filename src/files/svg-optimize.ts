@@ -1,5 +1,6 @@
 // Загружается в DocumentWorker для дополнительного сжатия или записи страниц PDF.
 // Общий SVG: два профиля; PDF: отдельная точная запись путей без упрощения геометрии.
+import { t } from '../core/language.ts';
 import { optimize } from 'svgo/dist/svgo.browser.js';
 import { utf8Size, type SvgResult } from './file-stats.ts';
 export {vectorizeEraserMasks} from './svg-eraser.ts';
@@ -19,13 +20,13 @@ export function compactPdfSvg(text:string):string {
       name:'safePdfPathNumbers',fn:()=>({element:{enter(node){
         if(node.name!=='path'||!node.attributes.d)return;
         const path=(node as typeof node & {pathJS?:Array<{command:string;args:number[]}>}).pathJS;
-        if(!path)throw new Error('Не найдена геометрия пути PDF.');
+        if(!path)throw new Error(t('error.pdfPath'));
         let previous='',last='';
         node.attributes.d=path.map(({command,args})=>{
           const prefix=previous===command&&!/[mz]/i.test(command)?'':command;
           if(prefix)last='';previous=command;
           const numbers=args.map(n=>{
-            if(!Number.isFinite(n))throw new Error('Неверные координаты PDF.');
+            if(!Number.isFinite(n))throw new Error(t('error.pdfCoordinates'));
             const text=String(Number(n.toFixed(12))).replace(/^0\./,'.').replace(/^-0\./,'-.');
             // Разделитель выбирается по записи чисел, а не по их величине:
             // .15 и 8e-7 обязательно разделяем; .15 и .2 разделяет сама точка.

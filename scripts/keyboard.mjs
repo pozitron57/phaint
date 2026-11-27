@@ -1,5 +1,6 @@
 // Шпаргалки README. Раскладка берётся из реестра команд, рисунки — с кнопок самой Phaint.
 import { writeFileSync } from 'node:fs';
+import { languages, setLanguage, t } from '../src/core/language.ts';
 import { registerActions } from '../src/actions-list.ts';
 import { Actions, normalizeCombo } from '../src/core/actions.ts';
 import { QUICK_COLORS } from '../src/core/settings.ts';
@@ -8,27 +9,27 @@ import { ICONS } from '../src/ui/dom.ts';
 const actions = new Actions();
 registerActions({ actions });
 const captions = {
-  'tool.pen': ['Pen', 'Ручка', 'pen'], 'tool.line': ['Line', 'Прямая', 'line'],
-  'tool.arrow': ['Arrow', 'Стрелка', 'arrow'], 'tool.coordinates': ['Axes', 'Оси', 'coordinates'],
-  'tool.ellipse': ['Circle', 'Круг', 'ellipse'], 'tool.sine': ['Sine', 'Синусоида', 'sine'],
-  'tool.parabola': ['Parabola', 'Парабола', 'parabola'], 'tool.hyperbola': ['Hyperbola', 'Гипербола', 'hyperbola'],
-  'tool.marker': ['Marker', 'Маркер', 'marker'], 'tool.select': ['Select', 'Выбор', 'select'],
-  'style.solid': ['Solid', 'Сплошная', 'line'], 'style.dashed': ['Dashes', 'Штрихи', 'dash'],
-  'style.dotted': ['Dots', 'Точки', 'dots'], 'style.dots': ['Dots on/off', 'Вкл. точки', 'dots'],
-  'style.perTool': ['Tool styles', 'Стили'],
-  'color.blue': ['Blue', 'Синий', 'color'], 'color.red': ['Red', 'Красный', 'color'], 'color.green': ['Green', 'Зелёный', 'color'],
-  'color.palette': ['Next colour', 'След. цвет'], 'edit.undo': ['Undo', 'Отмена', 'undo'], 'edit.redo': ['Redo', 'Повтор', 'redo'],
-  'edit.pasteImage': ['Image', 'Картинка', 'image'], 'edit.delete': ['Delete selection', 'Удалить выделение'],
-  'ui.brush': ['Settings', 'Параметры', 'sliders'], 'ui.toolbar': ['Toolbar', 'Панель'], 'ui.escape': ['Cancel', 'Отмена'],
-  'ui.debug': ['Debug', 'Отладка'], 'view.fullscreen': ['Full screen', 'Весь экран'],
-  'view.grid': ['Grid', 'Сетка', 'grid'], 'view.reset': ['Reset view', 'Сброс'],
-  'view.zoomIn': ['Zoom in', 'Крупнее'], 'view.zoomOut': ['Zoom out', 'Мельче'],
-  'view.left': ['Nudge / pan', 'Сдвиг'], 'view.right': ['Nudge / pan', 'Сдвиг'],
-  'view.up': ['Nudge / pan', 'Сдвиг'], 'view.down': ['Nudge / pan', 'Сдвиг'],
-  'width.thinner': ['Thinner', 'Тоньше'], 'width.thicker': ['Thicker', 'Толще'],
-  'selection.rotate.BracketLeft': ['−90°', '−90°'], 'selection.rotate.BracketRight': ['+90°', '+90°'],
-  'selection.rotate.Comma': ['−15°', '−15°'], 'selection.rotate.Period': ['+15°', '+15°'],
-  'gesture.pan': ['Hold and move to pan', 'Удерживать и двигать холст'],
+  'tool.pen': ['action.tool.pen', 'pen'], 'tool.line': ['action.tool.line', 'line'],
+  'tool.arrow': ['action.tool.arrow', 'arrow'], 'tool.coordinates': ['keyboard.tool.coordinates', 'coordinates'],
+  'tool.ellipse': ['keyboard.tool.ellipse', 'ellipse'], 'tool.sine': ['keyboard.tool.sine', 'sine'],
+  'tool.parabola': ['action.tool.parabola', 'parabola'], 'tool.hyperbola': ['action.tool.hyperbola', 'hyperbola'],
+  'tool.marker': ['keyboard.tool.marker', 'marker'], 'tool.select': ['keyboard.tool.select', 'select'],
+  'style.solid': ['panel.solid', 'line'], 'style.dashed': ['keyboard.style.dashed', 'dash'],
+  'style.dotted': ['keyboard.style.dotted', 'dots'], 'style.dots': ['keyboard.style.dots', 'dots'],
+  'style.perTool': ['keyboard.style.perTool'],
+  'color.blue': ['action.color.blue', 'color'], 'color.red': ['action.color.red', 'color'], 'color.green': ['action.color.green', 'color'],
+  'color.palette': ['keyboard.color.palette'], 'edit.undo': ['keyboard.edit.undo', 'undo'], 'edit.redo': ['keyboard.edit.redo', 'redo'],
+  'edit.pasteImage': ['keyboard.edit.pasteImage', 'image'], 'edit.delete': ['keyboard.edit.delete'],
+  'ui.brush': ['keyboard.ui.brush', 'sliders'], 'ui.toolbar': ['keyboard.ui.toolbar'], 'ui.escape': ['settings.cancel'],
+  'ui.debug': ['help.debug'], 'view.fullscreen': ['keyboard.view.fullscreen'],
+  'view.grid': ['keyboard.view.grid', 'grid'], 'view.reset': ['keyboard.view.reset'],
+  'view.zoomIn': ['keyboard.view.zoomIn'], 'view.zoomOut': ['keyboard.view.zoomOut'],
+  'view.left': ['keyboard.view.left'], 'view.right': ['keyboard.view.left'],
+  'view.up': ['keyboard.view.left'], 'view.down': ['keyboard.view.left'],
+  'width.thinner': ['keyboard.width.thinner'], 'width.thicker': ['keyboard.width.thicker'],
+  'selection.rotate.BracketLeft': ['keyboard.selection.rotate.BracketLeft'], 'selection.rotate.BracketRight': ['keyboard.selection.rotate.BracketRight'],
+  'selection.rotate.Comma': ['keyboard.selection.rotate.Comma'], 'selection.rotate.Period': ['keyboard.selection.rotate.Period'],
+  'gesture.pan': ['keyboard.gesture.pan'],
 };
 const singles = new Map();
 for (const { id } of actions.list()) {
@@ -50,21 +51,21 @@ const symbols = {
   ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓',
 };
 const groups = [
-  [['Shapes', 'Фигуры'], [
-    ['tool.arrowBoth', 'Double arrow', 'Двусторонняя стрелка'],
-    ['tool.adiabat', 'Adiabatic curve', 'Адиабата'],
-    ['gesture.ellipse', 'Hold Shift while drawing an ellipse', 'Держать Shift для эллипса', 'ellipse'],
-    ['arrowHead.shorter', 'Shorter / longer arrowhead', 'Короче / длиннее наконечник', 'heads'],
+  ['keyboard.group.shapes', [
+    ['tool.arrowBoth', 'keyboard.legend.tool.arrowBoth'],
+    ['tool.adiabat', 'keyboard.legend.tool.adiabat'],
+    ['gesture.ellipse', 'keyboard.legend.gesture.ellipse', 'ellipse'],
+    ['arrowHead.shorter', 'keyboard.legend.arrowHead.shorter', 'heads'],
   ]],
-  [['Canvas', 'Холст'], [
-    ['tool.eraser', 'Eraser', 'Ластик'], ['ui.background', 'Grid and snapping', 'Сетка и привязка'],
-    ['ui.toolbar', 'Show / hide toolbar', 'Показать / скрыть панель', 'last'],
-    ['tool.space', 'Make vertical space', 'Раздвинуть по вертикали'],
+  ['help.canvas', [
+    ['tool.eraser', 'action.tool.eraser'], ['ui.background', 'keyboard.legend.ui.background'],
+    ['ui.toolbar', 'keyboard.legend.ui.toolbar', 'last'],
+    ['tool.space', 'keyboard.legend.tool.space'],
   ]],
-  [['Files & settings', 'Файлы и настройки'], [
-    ['file.open', 'Open SVG, image or PDF', 'Открыть SVG, картинку, PDF'],
-    ['file.save', 'Save SVG', 'Сохранить SVG'], ['file.export', 'Export', 'Экспорт'],
-    ['ui.shortcuts', 'Shortcuts and Tab colors', 'Клавиши и цвета Tab'],
+  ['keyboard.group.files', [
+    ['file.open', 'keyboard.legend.file.open'],
+    ['file.save', 'action.file.save'], ['file.export', 'export.export'],
+    ['ui.shortcuts', 'keyboard.legend.ui.shortcuts'],
   ]],
 ];
 const keyLabel = key => symbols[key] ?? key.replace(/^(Key|Digit)/, '');
@@ -80,14 +81,13 @@ const rect = (x, y, w, h, radius, fill, stroke = 'none') =>
   '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + radius + '" fill="' + fill + '" stroke="' + stroke + '"/>';
 const ink = '#192e48', blue = '#315ca8', muted = '#526576';
 const pitch = 82, margin = 36;
-function render(lang) {
-  const t = (en, ru) => lang === 0 ? en : ru;
-  const title = t('Keyboard shortcuts', 'Горячие клавиши');
+function render() {
+  const title = t('keyboard.title');
   const parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="1302" height="722" viewBox="0 0 1302 722" role="img" aria-labelledby="title desc">',
-    '<title id="title">Phaint · ' + title + '</title><desc id="desc">' + t('Default shortcuts on a Mac keyboard.', 'Стандартные назначения на клавиатуре Mac.') + '</desc>',
+    '<title id="title">Phaint · ' + title + '</title><desc id="desc">' + t('keyboard.description') + '</desc>',
     '<g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">', rect(0, 0, 1302, 722, 18, '#f8fafc'),
     xmlText(margin, 49, 'Phaint', 34, blue, 750), xmlText(160, 49, title, 32, ink, 650),
-    xmlText(margin, 81, t('Use the same physical keys in any input language.', 'Назначения привязаны к физическим клавишам при любой раскладке.'), 18, muted),
+    xmlText(margin, 81, t('keyboard.physicalKeys'), 18, muted),
     xmlText(1131, 48, 'macOS · QWERTY', 16, muted, 600)];
   function keycap(code, x, y, w, h) {
     const id = singles.get(code), caption = captions[id], tool = id?.startsWith('tool.');
@@ -99,12 +99,13 @@ function render(lang) {
     const short = h < 40;
     parts.push(xmlText(x + 9, y + (short ? 17 : 24), label, label.length > 3 ? 14 : short ? 15 : 20, keyInk, 650));
     if (!caption || h < 30) return;
-    if (caption[2]) {
+    if (caption[1]) {
       parts.push('<g transform="translate(' + (x+w-32) + ' ' + (y+5) + ')" fill="none" color="' + (accent ?? blue) +
-        '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[caption[2]] + '</g>');
+        '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONS[caption[1]] + '</g>');
     }
-    const textSize = short ? 11.5 : w < pitch && caption[lang].length > 7 ? 12 : 13;
-    parts.push(xmlText(x + 9, y + h - 8, caption[lang], textSize, tool ? '#234678' : muted));
+    const labelText=t(caption[0]);
+    const textSize = short ? 11.5 : w < pitch && labelText.length > 7 ? 12 : 13;
+    parts.push(xmlText(x + 9, y + h - 8, labelText, textSize, tool ? '#234678' : muted));
   }
   let y = 104;
   for (const [index, row] of rows.entries()) {
@@ -124,16 +125,19 @@ function render(lang) {
   parts.push(rect(margin, 481, 1225, 1, 0, '#c3cfdb'));
   groups.forEach(([heading, entries], i) => {
     const x = [margin, 481, 882][i];
-    parts.push(xmlText(x, 519, heading[lang], 23, ink, 650));
-    entries.forEach(([id, en, ru, variant], j) => {
+    parts.push(xmlText(x, 519, t(heading), 23, ink, 650));
+    entries.forEach(([id, message, variant], j) => {
       let keys = combo(id, variant === 'last');
       if (variant === 'ellipse') keys = combo('tool.ellipse') + ' → ' + keys;
       if (variant === 'heads') keys = combo(id, true) + ' / ' + combo('arrowHead.longer', true);
       const rowY = 554 + j * 37;
-      parts.push(xmlText(x, rowY, keys, 20, blue, 650), xmlText(x + 94, rowY, t(en, ru), 17, ink));
+      parts.push(xmlText(x, rowY, keys, 20, blue, 650), xmlText(x + 94, rowY, t(message), 17, ink));
     });
   });
   parts.push('</g></svg>');
   return parts.join('\n') + '\n';
 }
-for (const [lang, file] of ['docs/keyboard.svg', 'docs/keyboard.ru.svg'].entries()) writeFileSync(file, render(lang));
+for (const {code} of languages) {
+  setLanguage(code);
+  writeFileSync(code==='en'?'docs/keyboard.svg':`docs/keyboard.${code}.svg`, render());
+}

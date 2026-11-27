@@ -1,5 +1,6 @@
 // Общая отмена асинхронных вычислений; не применяется к уже начатой атомарной замене файла.
-export const cancelled = (): DOMException => new DOMException('Обработка отменена.', 'AbortError');
+import { t } from './language.ts';
+export const cancelled = (): DOMException => new DOMException(t('error.cancelled'), 'AbortError');
 export const isCancelled = (error: unknown): boolean => error instanceof Error && error.name === 'AbortError';
 export function checkCancelled(signal?: AbortSignal): void { signal?.throwIfAborted(); }
 

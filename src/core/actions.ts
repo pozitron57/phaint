@@ -64,7 +64,7 @@ const KEY_NAMES: Record<string, string> = {
   NumpadSubtract: '−',
   Tab: 'Tab',
   Escape: 'Esc',
-  get Space() { return t('Пробел','Space'); },
+  get Space() { return t('actions.space'); },
   Backspace: '⌫',
   Delete: 'Del',
   Enter: '↩',

@@ -1,5 +1,5 @@
 // Ctrl+C: локальное распознавание одной выбранной картинки; документ и история не меняются.
-import { translate } from '../core/menu-text.ts';
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { isCancelled } from '../core/cancel.ts';
 import { isLocked } from '../core/types.ts';
@@ -25,18 +25,18 @@ export class ImageText {
     app.input.finishCurrent();
     const objects=app.selection?.objects,image=objects?.[0];
     if(objects?.length!==1 || image?.kind!=='image' || isLocked(image)){
-      app.hud.toast(translate('Выделите одну картинку для распознавания текста'));return;
+      app.hud.toast(t('file.selectImageForOcr'));return;
     }
-    const processing=this.processing=new FileProcessing(translate('Распознаю текст…'),translate('Распознавание текста'));
+    const processing=this.processing=new FileProcessing(t('file.recognizingText'),t('file.textRecognition'));
     this.generation=app.files.generation;
     try{
       const result=await app.platform.copyImageText({source:image.source,
         ...(image.clip?{clip:image.clip.flatMap(p=>[p.x/image.width,p.y/image.height])}:{})},processing.signal);
       processing.signal.throwIfAborted();
-      app.hud.toast({copied:translate('Текст скопирован'),empty:translate('На картинке не найден текст'),
-        superseded:translate('Буфер уже изменился — текст не скопирован'),cancelled:translate('Распознавание отменено')}[result]);
+      app.hud.toast({copied:t('file.textCopied'),empty:t('file.noTextFoundInTheImage'),
+        superseded:t('file.ocrCopySuperseded'),cancelled:t('file.textRecognitionCanceled')}[result]);
     }catch(error){
-      if(isCancelled(error))app.hud.toast(translate('Распознавание отменено'));
+      if(isCancelled(error))app.hud.toast(t('file.textRecognitionCanceled'));
       else{
         const message=(error instanceof Error?error.message:String(error)).replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'');
         await app.platform.files.error(message);

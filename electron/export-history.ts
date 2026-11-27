@@ -1,5 +1,6 @@
 // Последнее назначение экспорта привязано к полному пути исходника и области экспорта.
 // Каждый ключ записывается атомарно, поэтому окна не перезаписывают историю чужих рисунков.
+import { t } from '../src/core/language.ts';
 import { createHash } from 'node:crypto';
 import { isAbsolute, join } from 'node:path';
 import { atomicWrite, readOptional } from './storage.ts';
@@ -19,7 +20,7 @@ export class ExportHistory {
       const path = await readOptional(this.key(source, selected));
       return path && isAbsolute(path) && !path.includes('\0') && exportFormat(path) ? path : null;
     } catch (error) {
-      console.warn('Не удалось прочитать историю экспорта', error);
+      console.warn(t('debug.exportHistory'), error);
       return null;
     }
   }

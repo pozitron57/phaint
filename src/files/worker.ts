@@ -1,5 +1,6 @@
 // Фоновая сериализация. Снимки приходят небольшими пачками, SVG уходит порциями с подтверждением
 // записи: большой документ не копируется целиком в UI-поток и не заполняет очередь сообщений.
+import { isLanguage, setLanguage } from '../core/language.ts';
 import { decodeData, encodeData, nativeSvgData, type DocumentData } from './codec.ts';
 import { recompressPng } from './png-compression.ts';
 import { serializeSvg } from './svg-export.ts';
@@ -46,6 +47,7 @@ async function run(id: number, kind: string, data: unknown, stream = false): Pro
   } catch (error) { self.postMessage({ id, error: error instanceof Error ? error.message : String(error) }); }
 }
 self.onmessage = (event: MessageEvent) => {
+  if(isLanguage(event.data.language))setLanguage(event.data.language);
   const { id, kind, data, phase, stream, error } = event.data;
   if (phase === 'ack') {
     const ack = acknowledgements.get(id); acknowledgements.delete(id);

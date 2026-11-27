@@ -9,14 +9,13 @@
 //   --size=1280x820                    размер окна
 // Сценарий может сам делать снимки: await phaintNative.shot('имя') → файл.имя.png.
 // Результат печатается строкой «RESULT {json}».
-import { translate } from '../src/core/menu-text.ts';
 import { app, dialog, clipboard, nativeImage, BrowserWindow, ipcMain, Menu, type MenuItemConstructorOptions, type Rectangle, screen } from 'electron';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { installFiles } from './files.ts';
 import { installClipboard, type TextRecognitionNative } from './clipboard.ts';
-import { isLanguage, language, setLanguage } from '../src/core/language.ts';
+import { languages, multilingual, preferredLanguage, isLanguage, currentLanguage, setLanguage, t } from '../src/core/language.ts';
 import { WindowSettings } from './settings.ts';
 import { recoverySlots } from './recovery.ts';
 import { cascadeBounds } from './window-position.ts';
@@ -40,7 +39,7 @@ function loadNative(): Native | null {
     // Путь вычисляется при запуске, поэтому сборщик не пытается вшить модуль в бандл.
     return require(join(__dirname, 'phaint_native.node')) as Native;
   } catch (err) {
-    console.warn('Нативный модуль не загрузился: ' + String(err));
+    console.warn(t('debug.nativeLoad',{error:String(err)}));
     return null;
   }
 }
@@ -130,71 +129,70 @@ function buildMenu(shortcuts:Record<string,string[]>={}): void {
     {
       label: 'Phaint',
       submenu: [
-        { id:'app.about', label: 'О программе Phaint',click:()=>app.showAboutPanel() },
-        { id:'ui.shortcuts',label:'Настройки…',accelerator:'Cmd+,',click:()=>action('ui.shortcuts') },
+        { id:'app.about', label: t('menu.aboutPhaint'),click:()=>app.showAboutPanel() },
+        { id:'ui.shortcuts',label:t('action.ui.shortcuts'),accelerator:'Cmd+,',click:()=>action('ui.shortcuts') },
         { type: 'separator' },
-        { id:'app.hide',label:'Скрыть Phaint',accelerator:'Cmd+H',click:()=>app.hide() },
-        { id:'app.hideOthers',label:'Скрыть остальные',accelerator:'Alt+Cmd+H',click:()=>Menu.sendActionToFirstResponder('hideOtherApplications:') },
-        { id:'app.showAll',label:'Показать все',click:()=>Menu.sendActionToFirstResponder('unhideAllApplications:') },
+        { id:'app.hide',label:t('menu.hidePhaint'),accelerator:'Cmd+H',click:()=>app.hide() },
+        { id:'app.hideOthers',label:t('menu.hideOthers'),accelerator:'Alt+Cmd+H',click:()=>Menu.sendActionToFirstResponder('hideOtherApplications:') },
+        { id:'app.showAll',label:t('menu.showAll'),click:()=>Menu.sendActionToFirstResponder('unhideAllApplications:') },
         { type: 'separator' },
-        { id:'app.quit',label:'Завершить Phaint',accelerator:'Cmd+Q',click:()=>app.quit() },
+        { id:'app.quit',label:t('menu.quitPhaint'),accelerator:'Cmd+Q',click:()=>app.quit() },
       ],
     },
     {
-      label: 'Файл',
+      label: t('menu.file'),
       submenu: [
-        { id:'app.newWindow',label:'Новое окно',accelerator:'Cmd+T',click:()=>openWindow() },
-        { id:'file.new',label: 'Новый рисунок', click: () => fileCommand('new') },
-        { id:'file.open',label: 'Открыть SVG, картинку или PDF…', click: () => fileCommand('open') },
-        { id:'file.recent',label:'Открыть последний файл',click:()=>action('file.recent') },
-        { id:'file.save',label: 'Сохранить SVG', click: () => fileCommand('save') },
-        { id:'file.saveAs',label: 'Сохранить SVG как…', click: () => fileCommand('saveAs') },
-        { id:'file.export',label: 'Экспорт SVG / PDF / PNG / JPG…', click: () => fileCommand('export') },
-        { id:'app.close',label:'Закрыть окно',accelerator:'Cmd+W',click:()=>BrowserWindow.getFocusedWindow()?.close() },
+        { id:'app.newWindow',label:t('menu.newWindow'),accelerator:'Cmd+T',click:()=>openWindow() },
+        { id:'file.new',label: t('action.file.new'), click: () => fileCommand('new') },
+        { id:'file.open',label: t('action.file.open'), click: () => fileCommand('open') },
+        { id:'file.recent',label:t('action.file.recent'),click:()=>action('file.recent') },
+        { id:'file.save',label: t('action.file.save'), click: () => fileCommand('save') },
+        { id:'file.saveAs',label: t('action.file.saveAs'), click: () => fileCommand('saveAs') },
+        { id:'file.export',label: t('action.file.export'), click: () => fileCommand('export') },
+        { id:'app.close',label:t('menu.closeWindow'),accelerator:'Cmd+W',click:()=>BrowserWindow.getFocusedWindow()?.close() },
       ],
     },
     {
       // Нужно для полей ввода в настройках.
-      label: 'Правка',
+      label: t('menu.edit'),
       submenu: [
-        { id:'edit.undo',label:'Отменить',click:()=>action('edit.undo') },
-        { id:'edit.redo',label:'Повторить',click:()=>action('edit.redo') },
+        { id:'edit.undo',label:t('action.edit.undo'),click:()=>action('edit.undo') },
+        { id:'edit.redo',label:t('action.edit.redo'),click:()=>action('edit.redo') },
         { type:'separator' },
-        { id:'edit.cut',label:'Вырезать',accelerator:'Cmd+X',click:()=>edit('cut') },
-        { id:'edit.copy',label:'Скопировать',accelerator:'Cmd+C',click:()=>edit('copy') },
-        { id:'edit.copyImageText',label:'Распознать и скопировать текст',accelerator:'Ctrl+C',click:()=>action('edit.copyImageText') },
-        { id:'edit.paste',label:'Вставить',accelerator:'Cmd+V',click:()=>edit('paste') },
-        { id:'edit.selectAll',label:'Выделить всё',accelerator:'Cmd+A',click:selectAll },
+        { id:'edit.cut',label:t('menu.cut'),accelerator:'Cmd+X',click:()=>edit('cut') },
+        { id:'edit.copy',label:t('menu.copy'),accelerator:'Cmd+C',click:()=>edit('copy') },
+        { id:'edit.copyImageText',label:t('action.edit.copyImageText'),accelerator:'Ctrl+C',click:()=>action('edit.copyImageText') },
+        { id:'edit.paste',label:t('menu.paste'),accelerator:'Cmd+V',click:()=>edit('paste') },
+        { id:'edit.selectAll',label:t('action.edit.selectAll'),accelerator:'Cmd+A',click:selectAll },
         { type:'separator' },
-        { label:'Порядок объектов',submenu:[
-          { id:'selection.order.front',label:'На передний план',accelerator:'Ctrl+F',click:()=>action('selection.order.front') },
-          { id:'selection.order.back',label:'На задний план',accelerator:'Ctrl+B',click:()=>action('selection.order.back') },
-          { id:'selection.order.forward',label:'На один шаг вперёд',accelerator:'Ctrl+Shift+F',click:()=>action('selection.order.forward') },
-          { id:'selection.order.backward',label:'На один шаг назад',accelerator:'Ctrl+Shift+B',click:()=>action('selection.order.backward') },
+        { label:t('menu.arrange'),submenu:[
+          { id:'selection.order.front',label:t('action.selection.order.front'),accelerator:'Ctrl+F',click:()=>action('selection.order.front') },
+          { id:'selection.order.back',label:t('action.selection.order.back'),accelerator:'Ctrl+B',click:()=>action('selection.order.back') },
+          { id:'selection.order.forward',label:t('action.selection.order.forward'),accelerator:'Ctrl+Shift+F',click:()=>action('selection.order.forward') },
+          { id:'selection.order.backward',label:t('action.selection.order.backward'),accelerator:'Ctrl+Shift+B',click:()=>action('selection.order.backward') },
         ] },
       ],
     },
     {
-      label: 'Окно', role: 'windowMenu',
+      label: t('menu.window'), role: 'windowMenu',
       submenu: [
-        { id:'app.minimize',label:'Свернуть',accelerator:'Cmd+M',click:()=>BrowserWindow.getFocusedWindow()?.minimize() },
-        { id:'app.zoom',label:'Развернуть',click:()=>appAction('zoom') },
-        { id:'view.fullscreen',label:'Полный экран',click:()=>action('view.fullscreen') },
+        { id:'app.minimize',label:t('menu.minimize'),accelerator:'Cmd+M',click:()=>BrowserWindow.getFocusedWindow()?.minimize() },
+        { id:'app.zoom',label:t('menu.zoom'),click:()=>appAction('zoom') },
+        { id:'view.fullscreen',label:t('action.view.fullscreen'),click:()=>action('view.fullscreen') },
       ],
     },
   ];
   if (!app.isPackaged) {
     template.push({
-      label: 'Разработка',
+      label: t('menu.development'),
       submenu: [
-        { role: 'reload', label: 'Перезагрузить', accelerator:'Cmd+Shift+R' },
-        { role: 'toggleDevTools', label: 'Инструменты разработчика' },
+        { role: 'reload', label: t('menu.reload'), accelerator:'Cmd+Shift+R' },
+        { role: 'toggleDevTools', label: t('menu.developerTools') },
       ],
     });
   }
   const apply=(items:MenuItemConstructorOptions[]):void=>{
     for(const item of items){
-      if(item.label)item.label=translate(item.label);
       if(item.id&&Object.hasOwn(shortcuts,item.id)){
         const combo=shortcuts[item.id].find(key=>menuAccelerator(key));item.accelerator=combo?menuAccelerator(combo):undefined;
       }
@@ -341,7 +339,8 @@ async function runTest(win: BrowserWindow): Promise<void> {
 const windowOf = (event: { sender: Electron.WebContents }): BrowserWindow | null => BrowserWindow.fromWebContents(event.sender);
 
 async function windowReady(win: BrowserWindow): Promise<void> {
-  await win.webContents.executeJavaScript('new Promise((resolve, reject) => { const deadline = Date.now() + 30000; const check = () => { if (window.__phaint) resolve(true); else if (Date.now() > deadline) reject(new Error("Приложение не запустилось")); else setTimeout(check, 20); }; check(); })');
+  const ready=await win.webContents.executeJavaScript('new Promise(resolve => { const deadline = Date.now() + 30000; const check = () => { if (window.__phaint) resolve(true); else if (Date.now() > deadline) resolve(false); else setTimeout(check, 20); }; check(); })');
+  if(!ready)throw new Error(t('error.startTimeout'));
 }
 
 // Только тестовый режим: сценарий одного окна может проверить настоящий второй рендерер.
@@ -352,7 +351,7 @@ ipcMain.handle('test:windows', async (event, action: string, data: { id?: number
     const before=new Set(documentWindows);
     if(action==='new')openWindow();else app.emit(action);
     const win=[...documentWindows].find(win=>!before.has(win)) ?? menuWindow;
-    if (!win) throw new Error('Нет открытого окна.');
+    if (!win) throw new Error(t('error.noWindow'));
     await windowReady(win);
     return win.id;
   }
@@ -366,7 +365,7 @@ ipcMain.handle('test:windows', async (event, action: string, data: { id?: number
   }
   if (action==='quit') { app.quit(); return true; }
   const win=data.id===undefined?windowOf(event):[...documentWindows].find(win=>win.id===data.id);
-  if (!win || !documentWindows.has(win)) throw new Error('Нет тестового окна.');
+  if (!win || !documentWindows.has(win)) throw new Error(t('error.testWindow'));
   if (action==='close') return files.close(win);
   if (action==='focus') { if(visible){win.show();win.focus();}else win.emit('focus'); return true; }
   if (action==='minimize') { win.minimize(); return true; }
@@ -392,7 +391,7 @@ ipcMain.handle('settings:load', event => settings.load(event.sender.id));
 ipcMain.handle('settings:save', async (event, data: unknown, choice: unknown) => {
   const selected = isLanguage(choice) ? choice : undefined;
   await settings.save(event.sender.id, data, selected);
-  if (selected && selected !== language) {
+  if (selected && selected !== currentLanguage()) {
     setLanguage(selected);
     buildMenu(menuWindow ? windowShortcuts.get(menuWindow) : undefined);
     for (const win of documentWindows) win.webContents.send('settings:language', selected);
@@ -438,15 +437,15 @@ void app.whenReady().then(async () => {
   const profile = await settings.load(0);
   if (profile.language) setLanguage(profile.language);
   else {
-    const selected = testing ? (arg('choose-language') === 'en' ? 'en' : 'ru') :
-      (dialog.showMessageBoxSync({
-        type: 'question', title: 'Phaint', message: 'Выберите язык / Choose your language',
-        detail: 'Позже язык можно изменить в настройках (⌘,).\nYou can change the language later in Settings (⌘,).',
-        buttons: ['Русский', 'English'], defaultId: app.getLocale().startsWith('ru') ? 0 : 1, noLink: true,
-      }) === 0 ? 'ru' : 'en');
+    const requested=arg('choose-language');
+    const selected=testing ? (isLanguage(requested)?requested:'ru') : languages[dialog.showMessageBoxSync({
+      type:'question', title:'Phaint', message:multilingual('startup.choose',' / '),
+      detail:multilingual('startup.detail','\n'), buttons:languages.map(item=>item.name),
+      defaultId:languages.findIndex(item=>item.code===preferredLanguage(app.getLocale())), noLink:true,
+    })].code;
     try { await settings.save(0, profile, selected); }
     catch (error) {
-      dialog.showErrorBox('Не удалось сохранить язык / Could not save language', String(error));
+      dialog.showErrorBox(multilingual('startup.saveError',' / '), String(error));
       app.quit(); return;
     }
     setLanguage(selected);
@@ -466,7 +465,7 @@ void app.whenReady().then(async () => {
   for(const slot of slots.slice(1))createWindow(slot);
   // loadFile уже запущен: пока рендерер загружает интерфейс, AppKit готовит файловую панель.
   // В автоматических сценариях диалоги подменены, поэтому лишняя инициализация не нужна.
-  if(!testing&&native)try{native.prepareFileDialogs();}catch(error){console.warn('Подготовка файловой панели: '+String(error));}
+  if(!testing&&native)try{native.prepareFileDialogs();}catch(error){console.warn(t('debug.filePanel',{error:String(error)}));}
   if (testing) {
     win.webContents.once('did-finish-load', () => void runTest(win));
     // Страховка: если страница не ответила, не висеть вечно.

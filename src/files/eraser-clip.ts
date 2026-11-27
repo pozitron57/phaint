@@ -1,5 +1,6 @@
 // PDF: следы ластика вычитаются из области объекта. SVG mask Chromium печатает
 // растром; clipPath остаётся векторным. Рабочие SVG и история не меняются.
+import { t } from '../core/language.ts';
 import ClipperLib from 'clipper-lib';
 import {boxPolygon,intersectClip,polygonArea} from '../core/clip.ts';
 import {type BBox,type Pt} from '../core/geom.ts';
@@ -44,7 +45,7 @@ export function eraserClipPolygons(bounds:BBox,marks:readonly (readonly number[]
   clipper.AddPath(integer(rectangle),ClipperLib.PolyType.ptSubject,true);
   for(const mark of marks){const p=capsule(mark,bounds,error);if(p.length>=3)clipper.AddPath(integer(p),ClipperLib.PolyType.ptClip,true);}
   // nonzero сначала объединяет пересечения следов. evenodd здесь восстановил бы стёртое.
-  if(!clipper.Execute(ClipperLib.ClipType.ctDifference,solution,ClipperLib.PolyFillType.pftNonZero,ClipperLib.PolyFillType.pftNonZero))throw new Error('Не удалось построить векторное стирание.');
+  if(!clipper.Execute(ClipperLib.ClipType.ctDifference,solution,ClipperLib.PolyFillType.pftNonZero,ClipperLib.PolyFillType.pftNonZero))throw new Error(t('error.vectorEraser'));
   return solution.filter(p=>p.length>=3).map(p=>p.flatMap(v=>[v.X/scale,v.Y/scale]));
 }
 

@@ -1,7 +1,7 @@
 // Платформа: всё, что зависит от оболочки. В Electron функции даёт preload (window.phaintNative),
 // в обычном браузере — заменители на веб-API. Благодаря этому рендерер можно открыть и проверить
 // в любом браузере без Electron.
-import { isLanguage, type Language } from './core/language.ts';
+import { isLanguage, type Language, t } from './core/language.ts';
 import type { FileApi } from './files/api.ts';
 import { browserFiles } from './files/browser.ts';
 import { abortable, checkCancelled } from './core/cancel.ts';
@@ -105,7 +105,7 @@ export function getPlatform(): Platform {
     readClipboardSvg:async()=>{const text=await navigator.clipboard.readText();return /^\s*(<\?xml[^>]*>\s*)?<svg[\s>]/i.test(text)?text:null;},
     writeClipboardSvg:svg=>navigator.clipboard.writeText(svg),
     clipboardCopy:()=>{},
-    copyImageText:async()=>{throw new Error('Распознавание текста доступно в приложении Phaint для macOS.');},
+    copyImageText:async()=>{throw new Error(t('error.ocrPlatform'));},
     onEdit:()=>{},
     editText:command=>{document.execCommand(command);},
     clipboardImage: async () => {

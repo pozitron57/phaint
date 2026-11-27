@@ -1,5 +1,5 @@
 // Размер последней успешной записи. Резервные копии и отменённые диалоги его не меняют.
-import { language, t } from '../core/language.ts';
+import { currentLanguage, t } from '../core/language.ts';
 export interface SvgProcessing {
   name:'SVGO'; before:number; after:number|null; used:boolean; error?:string;
 }
@@ -21,7 +21,8 @@ export function utf8Size(text:string):number {
   return bytes;
 }
 export function formatFileBytes(bytes:number):string {
-  if(bytes<1000)return `${bytes} ${t('байт','bytes')}`;
-  const unit=bytes<1e6?1000:1e6,label=unit===1000?t('КБ','kB'):t('МБ','MB');
-  return `${(bytes/unit).toFixed(1).replace('.',language==='ru'?',':'.')} ${label} (${bytes} ${t('байт','bytes')})`;
+  if(bytes<1000)return t('fileStats.bytes',{bytes});
+  const unit=bytes<1e6?1000:1e6;
+  const size=(bytes/unit).toLocaleString(currentLanguage(),{useGrouping:false,minimumFractionDigits:1,maximumFractionDigits:1});
+  return t(unit===1000?'fileStats.kb':'fileStats.mb',{size,bytes});
 }

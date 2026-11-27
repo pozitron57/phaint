@@ -1,5 +1,6 @@
 // Одна векторная страница размером с рисунок. Изолированное окно без JS и сети
 // закрывается после печати; временный HTML не остаётся на диске.
+import { currentLanguage, t } from '../src/core/language.ts';
 import { app, BrowserWindow } from 'electron';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -11,12 +12,12 @@ import { abortable, checkCancelled } from '../src/core/cancel.ts';
 export async function renderAnnotatedPdf(request:PdfExportRequest,signal?:AbortSignal):Promise<Uint8Array> {
   checkCancelled(signal);
   const r=request;
-  if(!r?.source||typeof r.source.data!=='string'||r.source.data.length>MAX_FILE_BYTES||!Array.isArray(r.pages)||r.pages.length>500||!r.pages.length||!['pages','sheet'].includes(r.layout))throw new Error('Неверные данные PDF.');
-  if(![r.bounds.x,r.bounds.y,r.bounds.width,r.bounds.height].every(Number.isFinite)||r.bounds.width<=0||r.bounds.height<=0)throw new Error('Неверный размер PDF.');
-  if(r.grid&&(!Number.isFinite(r.grid.step)||r.grid.step<=0))throw new Error('Неверный шаг сетки PDF.');
+  if(!r?.source||typeof r.source.data!=='string'||r.source.data.length>MAX_FILE_BYTES||!Array.isArray(r.pages)||r.pages.length>500||!r.pages.length||!['pages','sheet'].includes(r.layout))throw new Error(t('error.pdfData'));
+  if(![r.bounds.x,r.bounds.y,r.bounds.width,r.bounds.height].every(Number.isFinite)||r.bounds.width<=0||r.bounds.height<=0)throw new Error(t('error.pdfSize'));
+  if(r.grid&&(!Number.isFinite(r.grid.step)||r.grid.step<=0))throw new Error(t('error.pdfGridStep'));
   for(const p of r.pages){
     const m=p.page?.transform;
-    if(!m||!Number.isInteger(p.page.index)||p.page.index<0||![p.x,p.y,p.width,p.height,...Object.values(m)].every(Number.isFinite)||p.width<=0||p.height<=0||Math.abs(m.a*m.d-m.b*m.c)<1e-12)throw new Error('Неверная страница PDF.');
+    if(!m||!Number.isInteger(p.page.index)||p.page.index<0||![p.x,p.y,p.width,p.height,...Object.values(m)].every(Number.isFinite)||p.width<=0||p.height<=0||Math.abs(m.a*m.d-m.b*m.c)<1e-12)throw new Error(t('error.pdfPage'));
   }
   const overlays:Array<Uint8Array|null>=[];
   if(r.layout==='sheet')overlays.push(r.layers?.length?await renderPdfLayers(r.layers.map(l=>l.svg),r.bounds.width,r.bounds.height,true,signal):null);
@@ -29,11 +30,11 @@ export async function renderAnnotatedPdf(request:PdfExportRequest,signal?:AbortS
 
 async function runWorker(name:string,data:unknown,transfer:ArrayBuffer[],signal?:AbortSignal):Promise<Uint8Array> {
   checkCancelled(signal);
-  const worker=new Worker(join(__dirname,name));
+  const worker=new Worker(join(__dirname,name),{workerData:currentLanguage()});
   try{
     return await abortable(new Promise<Uint8Array>((resolve,reject)=>{
       worker.once('message',message=>message.error?reject(new Error(message.error)):resolve(message.bytes));
-      worker.once('error',reject);worker.once('exit',code=>reject(new Error(`PDF: поток завершился с кодом ${code}`)));
+      worker.once('error',reject);worker.once('exit',code=>reject(new Error(t('error.pdfWorkerExit', {code}))));
       worker.postMessage(data,transfer);
     }),signal);
   }finally{await worker.terminate();}
@@ -45,7 +46,7 @@ export async function renderPdf(svg:string,width:number,height:number,transparen
 /** Слои одной страницы печатаются одним запуском Chromium, без окна на каждый маркер. */
 async function renderPdfLayers(svgs:string[],width:number,height:number,transparent=false,signal?:AbortSignal):Promise<Uint8Array> {
   checkCancelled(signal);
-  if(!svgs.length||svgs.some(svg=>typeof svg!=='string')||svgs.reduce((n,s)=>n+Buffer.byteLength(s),0)>MAX_FILE_BYTES||![width,height].every(n=>Number.isFinite(n)&&n>0))throw new Error('Неверный размер рисунка для PDF.');
+  if(!svgs.length||svgs.some(svg=>typeof svg!=='string')||svgs.reduce((n,s)=>n+Buffer.byteLength(s),0)>MAX_FILE_BYTES||![width,height].every(n=>Number.isFinite(n)&&n>0))throw new Error(t('error.pdfDrawingSize'));
   // Chromium ограничивает физический размер страницы. Масштаб меняется одинаково по осям.
   const factor=Math.min(1,14400/Math.max(width,height)),w=Math.max(16,width*factor),h=Math.max(16,height*factor);
   const directory=await mkdtemp(join(app.getPath('temp'),'phaint-pdf-'));

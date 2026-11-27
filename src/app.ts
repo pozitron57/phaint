@@ -1,6 +1,5 @@
 // Приложение: создаёт и связывает документ, вид, отрисовщик, ввод, действия и интерфейс.
-import { translate } from './core/menu-text.ts';
-import { language, setLanguage, t, type Language } from './core/language.ts';
+import { currentLanguage, setLanguage, t, type Language } from './core/language.ts';
 import { registerActions } from './actions-list.ts';
 import { Actions, type KeyLike } from './core/actions.ts';
 import { stepWidth } from './core/brush.ts';
@@ -40,7 +39,7 @@ const strokePattern = (o:StrokeObj):LinePattern => o.dash ? (o.dash.dots ? 'dots
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
-  if (!el) throw new Error(`Нет элемента #${id}`);
+  if (!el) throw new Error(t('error.missingElement',{id}));
   return el as T;
 }
 
@@ -105,7 +104,7 @@ export class App {
     this.toolbar = new Toolbar(this);
     this.history.onTrim = oversized => {
       this.toolbar.update();
-      if(oversized)this.hud.toast(translate('Действие слишком большое для истории отмены'));
+      if(oversized)this.hud.toast(t('tool.historyTooLarge'));
     };
     this.uiRoot.append(this.toolbar.el, this.panels.brush.el, this.panels.background.el, this.palette.el);
     this.files = new DocumentSession(this);
@@ -165,7 +164,7 @@ export class App {
 
   changeLanguage(value:Language):void {
     this.settings.language=value;
-    if(language===value)return;
+    if(currentLanguage()===value)return;
     setLanguage(value);document.documentElement.lang=value;
     registerActions(this);
     this.panels.brush.refreshLanguage();this.panels.background.refreshLanguage();
@@ -192,7 +191,7 @@ export class App {
     const brush = this.tool.id === 'eraser' ? this.settings.eraser : this.widthSettings;
     brush.width = this.tool.id === 'eraser'
       ? Math.max(2,Math.min(120,Math.round(brush.width*(dir>0 ? 1.1 : 1/1.1)*10)/10)) : this.tool.id==='marker'?Math.max(2,Math.min(240,Math.round(brush.width*(dir>0?1.1:1/1.1)*10)/10)):stepWidth(brush.width,dir);
-    this.hud.toast(`${this.tool.id === 'eraser' ? translate('Ластик') : translate('Толщина')} ${brush.width}`);
+    this.hud.toast(`${this.tool.id === 'eraser' ? t('action.tool.eraser') : t('panel.width')} ${brush.width}`);
     this.panels.brush.sync();
     this.settingsChanged();
   }
@@ -212,7 +211,7 @@ export class App {
     if(on===this.settings.stylePerTool)return;
     this.settings.stylePerTool=on;this.settingsChanged();
     this.panels.brush.sync();this.toolbar.update();if(this.palette.open)this.palette.sync();
-    this.hud.toast(on?translate('ВКЛ · У каждого инструмента свой штрих и цвет'):translate('ВЫКЛ · Штрих и цвет общие для всех инструментов'),1800);
+    this.hud.toast(on?t('tool.perToolStyle'):t('tool.sharedStyle'),1800);
   }
   get selection():SelectTool|null {return this.tool instanceof SelectTool?this.tool:null;}
   get selectedStroke():StrokeObj|undefined {return this.selection?.objects.find((o):o is StrokeObj=>o.kind==='stroke');}
@@ -238,9 +237,9 @@ export class App {
     this.tool=id==='pen'||id==='marker'?new PenTool(this,id):id==='eraser'?new EraserTool(this):id==='select'?new SelectTool(this):id==='space'?new SpaceTool(this):new ShapeTool(this,id);
     this.palette.hide();this.panels.brush.sync();this.toolbar.update();this.updateCursor();
     const hint=(action:string,text:string)=>this.actions.hint(action)?` · ${this.actions.hint(action)} — ${text}`:'';
-    const snap=hint('gesture.grid',this.settings.snapToGrid?translate('без привязки'):translate('сетка'));
-    const names:Record<string,string>={pen:translate('Ручка'),line:`${translate('Прямая')}${snap}`,arrow:`${this.settings.arrow.both?translate('Двусторонняя стрелка'):translate('Стрелка')}${snap}`,coordinates:`${translate('Координаты · тяните между наконечниками')}${snap}`,ellipse:`${translate('Окружность')}${hint('gesture.ellipse',translate('эллипс'))}${snap}`,sine:`${translate('Синусоида')}${snap}`,parabola:`${translate('Парабола · задайте концы')}${snap}`,hyperbola:`${translate('Гипербола · направление жеста — четверть')}${snap}`,adiabat:`${translate('Адиабата · направление жеста — четверть')}${hint('ui.brush','γ')}${snap}`,marker:`${translate('Маркер')}${hint('gesture.marker',translate('прямая'))}`,eraser:translate('Ластик'),select:translate('Выбор · углы — размер · ручка — поворот')};
-    names.space=translate('Раздвижение · тяните вверх или вниз · прокрутка доступна');
+    const snap=hint('gesture.grid',this.settings.snapToGrid?t('tool.noSnapping'):t('tool.grid'));
+    const names:Record<string,string>={pen:t('action.tool.pen'),line:`${t('action.tool.line')}${snap}`,arrow:`${this.settings.arrow.both?t('action.tool.arrowBoth'):t('action.tool.arrow')}${snap}`,coordinates:`${t('tool.axesHint')}${snap}`,ellipse:`${t('tool.circle')}${hint('gesture.ellipse',t('tool.ellipse'))}${snap}`,sine:`${t('action.tool.sine')}${snap}`,parabola:`${t('tool.parabolaSetTheEndpoints')}${snap}`,hyperbola:`${t('tool.hyperbolaHint')}${snap}`,adiabat:`${t('tool.adiabatHint')}${hint('ui.brush','γ')}${snap}`,marker:`${t('action.tool.marker')}${hint('gesture.marker',t('tool.straightLine'))}`,eraser:t('action.tool.eraser'),select:t('tool.selectionHint')};
+    names.space=t('tool.spaceHint');
     if(id==='eraser'||id==='select'||id==='space')this.hud.toast(names[id]);else this.hud.drawingTool(names[id]);
   }
   /** Число наконечников задаётся явно; смена режима сохраняет последнюю стрелку для Безье. */
@@ -252,7 +251,7 @@ export class App {
     this.settingsChanged();this.panels.brush.sync();this.toolbar.update();
     if(this.tool.id==='arrow'){
       const grid=this.actions.hint('gesture.grid');
-      this.hud.drawingTool((both?translate('Двусторонняя стрелка'):translate('Стрелка'))+(grid?` · ${grid} — ${this.settings.snapToGrid?translate('без привязки'):translate('сетка')}`:''));
+      this.hud.drawingTool((both?t('action.tool.arrowBoth'):t('action.tool.arrow'))+(grid?` · ${grid} — ${this.settings.snapToGrid?t('tool.noSnapping'):t('tool.grid')}`:''));
     }
   }
   get linePattern():LinePattern {
@@ -325,7 +324,7 @@ export class App {
       this.recentArrow=updated;
     }
     this.panels.brush.sync();
-    this.hud.toast(t(`${key==='headWidth'?'Ширина':'Длина'} головки × ${Number(value.toFixed(2))}`,`Arrowhead ${key==='headWidth'?'width':'length'} × ${Number(value.toFixed(2))}`));
+    this.hud.toast(t(key === 'headWidth' ? 'tool.headWidth' : 'tool.headLength', {value:Number(value.toFixed(2))}));
   }
   changeSine(key:'period'|'amplitude',value:number):void {
     this.settings.sine[key]=value;
@@ -350,8 +349,8 @@ export class App {
     const gridStep=this.settings.snapToGrid?this.settings.grid.step:null, alignImages=this.settings.snapToImages;
     try {
       const image=await this.platform.clipboardImage();
-      if(!image) {this.hud.toast(translate('В буфере нет картинки'));return;}
-      if(!Number.isFinite(image.width)||!Number.isFinite(image.height)||image.width<=0||image.height<=0)throw new Error(translate('Неверный размер картинки'));
+      if(!image) {this.hud.toast(t('tool.noImageOnTheClipboard'));return;}
+      if(!Number.isFinite(image.width)||!Number.isFinite(image.height)||image.width<=0||image.height<=0)throw new Error(t('tool.invalidImageSize'));
       const decoded=makeImage(0,0,0,0,image.width/scale,image.height/scale,image.dataURL);
       await prepareObjects([decoded]);
       if(generation!==this.files.generation||this.input.blocked)return;
@@ -368,7 +367,7 @@ export class App {
   toggleOriginalEraser(): void {
     this.input.finishCurrent();this.settings.eraser.original=!this.settings.eraser.original;
     this.settingsChanged();this.toolbar.update();
-    this.hud.toast(this.settings.eraser.original?translate('Ластик: включая исходный SVG'):translate('Ластик: только добавленные штрихи'));
+    this.hud.toast(this.settings.eraser.original?t('tool.eraserIncludesOriginal'):t('tool.eraserAddedStrokes'));
   }
 
   deleteSelection(): void { if(this.tool instanceof SelectTool)this.tool.remove(); }
@@ -407,7 +406,7 @@ export class App {
   rotate(steps: number): void {
     if (this.input.drawing) return;
     this.view.rotate(steps);
-    this.hud.toast(t(`Поворот ${this.view.angle}°`,`Rotation ${this.view.angle}°`));
+    this.hud.toast(t('tool.rotation', {angle:this.view.angle}));
   }
 
   resetView(): void {

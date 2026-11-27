@@ -1,5 +1,6 @@
 // SVG в системном буфере: стандартный формат для редакторов и текст для обмена.
 // Автотесты используют свой буфер, не подменяя содержимое буфера пользователя.
+import { t, isLabelKey } from '../src/core/language.ts';
 import { clipboard, ClipboardItem, ipcMain } from 'electron';
 import { MAX_FILE_BYTES } from '../src/files/codec.ts';
 import { stripProblemHeader } from './problem-text.ts';
@@ -18,14 +19,14 @@ export interface TextRecognitionNative {
 const SVG_TYPE='electron application/osclipboard;format="public.svg-image"';
 const LEGACY_SVG='electron application/osclipboard;format="CorePasteboardFlavorType 0x73766720"';
 export async function writeSvg(svg:string):Promise<void> {
-  if(typeof svg!=='string'||Buffer.byteLength(svg)>MAX_FILE_BYTES)throw new Error('Слишком большое выделение для буфера.');
+  if(typeof svg!=='string'||Buffer.byteLength(svg)>MAX_FILE_BYTES)throw new Error(t('error.selectionTooLarge'));
   await clipboard.write([new ClipboardItem({[SVG_TYPE]:new Blob([svg],{type:'image/svg+xml'}),'text/plain':svg})]);
 }
 export async function readSvg():Promise<string|null> {
   for(const item of await clipboard.read())for(const type of [SVG_TYPE,LEGACY_SVG,'image/svg+xml']){
     if(!item.types.includes(type))continue;
     const blob=await item.getType(type);if(!(blob instanceof Blob))continue;
-    if(blob.size>MAX_FILE_BYTES)throw new Error('SVG в буфере слишком большой.');
+    if(blob.size>MAX_FILE_BYTES)throw new Error(t('error.clipboardSvgSize'));
     const svg=await blob.text();if(svg.trim())return svg;
   }
   const text=await clipboard.readText();
@@ -60,7 +61,7 @@ export function installClipboard(testing:boolean,native:TextRecognitionNative|nu
     watch(sender);
   });
   ipcMain.handle('clipboard:svg-write',async(e,svg:unknown)=>{
-    if(typeof svg!=='string'||Buffer.byteLength(svg)>MAX_FILE_BYTES)throw new Error('Слишком большое выделение для буфера.');
+    if(typeof svg!=='string'||Buffer.byteLength(svg)>MAX_FILE_BYTES)throw new Error(t('error.selectionTooLarge'));
     const id=pending.get(e.sender)?.id ?? ++latestCopy;
     await writes.run(async()=>{
       // Поздно готовая большая копия не подменяет более новое Cmd+C из другого окна.
@@ -77,14 +78,14 @@ export function installClipboard(testing:boolean,native:TextRecognitionNative|nu
     return readSvg();
   });
   ipcMain.handle('clipboard:image-text',async(event,job:unknown,image:ImageTextSource):Promise<ImageTextResult>=>{
-    if(!native)throw new Error('Не удалось загрузить распознавание текста macOS.');
+    if(!native)throw new Error(t('error.ocrLoad'));
     if(!Number.isSafeInteger(job) || (job as number)<1 || !image || typeof image.source!=='string' || image.source.length>90*1024*1024)
-      throw new Error('Неверная картинка для распознавания.');
+      throw new Error(t('error.ocrImage'));
     const comma=image.source.indexOf(',');
     if(comma<0 || !/^data:image\/(?:png|jpe?g|webp|gif|bmp|tiff);base64$/i.test(image.source.slice(0,comma)))
-      throw new Error('Для распознавания нужна растровая картинка.');
+      throw new Error(t('error.ocrRaster'));
     if(image.clip!==undefined && (!Array.isArray(image.clip) || image.clip.length>128 || image.clip.length%2 || image.clip.some(n=>!Number.isFinite(n) || Math.abs(n)>1e6)))
-      throw new Error('Неверная обрезка картинки.');
+      throw new Error(t('error.ocrCrop'));
     const sender=event.sender;watch(sender);cancelRecognition(sender);
     const task={job:job as number,id:++latestCopy,cancelled:false};recognizing.set(sender,task);
     const changeCount=testing?testChangeCount:native.clipboardChangeCount();
@@ -98,7 +99,9 @@ export function installClipboard(testing:boolean,native:TextRecognitionNative|nu
         if(testing){testSvg=null;testText=text;testChangeCount++;return 'copied';}
         return native.writeClipboardText(text,changeCount)?'copied':'superseded';
       });
-    }catch(error){if(task.cancelled)return 'cancelled';throw error;}
+    }catch(error){if(task.cancelled)return 'cancelled';
+      if(error instanceof Error && isLabelKey(error.message))throw new Error(t(error.message));
+      throw error;}
     finally{if(recognizing.get(sender)===task)recognizing.delete(sender);}
   });
   ipcMain.on('clipboard:image-text-cancel',(event,job:unknown)=>{if(typeof job==='number')cancelRecognition(event.sender,job);});

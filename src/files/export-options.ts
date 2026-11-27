@@ -12,9 +12,9 @@ export interface ExportSettings {
   jpg:RasterOptions & {quality:number};
 }
 export const VECTOR_QUALITY={
-  maximum:{label:'Максимальное',precision:3,tolerance:0,pixelsPerUnit:Infinity,jpeg:1},
-  high:{label:'Высокое',precision:2,tolerance:.04,pixelsPerUnit:3,jpeg:.92},
-  compact:{label:'Компактное',precision:1,tolerance:.12,pixelsPerUnit:1.5,jpeg:.8},
+  maximum:{precision:3,tolerance:0,pixelsPerUnit:Infinity,jpeg:1},
+  high:{precision:2,tolerance:.04,pixelsPerUnit:3,jpeg:.92},
+  compact:{precision:1,tolerance:.12,pixelsPerUnit:1.5,jpeg:.8},
 } as const;
 export const DETAIL_LOSS_TOLERANCE=3;
 export const MAX_CONTOUR_TOLERANCE=14;

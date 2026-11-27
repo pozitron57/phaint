@@ -1,11 +1,11 @@
 // Быстрый показ цикла Tab и полная палитра с запоминаемым произвольным цветом.
-import { translate } from '../core/menu-text.ts';
+import { t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import { PALETTE } from '../core/settings.ts';
 import { h, icon } from './dom.ts';
 
-const NAMES=['Синий','Зелёный','Красный','Чёрный','Белый','Оранжевый','Фиолетовый'];
-function colorName(color:string):string {return translate(NAMES[PALETTE.indexOf(color)]??color.toUpperCase());}
+const NAMES=['action.color.blue','action.color.green','action.color.red','panel.black','panel.white','panel.orange','panel.purple'] as const;
+function colorName(color:string):string {const key=NAMES[PALETTE.indexOf(color)];return key?t(key):color.toUpperCase();}
 
 export class Palette {
   readonly el:HTMLElement;
@@ -63,11 +63,11 @@ export class Palette {
       button.title=colorName(colors[i]);button.setAttribute('aria-label',button.title);
       button.classList.toggle('selected',i===selected);button.setAttribute('aria-pressed',String(i===selected));
     });
-    this.el.setAttribute('aria-label',translate('Цвет'));
+    this.el.setAttribute('aria-label',t('panel.color'));
     this.label.hidden=this.picker.hidden=!this.full;
     this.label.textContent=colorName(current);
     this.custom.value=settings.customColor;
-    this.custom.title=this.picker.title=translate('Другой цвет');
+    this.custom.title=this.picker.title=t('panel.customColor');
     this.picker.style.backgroundColor=this.custom.value;
     const rgb=this.custom.value.slice(1).match(/../g)!.map(n=>parseInt(n,16));
     this.picker.style.color=rgb[0]*.299+rgb[1]*.587+rgb[2]*.114<140?'white':'#353942';

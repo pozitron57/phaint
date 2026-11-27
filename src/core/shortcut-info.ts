@@ -1,78 +1,80 @@
 // Категории и пояснения для редактора клавиш. Сам список команд — actions-list.ts.
+import type { LabelKey } from './language.ts';
 import type { ActionDef } from './actions.ts';
-export const SHORTCUT_GROUPS={tools:'Инструменты',drawing:'Цвет и линия',selection:'Выделение',view:'Холст',files:'Файлы и буфер',ui:'Интерфейс',gestures:'Клавиши при жестах',app:'Окно и приложение',debug:'Отладка'};
-export function shortcutInfo(id:string):Pick<ActionDef,'group'|'description'> {
+export const SHORTCUT_GROUPS={tools:'help.tools',drawing:'help.colorAndLine',selection:'help.selection',view:'help.canvas',files:'help.filesAndClipboard',ui:'help.interface',gestures:'help.gestureModifiers',app:'help.windowAndApp',debug:'help.debug'} as const;
+export function shortcutInfo(id:string):{group:string;description?:LabelKey} {
   const prefix=id.split('.')[0];
   let group=({tool:'tools',style:'drawing',color:'drawing',width:'drawing',eraser:'drawing',selection:'selection',view:'view',file:'files',edit:'files',ui:'ui',app:'app',debug:'debug'} as Record<string,string>)[prefix]??'ui';
-  if(prefix==='arrowHead')return {group:'drawing',description:'Для одной выбранной или только что нарисованной стрелки либо системы координат. Шаг — четверть толщины линии.'};
+  if(prefix==='arrowHead')return {group:'drawing',description:'help.arrowHeadStep'};
   if(id==='edit.delete'||id==='edit.selectAll')group='selection';
-  if(/^view\.(left|right|up|down)$/.test(id))return {group:'selection',description:'Сдвинуть выделение на ⅕ клетки; модификаторы задают точный или ускоренный шаг. Без выделения — прокрутить вид холста. Удержание — одна отмена.'};
-  if(id.startsWith('selection.move'))return {group:'selection',description:'Сдвинуть выбранные объекты на 2 клетки в экранном направлении. Шаг не зависит от масштаба; вид холста неподвижен.'};
-  const descriptions:Record<string,string>={
-    'tool.pen':'Переключиться на ручку.', 'tool.select':'Выбрать объект или группу рамкой. Повтор вернёт прежний инструмент.',
-    'tool.space':'Тяните вверх или вниз: объекты целиком ниже касания перемещаются по вертикали холста. Прокрутка учитывается в жесте. Повтор вернёт прежний инструмент.',
-    'tool.ellipse':'Окружность от центра; модификатор эллипса настраивается в разделе жестов.',
-    'tool.hyperbola':'Ветвь y = 1/x; направление движения выбирает четверть.',
-    'tool.adiabat':'Кривая pVᵞ = const. Показатель γ задаётся в настройках инструмента.',
-    'tool.coordinates':'Две перпендикулярные стрелки из общего начала.',
-    'tool.line':'Рисовать прямую. У выбранной стрелки убрать наконечники, сохранив изгиб.',
-    'tool.arrow':'Рисовать стрелку. В выделении менять наконечники по кругу: в конце, в начале, на обоих концах, без наконечников.',
-    'tool.arrowBoth':'Рисовать двустороннюю стрелку. В выделении менять наконечники в обратном порядке.',
-    'selection.flipArrowHead':'Перенести одиночный наконечник на другой конец. У выбранной линии поставить его в точке касания пера.',
-    'tool.parabola':'Первый жест задаёт концы, второй — изгиб.',
-    'eraser.original':'Включить или выключить стирание линий из внешнего SVG.',
-    'style.dash':'Сплошная → штрихи → точки → сплошная. Работает и во время рисования.',
-    'style.previous':'Переключить сплошную линию, штрихи и точки в обратном порядке.',
-    'style.dots':'Включить точки; повтор вернёт сплошную линию.',
-    'style.perTool':'Переключить между общим штрихом и цветом и отдельными настройками каждого инструмента.',
-    'color.palette':'Перейти к следующему цвету из списка «Цвета Tab» в настройках. Работает и с выделением.',
-    'color.menu':'Открыть всю палитру, включая произвольный цвет.',
-    'width.thinner':'Уменьшить толщину примерно на 10 %. Можно удерживать клавишу.',
-    'width.thicker':'Увеличить толщину примерно на 10 %. Можно удерживать клавишу.',
-    'file.save':'Полный SVG, а при выделении — выбранные объекты в отдельный файл.',
-    'file.recent':'Последний успешно открытый или сохранённый рабочий файл, в том числе после перезапуска. Экспорт копии не меняет этот выбор.',
-    'file.export':'SVG, PDF, PNG или JPG с выбором качества.',
-    'edit.copy':'Скопировать выбранные объекты с параметрами фигур.',
-    'edit.copyImageText':'Распознать русский и английский текст одной выбранной картинки локально на Mac и скопировать в буфер. Картинка остаётся на холсте; Esc отменяет распознавание.',
-    'edit.paste':'Вставить скопированные объекты под курсором.',
-    'edit.pasteImage':'Вставить картинку в её экранном размере с учётом включённых привязок.',
-    'edit.pasteImageFree':'Поставить левый верхний угол картинки точно под курсором.',
-    'edit.cut':'Скопировать выбранные объекты и удалить их с холста.',
-    'edit.selectAll':'Выбрать все объекты, в том числе за границами экрана.',
-    'selection.order.front':'Порядок объектов: переместить выделение поверх остальных, сохранив порядок внутри группы.',
-    'selection.order.back':'Порядок объектов: переместить выделение под остальные. Фон и страницы PDF остаются снизу.',
-    'selection.order.forward':'Порядок объектов: поднять выделение на один шаг, сохранив порядок внутри группы.',
-    'selection.order.backward':'Порядок объектов: опустить выделение на один шаг, сохранив порядок внутри группы.',
-    'view.reset':'Вернуться к базовому масштабу и нулевому повороту.',
-    'view.rotateCw':'Без выделения стандартное Cmd+→ поворачивает вид; с выделением ускоряет перенос. Явное назначение этой команды сохраняет поворот.',
-    'view.rotateCcw':'Без выделения стандартное Cmd+← поворачивает вид; с выделением ускоряет перенос. Явное назначение этой команды сохраняет поворот.',
-    'ui.escape':'Отменить текущий жест, снять выделение и закрыть панели.',
-    'ui.shortcuts':'Открыть это окно. Оно также всегда доступно в меню Phaint.',
-    'app.newWindow':'Открыть независимый холст в новом окне.',
-    'app.quit':'Завершить Phaint с предложением сохранить рисунок в каждом окне.',
-    'app.close':'Закрыть окно с предложением сохранить рисунок.',
+  if(/^view\.(left|right|up|down)$/.test(id))return {group:'selection',description:'help.nudgeOrPan'};
+  if(id.startsWith('selection.move'))return {group:'selection',description:'help.moveSelection'};
+  const descriptions:Partial<Record<string,LabelKey>>={
+    'tool.pen':'help.tool.pen', 'tool.select':'help.tool.select',
+    'tool.space':'help.tool.space',
+    'tool.ellipse':'help.tool.ellipse',
+    'tool.hyperbola':'help.tool.hyperbola',
+    'tool.adiabat':'help.tool.adiabat',
+    'tool.coordinates':'help.tool.coordinates',
+    'tool.line':'help.tool.line',
+    'tool.arrow':'help.tool.arrow',
+    'tool.arrowBoth':'help.tool.arrowBoth',
+    'selection.flipArrowHead':'help.selection.flipArrowHead',
+    'tool.parabola':'help.tool.parabola',
+    'eraser.original':'help.eraser.original',
+    'style.dash':'help.style.dash',
+    'style.previous':'help.style.previous',
+    'style.dots':'help.style.dots',
+    'style.perTool':'help.style.perTool',
+    'color.palette':'help.color.palette',
+    'color.menu':'help.color.menu',
+    'width.thinner':'help.width.thinner',
+    'width.thicker':'help.width.thicker',
+    'file.save':'help.file.save',
+    'file.recent':'help.file.recent',
+    'file.export':'help.file.export',
+    'edit.copy':'help.edit.copy',
+    'edit.copyImageText':'help.edit.copyImageText',
+    'edit.paste':'help.edit.paste',
+    'edit.pasteImage':'help.edit.pasteImage',
+    'edit.pasteImageFree':'help.edit.pasteImageFree',
+    'edit.cut':'help.edit.cut',
+    'edit.selectAll':'help.edit.selectAll',
+    'selection.order.front':'help.selection.order.front',
+    'selection.order.back':'help.selection.order.back',
+    'selection.order.forward':'help.selection.order.forward',
+    'selection.order.backward':'help.selection.order.backward',
+    'view.reset':'help.view.reset',
+    'view.rotateCw':'help.view.rotateCw',
+    'view.rotateCcw':'help.view.rotateCcw',
+    'ui.escape':'help.ui.escape',
+    'ui.shortcuts':'help.ui.shortcuts',
+    'app.newWindow':'help.app.newWindow',
+    'app.quit':'help.app.quit',
+    'app.close':'help.app.close',
   };
-  if(['style.solid','style.dashed','style.dotted'].includes(id))return {group,description:'Выбрать вид линии для рисования или выделенных штрихов.'};
-  if(['color.blue','color.red','color.green'].includes(id))return {group,description:'Выбрать цвет для рисования или выделенных объектов.'};
-  return {group,description:descriptions[id]??(prefix==='tool'?'Повторное нажатие возвращает предыдущий инструмент.':prefix==='selection'?'Вокруг центра вращения выбранного объекта или группы.':'')};
+  if(['style.solid','style.dashed','style.dotted'].includes(id))return {group,description:'help.changeLineStyle'};
+  if(['color.blue','color.red','color.green'].includes(id))return {group,description:'help.changeColor'};
+  return {group,description:descriptions[id]??(prefix==='tool'?'help.previousTool':prefix==='selection'?'help.rotateSelection':undefined)};
 }
-const gesture=(id:string,title:string,key:string,description:string,contexts:string[],kind:'modifier'|'hold'='modifier'):ActionDef=>({id,title,keys:[key],description,contexts,kind,group:'gestures',run:()=>{}});
-export const GESTURES:ActionDef[]=[
-  {...gesture('gesture.nudgeFine','Точный сдвиг выделения стрелками','Alt','1 экранный пиксель; имеет приоритет перед ускорением.',['selection.keys']),group:'selection'},
-  {...gesture('gesture.nudgeMedium','Сдвиг стрелками в 2,5 раза быстрее','Ctrl','½ клетки на нажатие независимо от масштаба.',['selection.keys']),group:'selection'},
-  {...gesture('gesture.nudgeFast','Сдвиг стрелками в 10 раз быстрее','Cmd','2 клетки на нажатие независимо от масштаба.',['selection.keys']),keys:['Cmd','Shift'],group:'selection'},
-  gesture('gesture.pan','Двигать холст без клика','Space','Удерживайте клавишу и двигайте перо или мышь.',['*'],'hold'),
-  gesture('gesture.zoom','Масштаб колёсиком','Ctrl','Удерживайте модификатор при прокрутке. Щипок трекпада сохраняется.',['wheel']),
-  gesture('gesture.select','Выбрать объект при рисовании','Cmd','Касание в любом инструменте рисования переключает на выделение.',['pen','eraser','line','arrow','coordinates','marker','ellipse','sine','parabola','hyperbola','adiabat']),
-  gesture('gesture.angle','Угол прямой и стрелки с шагом 15°','Shift','При рисовании и изменении конца выбранной линии или стрелки.',['line','arrow','endpoint']),
-  gesture('gesture.grid','Временно изменить привязку','Alt','При рисовании фигур обращает привязку к сетке. При работе с выделением отключает привязки при переносе объектов, изменении размера картинок и перетаскивании концов прямых и стрелок.',['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','select.move','resize','endpoint']),
-  gesture('gesture.bezier','Создать точку Безье','Ctrl','Касание или перетаскивание у последней либо выбранной прямой/стрелки. Ручки рамки имеют приоритет.',['line','arrow','select.begin']),
-  gesture('gesture.marker','Рисовать прямым маркером','Shift','Прямой штрих с углом через 15°.',['marker']),
-  gesture('gesture.ellipse','Эллипс вместо окружности','Shift','Независимые полуоси при рисовании от центра.',['ellipse']),
-  gesture('gesture.parabola','Концы параболы на одном уровне','Shift','Выравнивание по горизонтали, в том числе во время второго жеста.',['parabola']),
-  gesture('gesture.addSelection','Добавить к выделению или убрать','Cmd','Клик меняет состав группы, рамка добавляет объекты.',['select.begin']),
-  gesture('gesture.resizeFree','Менять пропорции объекта','Shift','При перетаскивании за угол рамки.',['resize']),
-  gesture('gesture.resizeCenter','Менять размер от центра','Ctrl','При перетаскивании за угол рамки.',['resize']),
-  gesture('gesture.rotate','Поворот объекта с шагом 15°','Shift','При перетаскивании ручки вращения.',['rotate']),
-  gesture('gesture.pivotFree','Свободно двигать центр вращения','Alt','Отключает прилипание центра к рамке.',['pivot']),
+type Gesture=ActionDef & {title:LabelKey; description:LabelKey};
+const gesture=(id:string,title:LabelKey,key:string,description:LabelKey,contexts:string[],kind:'modifier'|'hold'='modifier'):Gesture=>({id,title,keys:[key],description,contexts,kind,group:'gestures',run:()=>{}});
+export const GESTURES:Gesture[]=[
+  {...gesture('gesture.nudgeFine','action.gesture.nudgeFine','Alt','help.gesture.nudgeFine',['selection.keys']),group:'selection'},
+  {...gesture('gesture.nudgeMedium','action.gesture.nudgeMedium','Ctrl','help.gesture.nudgeMedium',['selection.keys']),group:'selection'},
+  {...gesture('gesture.nudgeFast','action.gesture.nudgeFast','Cmd','help.gesture.nudgeFast',['selection.keys']),keys:['Cmd','Shift'],group:'selection'},
+  gesture('gesture.pan','action.gesture.pan','Space','help.gesture.pan',['*'],'hold'),
+  gesture('gesture.zoom','action.gesture.zoom','Ctrl','help.gesture.zoom',['wheel']),
+  gesture('gesture.select','action.gesture.select','Cmd','help.gesture.select',['pen','eraser','line','arrow','coordinates','marker','ellipse','sine','parabola','hyperbola','adiabat']),
+  gesture('gesture.angle','action.gesture.angle','Shift','help.gesture.angle',['line','arrow','endpoint']),
+  gesture('gesture.grid','action.gesture.grid','Alt','help.gesture.grid',['line','arrow','coordinates','ellipse','sine','parabola','hyperbola','adiabat','select.move','resize','endpoint']),
+  gesture('gesture.bezier','action.gesture.bezier','Ctrl','help.gesture.bezier',['line','arrow','select.begin']),
+  gesture('gesture.marker','action.gesture.marker','Shift','help.gesture.marker',['marker']),
+  gesture('gesture.ellipse','action.gesture.ellipse','Shift','help.gesture.ellipse',['ellipse']),
+  gesture('gesture.parabola','action.gesture.parabola','Shift','help.gesture.parabola',['parabola']),
+  gesture('gesture.addSelection','action.gesture.addSelection','Cmd','help.gesture.addSelection',['select.begin']),
+  gesture('gesture.resizeFree','action.gesture.resizeFree','Shift','help.gesture.resizeCenter',['resize']),
+  gesture('gesture.resizeCenter','action.gesture.resizeCenter','Ctrl','help.gesture.resizeCenter',['resize']),
+  gesture('gesture.rotate','action.gesture.rotate','Shift','help.gesture.rotate',['rotate']),
+  gesture('gesture.pivotFree','action.gesture.pivotFree','Alt','help.gesture.pivotFree',['pivot']),
 ];

@@ -1,5 +1,6 @@
 // Исходные PDF-потоки не переписываются: поверх страниц добавляется прозрачная
 // векторная форма. В длинном листе оригиналы вложены как PDF-формы, без растеризации.
+import { t } from '../core/language.ts';
 import { PDFDocument, PDFDict, PDFRawStream, PDFName, concatTransformationMatrix, drawObject, popGraphicsState, pushGraphicsState, setGraphicsState, rgb, type PDFPage, type PDFEmbeddedPage } from 'pdf-lib';
 import { matInvert, matMul, type Mat } from '../core/geom.ts';
 import type { PdfExportRequest, PdfLayer } from './pdf-types.ts';
@@ -29,7 +30,7 @@ function multiplyStates(doc:PDFDocument):void {
 async function embedOverlays(doc:PDFDocument,bytes:Uint8Array|null|undefined,layers?:PdfLayer[]):Promise<Array<{form:PDFEmbeddedPage;multiply:boolean}>> {
   if(!bytes)return [];
   const overlay=await PDFDocument.load(bytes);
-  if(layers&&overlay.getPageCount()!==layers.length)throw new Error('Не удалось напечатать все слои пометок PDF.');
+  if(layers&&overlay.getPageCount()!==layers.length)throw new Error(t('error.pdfOverlay'));
   const result:Array<{form:PDFEmbeddedPage;multiply:boolean}>=[];
   for(let i=0;i<overlay.getPageCount();i++){
     const multiply=layers?.[i]?.multiply===true;
@@ -64,7 +65,7 @@ export async function composePdf({request:r,overlays}:PdfComposition):Promise<Ui
   if(r.grid){
     const step=r.grid.step,color=rgb(201/255,213/255,230/255),thickness=.5*Math.min(sx,sy);
     const count=(r.bounds.width+r.bounds.height)/step;
-    if(count>200000)throw new Error('Слишком много линий сетки для PDF. Увеличьте шаг сетки.');
+    if(count>200000)throw new Error(t('error.pdfGridLines'));
     for(let x=Math.ceil(r.bounds.x/step)*step;x<=r.bounds.x+r.bounds.width;x+=step){const px=(x-r.bounds.x)*sx;page.drawLine({start:{x:px,y:0},end:{x:px,y:height},thickness,color});}
     for(let y=Math.ceil(r.bounds.y/step)*step;y<=r.bounds.y+r.bounds.height;y+=step){const py=(r.bounds.y+r.bounds.height-y)*sy;page.drawLine({start:{x:0,y:py},end:{x:width,y:py},thickness,color});}
     page.drawRectangle({x:0,y:0,width,height,borderColor:rgb(158/255,175/255,201/255),borderWidth:1.5*Math.min(sx,sy)});

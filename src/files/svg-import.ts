@@ -3,6 +3,7 @@
 // Зависимые эффекты и неподдерживаемые стили остаются в едином исходном SVG.
 // Изменённый во внешнем редакторе SVG никогда не заменяется устаревшими данными пера.
 // Внешняя страница вписывается по ширине при масштабе холста 1: клетки и перо как на пустом.
+import { t } from '../core/language.ts';
 import { cancellationPoint } from '../core/cancel.ts';
 import { transformObject } from '../core/transform.ts';
 import { svgParts } from './svg-parts.ts';
@@ -21,13 +22,13 @@ const length = (s: string | null, fallback: number): number => {
 };
 
 export function sanitizeSvg(text: string): { source: string; x: number; y: number; width: number; height: number } {
-  if (text.length > MAX_FILE_BYTES) throw new Error('SVG слишком большой (предел 256 МБ).');
+  if (text.length > MAX_FILE_BYTES) throw new Error(t('error.svgLimit'));
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
   const comments=doc.createTreeWalker(doc,NodeFilter.SHOW_COMMENT);const removed:Node[]=[];
   while(comments.nextNode()) if(/^phaint-(asset|end)-/.test(comments.currentNode.textContent??''))removed.push(comments.currentNode);
   for(const node of removed)node.parentNode?.removeChild(node);
   const root = doc.documentElement;
-  if (doc.querySelector('parsererror') || root.localName !== 'svg' || root.namespaceURI !== NS) throw new Error('Не удалось прочитать SVG: неверный XML.');
+  if (doc.querySelector('parsererror') || root.localName !== 'svg' || root.namespaceURI !== NS) throw new Error(t('error.svgXml'));
   for (const el of [root, ...root.querySelectorAll('*')]) {
     if (el !== root && (el.namespaceURI !== NS || ['metadata', 'script', 'foreignObject', 'animate', 'animateTransform', 'animateMotion', 'set'].includes(el.localName))) {
       el.remove();
@@ -37,7 +38,7 @@ export function sanitizeSvg(text: string): { source: string; x: number; y: numbe
       if (/^on/i.test(attr.localName)) { el.removeAttributeNode(attr); continue; }
       const value = attr.value.trim();
       if (attr.localName === 'href' && value && !value.startsWith('#') && !/^data:image\/(png|jpeg|webp|gif);base64,[\da-z+/=\s]+$/i.test(value)) {
-        throw new Error('SVG ссылается на внешний файл. Встройте картинки в SVG перед открытием.');
+        throw new Error(t('error.svgExternalFile'));
       }
       checkCss(value);
     }
@@ -47,11 +48,11 @@ export function sanitizeSvg(text: string): { source: string; x: number; y: numbe
   let x = 0, y = 0;
   let vbWidth = 300, vbHeight = 150;
   if (vb) {
-    if (vb.length !== 4 || !vb.every(v => Number.isFinite(v) && Math.abs(v) <= 1e9) || vb[2] <= 0 || vb[3] <= 0) throw new Error('Некорректный viewBox SVG.');
+    if (vb.length !== 4 || !vb.every(v => Number.isFinite(v) && Math.abs(v) <= 1e9) || vb[2] <= 0 || vb[3] <= 0) throw new Error(t('error.svgViewBox'));
     [x, y, vbWidth, vbHeight] = vb;
   }
   const width = length(root.getAttribute('width'), vbWidth), height = length(root.getAttribute('height'), vbHeight);
-  if (![x, y, width, height].every(v => Number.isFinite(v) && Math.abs(v) <= 1e9) || width <= 0 || height <= 0) throw new Error('Некорректный размер SVG.');
+  if (![x, y, width, height].every(v => Number.isFinite(v) && Math.abs(v) <= 1e9) || width <= 0 || height <= 0) throw new Error(t('error.svgDimensions'));
   root.setAttribute('width', String(width));
   root.setAttribute('height', String(height));
   root.setAttribute('viewBox', `${x} ${y} ${vb ? vbWidth : width} ${vb ? vbHeight : height}`);
@@ -62,7 +63,7 @@ export function sanitizeSvg(text: string): { source: string; x: number; y: numbe
 function checkCss(value: string): void {
   const urls = [...value.matchAll(/url\(([^)]*)\)/gi)];
   if (/@import|@font-face|\\/i.test(value) || urls.some(m => !m[1].trim().replace(/^['"]|['"]$/g, '').startsWith('#'))) {
-    throw new Error('SVG содержит внешние ресурсы или неподдерживаемые CSS-ссылки. Встройте ресурсы в файл.');
+    throw new Error(t('error.svgExternalResources'));
   }
 }
 

@@ -183,7 +183,7 @@ body {
 .choice-buttons { display:flex; gap:6px; }
 .choice-buttons .btn { flex:1; }
 .choice-buttons .btn.active { border-color:var(--accent); color:var(--accent); background:var(--ui-hover); }
-.choice-buttons[aria-label="Рисунок линии"] .btn { padding:6px; font-size:12px; white-space:nowrap; }
+.choice-buttons[data-choice="panel.lineStyle"] .btn { padding:6px; font-size:12px; white-space:nowrap; }
 
 input[type='range'] {
   width: 100%;

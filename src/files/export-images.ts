@@ -1,5 +1,6 @@
 // Уменьшение вставленных картинок в Worker, последовательно и без изменения документа.
 // Прозрачность сохраняется PNG; для непрозрачной картинки выбирается меньший PNG/JPEG.
+import { t } from '../core/language.ts';
 import type { DocumentData } from './codec.ts';
 import { exportImageSize, matrixScale, VECTOR_QUALITY, vectorOptions } from './export-options.ts';
 
@@ -8,7 +9,7 @@ function base64(bytes:Uint8Array):string {
 }
 function imageBlob(source:string):Blob {
   const comma=source.indexOf(','),header=source.slice(0,comma);
-  if(!/^data:image\/(?:png|jpeg|webp);base64$/i.test(header))throw new Error('Не удалось прочитать встроенную картинку.');
+  if(!/^data:image\/(?:png|jpeg|webp);base64$/i.test(header))throw new Error(t('error.embeddedImage'));
   const raw=atob(source.slice(comma+1)),bytes=new Uint8Array(raw.length);
   for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
   return new Blob([bytes],{type:header.slice(5,-7)});
@@ -27,7 +28,7 @@ export async function prepareExportImages(data:DocumentData):Promise<DocumentDat
     try{
       const size=exportImageSize(bitmap.width,bitmap.height,o.width*zoom,o.height*zoom,quality);
       canvas=new OffscreenCanvas(size.width,size.height);
-      const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw new Error('Не удалось обработать картинку для экспорта.');
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw new Error(t('error.exportImage'));
       ctx.drawImage(bitmap,0,0,size.width,size.height);
       let encoded=await canvas.convertToBlob({type:'image/png'});
       const pixels=ctx.getImageData(0,0,size.width,size.height).data;

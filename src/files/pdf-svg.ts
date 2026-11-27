@@ -1,5 +1,6 @@
 // Векторные страницы для SVG: контуры текста переиспользуются через defs/use.
 // MuPDF загружается только в Worker при сохранении PDF; оригинал и холст не меняются.
+import { t } from '../core/language.ts';
 import * as mupdf from 'mupdf';
 import { isPdfPage, type SvgObj } from '../core/types.ts';
 import { MAX_FILE_BYTES, type DocumentData } from './codec.ts';
@@ -30,7 +31,7 @@ export function pdfVectorPages(data:DocumentData):DocumentData {
   const copies=new Map<number,SvgObj>();let length=0;
   try{
     for(const o of pages){
-      if(!isPdfPage(o)||o.pdfPage.index>=pdf.countPages())throw new Error('Не найдена исходная страница PDF.');
+      if(!isPdfPage(o)||o.pdfPage.index>=pdf.countPages())throw new Error(t('error.pdfMissingPage'));
       const page=pdf.loadPage(o.pdfPage.index),buffer=new mupdf.Buffer();
       let writer:mupdf.DocumentWriter|undefined,device:mupdf.Device|undefined;
       try{
@@ -39,7 +40,7 @@ export function pdfVectorPages(data:DocumentData):DocumentData {
         device.close();writer.endPage();writer.close();
         const source=compactPdfSvg(pageSource(buffer.asString(),o.width,o.height,`${prefix}${o.id}-`));
         length+=source.length;
-        if(length>MAX_FILE_BYTES)throw new Error('Векторные страницы SVG превышают предел 256 МБ.');
+        if(length>MAX_FILE_BYTES)throw new Error(t('error.svgPageLimit'));
         copies.set(o.id,{...o,kind:'svg',source});
       }finally{device?.destroy();writer?.destroy();buffer.destroy();page.destroy();}
     }

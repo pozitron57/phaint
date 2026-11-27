@@ -1,6 +1,5 @@
 // Браузерный вариант: SVG/картинки/PDF, скачивание файлов, резервная копия в IndexedDB.
-import { translate } from '../core/menu-text.ts';
-import { type Language, t } from '../core/language.ts';
+import { languages, multilingual, type Language, t } from '../core/language.ts';
 import type { FileApi, RecoveryFile, UnsavedChoice } from './api.ts';
 import { imageTypes } from './binary.ts';
 import { exportName, repeatExportName, workingName } from './names.ts';
@@ -18,7 +17,7 @@ async function recovery(write: boolean, value?: RecoveryFile | null): Promise<Re
       const store = tx.objectStore('recovery');
       const req = write ? (value ? store.put(value, 'current') : store.delete('current')) : store.get('current');
       tx.oncomplete = () => resolve(write ? null : req.result ?? null);
-      tx.onabort = tx.onerror = () => reject(tx.error ?? new Error(translate('Не удалось записать резервную копию.')));
+      tx.onabort = tx.onerror = () => reject(tx.error ?? new Error(t('file.couldNotWriteTheBackup')));
     });
   } finally { db.close(); }
 }
@@ -39,8 +38,8 @@ function choose(message: string, labels: string[], cancellable=true): Promise<nu
 }
 
 export async function chooseBrowserLanguage():Promise<Language> {
-  const chosen=await choose('Выберите язык / Choose your language', ['Русский','English'], false);
-  return chosen===0?'ru':'en';
+  const chosen=await choose(multilingual('startup.choose',' / '), languages.map(item=>item.name), false);
+  return languages[chosen].code;
 }
 
 export function browserFiles(): FileApi {
@@ -61,7 +60,7 @@ export function browserFiles(): FileApi {
     }),
     chooseSave: async (current, saveAs, selection) => {
       if (current && !saveAs&&!selection&&/\.svg$/i.test(current.name)) return current;
-      let name = window.prompt(selection?translate('Сохранить выделение в отдельный SVG'):translate('Название SVG-файла'), selection?exportName(current?.name,'svg',true):workingName(current?.name));
+      let name = window.prompt(selection?t('file.saveSelectionAs'):t('file.svgFileName'), selection?exportName(current?.name,'svg',true):workingName(current?.name));
       if (!name?.trim()) return null;
       name = name.trim(); if (!/\.svg$/i.test(name)) name += '.svg';
       return { handle: crypto.randomUUID(), name };
@@ -73,7 +72,7 @@ export function browserFiles(): FileApi {
     },
     chooseExport: async (current, format, selection, previous) => {
       const suggested = previous && repeatExportName(previous.name, format);
-      let name=window.prompt(translate('Название файла'),suggested || exportName(current?.name,format,selection))?.trim();
+      let name=window.prompt(t('file.fileName'),suggested || exportName(current?.name,format,selection))?.trim();
       if(!name)return null;
       if(!name.toLowerCase().endsWith(`.${format}`))name+=`.${format}`;
       return {handle:crypto.randomUUID(),name};
@@ -83,12 +82,12 @@ export function browserFiles(): FileApi {
       const a=document.createElement('a');a.href=url;a.download=file.name;a.click();
       window.setTimeout(()=>URL.revokeObjectURL(url),30000);
     },
-    confirmUnsaved: async name => (['save', 'discard', 'cancel'] as UnsavedChoice[])[await choose(t(`Сохранить изменения в «${name}»?`,`Save changes to “${name}”?`), [translate('Сохранить'), translate('Не сохранять'), translate('Отмена')])],
+    confirmUnsaved: async name => (['save', 'discard', 'cancel'] as UnsavedChoice[])[await choose(t('file.saveChanges', {name}), [t('settings.save'), t('file.donTSave'), t('settings.cancel')])],
     recoveryRead: () => recovery(false),
     recoveryWrite: async file => { await recovery(true, file); },
-    confirmRecovery: async file => (await choose(t(`Восстановить «${file.name}» после незавершённой работы?`,`Restore “${file.name}” from the last session?`), [translate('Восстановить'), translate('Начать с пустого холста')])) === 0,
+    confirmRecovery: async file => (await choose(t('file.restoreSession', {name:file.name}), [t('file.restore'), t('file.startWithABlankCanvas')])) === 0,
     status: (name, changed) => { dirty = changed; document.title = `${name}${dirty ? ' •' : ''} — Phaint`; },
-    error: async message => { await choose(message, [translate('Понятно')]); },
+    error: async message => { await choose(message, [t('file.ok')]); },
     onCommand: () => undefined,
     closeReady: () => undefined,
   };

@@ -1,4 +1,5 @@
 // Worker создаётся по требованию; отмена завершает его даже внутри синхронного расчёта.
+import { currentLanguage, t } from '../core/language.ts';
 import type { DocumentData } from './codec.ts';
 import type { FileWriteStats } from './file-stats.ts';
 import { cancelled, checkCancelled } from '../core/cancel.ts';
@@ -43,7 +44,7 @@ export class DocumentWorker {
           if (!this.pending.size && this.worker === worker) this.dispose();
         }, 5000);
       };
-      worker.onerror = () => { if (worker === this.worker) this.dispose(new Error('Не удалось обработать документ.')); };
+      worker.onerror = () => { if (worker === this.worker) this.dispose(new Error(t('error.documentProcessing'))); };
     }
     const worker = this.worker;
     return new Promise<T>((resolve, reject) => {
@@ -61,14 +62,14 @@ export class DocumentWorker {
   private async send(worker: Worker, id: number, kind: Kind, data: unknown, stream: boolean): Promise<void> {
     if ((kind === 'svg' || kind === 'svg-file' || kind === 'visual' || kind === 'recovery') && (data as DocumentData).objects.length > 256) {
       const { objects, ...fields } = data as DocumentData;
-      worker.postMessage({ id, kind, phase: 'start', data: fields, stream });
+      worker.postMessage({ id, kind, language:currentLanguage(), phase: 'start', data: fields, stream });
       for (let at = 0; at < objects.length; at += 256) {
         if (worker !== this.worker || !this.pending.has(id)) return;
         worker.postMessage({ id, phase: 'append', data: objects.slice(at, at + 256) });
         await new Promise<void>(resolve => setTimeout(resolve, 0));
       }
       if (worker === this.worker && this.pending.has(id)) worker.postMessage({ id, phase: 'end' });
-    } else if (kind === 'png') worker.postMessage({ id, kind, data }, [(data as {bytes: Uint8Array}).bytes.buffer as ArrayBuffer]);
-    else worker.postMessage({ id, kind, data, stream });
+    } else if (kind === 'png') worker.postMessage({ id, kind, language:currentLanguage(), data }, [(data as {bytes: Uint8Array}).bytes.buffer as ArrayBuffer]);
+    else worker.postMessage({ id, kind, language:currentLanguage(), data, stream });
   }
 }

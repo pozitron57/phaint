@@ -26,15 +26,15 @@ static NSMutableDictionary<NSNumber *,PhaintTextRecognition *> *recognitions;
 
 static CGImageRef RecognitionImage(PhaintTextRecognition *task) {
   CGImageSourceRef source=CGImageSourceCreateWithData((__bridge CFDataRef)task.data,NULL);
-  if(!source){task.error=@"Не удалось прочитать картинку.";return NULL;}
+  if(!source){task.error=@"error.ocrRead";return NULL;}
   NSDictionary *properties=CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source,0,NULL));
   double width=[properties[(__bridge NSString *)kCGImagePropertyPixelWidth] doubleValue];
   double height=[properties[(__bridge NSString *)kCGImagePropertyPixelHeight] doubleValue];
   if(!isfinite(width) || !isfinite(height) || width<1 || height<1){
-    CFRelease(source);task.error=@"Не удалось прочитать картинку.";return NULL;
+    CFRelease(source);task.error=@"error.ocrRead";return NULL;
   }
   if(width*height>64000000){
-    CFRelease(source);task.error=@"Картинка слишком большая: поддерживается до 64 миллионов пикселей.";return NULL;
+    CFRelease(source);task.error=@"error.imageTooLarge";return NULL;
   }
   // EXIF-поворот, как при показе JPEG на холсте. Масштаб объекта и вида сюда не попадает.
   NSDictionary *options=@{(__bridge NSString *)kCGImageSourceCreateThumbnailFromImageAlways:@YES,
@@ -42,7 +42,7 @@ static CGImageRef RecognitionImage(PhaintTextRecognition *task) {
     (__bridge NSString *)kCGImageSourceThumbnailMaxPixelSize:@(MAX(width,height))};
   CGImageRef image=CGImageSourceCreateThumbnailAtIndex(source,0,(__bridge CFDictionaryRef)options);
   CFRelease(source);
-  if(!image){task.error=@"Не удалось декодировать картинку.";return NULL;}
+  if(!image){task.error=@"error.ocrDecode";return NULL;}
   width=CGImageGetWidth(image);height=CGImageGetHeight(image);
   double left=0,top=0,right=width,bottom=height;
   if(task.clip){
@@ -57,7 +57,7 @@ static CGImageRef RecognitionImage(PhaintTextRecognition *task) {
   CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
   CGContextRef ctx=CGBitmapContextCreate(NULL,right-left,bottom-top,8,0,space,(CGBitmapInfo)kCGImageAlphaNoneSkipLast);
   CGColorSpaceRelease(space);
-  if(!ctx){CGImageRelease(image);task.error=@"Недостаточно памяти для распознавания картинки.";return NULL;}
+  if(!ctx){CGImageRelease(image);task.error=@"error.ocrMemory";return NULL;}
   // Прозрачные и обрезанные участки белые, поэтому скрытый текст не распознаётся.
   CGContextSetRGBFillColor(ctx,1,1,1,1);CGContextFillRect(ctx,CGRectMake(0,0,right-left,bottom-top));
   CGContextTranslateCTM(ctx,-left,bottom-height);
@@ -87,13 +87,13 @@ static void RecognizeExecute(napi_env env,void *data) {
     request.recognitionLevel=VNRequestTextRecognitionLevelAccurate;request.usesLanguageCorrection=YES;
     NSError *error=nil;
     NSArray<NSString *> *supported=[request supportedRecognitionLanguagesAndReturnError:&error];
-    if(!supported){task.error=error.localizedDescription ?: @"Распознавание текста недоступно.";return;}
+    if(!supported){task.error=error.localizedDescription ?: @"error.ocrUnavailable";return;}
     NSMutableArray<NSString *> *languages=[NSMutableArray array];
     for(NSString *language in @[@"ru-RU",@"en-US"])if([supported containsObject:language])[languages addObject:language];
     if(languages.count)request.recognitionLanguages=languages;
     if(@available(macOS 13.0,*))request.automaticallyDetectsLanguage=YES;
     if(task.cancelled)return;
-    if(![handler performRequests:@[request] error:&error]){task.error=error.localizedDescription ?: @"Не удалось распознать текст.";return;}
+    if(![handler performRequests:@[request] error:&error]){task.error=error.localizedDescription ?: @"error.ocrFailed";return;}
     NSArray<VNRecognizedTextObservation *> *observations=[request.results sortedArrayUsingComparator:^NSComparisonResult(VNRecognizedTextObservation *a,VNRecognizedTextObservation *b){
       double y=CGRectGetMidY(b.boundingBox)-CGRectGetMidY(a.boundingBox);
       if(y!=0)return y<0?NSOrderedAscending:NSOrderedDescending;
@@ -106,7 +106,7 @@ static void RecognizeExecute(napi_env env,void *data) {
     }
     task.text=[lines componentsJoinedByString:@"\n"];
   } @catch(NSException *exception){
-    ((__bridge PhaintTextRecognition *)data).error=exception.reason ?: @"Ошибка распознавания текста.";
+    ((__bridge PhaintTextRecognition *)data).error=exception.reason ?: @"error.ocrException";
   }}
 }
 
@@ -114,7 +114,7 @@ static void RecognizeComplete(napi_env env,napi_status status,void *data) {
   PhaintTextRecognition *task=(__bridge PhaintTextRecognition *)data;
   napi_value value;
   if(task.cancelled || task.error || status!=napi_ok){
-    NSString *message=task.cancelled?@"Распознавание отменено.":task.error ?: @"Не удалось распознать текст.";
+    NSString *message=task.cancelled?@"error.ocrCancelled":task.error ?: @"error.ocrFailed";
     napi_value text;napi_create_string_utf8(env,message.UTF8String,NAPI_AUTO_LENGTH,&text);
     napi_create_error(env,NULL,text,&value);napi_reject_deferred(env,task->deferred,value);
   }else{
@@ -130,19 +130,19 @@ static napi_value RecognizeText(napi_env env,napi_callback_info info) {
   if(argc<2 || napi_is_buffer(env,argv[0],&buffer)!=napi_ok || !buffer ||
      napi_get_value_uint32(env,argv[1],&identifier)!=napi_ok || !identifier ||
      napi_get_buffer_info(env,argv[0],&bytes,&size)!=napi_ok || !size || size>64*1024*1024 || recognitions[@(identifier)]){
-    napi_throw_error(env,NULL,"Неверные данные картинки для распознавания.");return NULL;
+    napi_throw_error(env,NULL,"error.ocrData");return NULL;
   }
   PhaintTextRecognition *task=[PhaintTextRecognition new];task.identifier=identifier;
   task.data=[NSData dataWithBytes:bytes length:size];task.request=[VNRecognizeTextRequest new];
   if(argc>2){
     bool array=false;napi_is_array(env,argv[2],&array);
     if(array){uint32_t length=0;napi_get_array_length(env,argv[2],&length);
-      if(length>128 || length%2){napi_throw_error(env,NULL,"Неверная обрезка картинки.");return NULL;}
+      if(length>128 || length%2){napi_throw_error(env,NULL,"error.ocrCrop");return NULL;}
       NSMutableArray<NSValue *> *clip=[NSMutableArray array];
       for(uint32_t i=0;i<length;i+=2){napi_value x,y;double px,py;
         napi_get_element(env,argv[2],i,&x);napi_get_element(env,argv[2],i+1,&y);
         if(napi_get_value_double(env,x,&px)!=napi_ok || napi_get_value_double(env,y,&py)!=napi_ok || !isfinite(px) || !isfinite(py)){
-          napi_throw_error(env,NULL,"Неверная обрезка картинки.");return NULL;
+          napi_throw_error(env,NULL,"error.ocrCrop");return NULL;
         }
         [clip addObject:[NSValue valueWithPoint:NSMakePoint(px,py)]];
       }
@@ -158,7 +158,7 @@ static napi_value RecognizeText(napi_env env,napi_callback_info info) {
   }
   if(status!=napi_ok){
     if(task->work)napi_delete_async_work(env,task->work);[recognitions removeObjectForKey:@(identifier)];
-    napi_value message,error;napi_create_string_utf8(env,"Не удалось запустить распознавание.",NAPI_AUTO_LENGTH,&message);
+    napi_value message,error;napi_create_string_utf8(env,"error.ocrStart",NAPI_AUTO_LENGTH,&message);
     napi_create_error(env,NULL,message,&error);napi_reject_deferred(env,task->deferred,error);
   }
   return promise;

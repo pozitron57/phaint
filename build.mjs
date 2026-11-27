@@ -2,6 +2,8 @@
 // и нативный модуль. `node build.mjs` — один раз, `node build.mjs --watch` — пересобирать при правках.
 import * as esbuild from 'esbuild';
 import { cp, mkdir, readFile, rm } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { readCatalogs } from './src/locales/read.ts';
 import { buildNative } from './scripts/build-native.mjs';
 
 const watch = process.argv.includes('--watch');
@@ -9,7 +11,17 @@ const watch = process.argv.includes('--watch');
 const {version}=JSON.parse(await readFile(new URL('./package.json',import.meta.url),'utf8'));
 // SVGO не разбирается при обычном сохранении: отдельный модуль загружается по галочке.
 const lazySvg = {name:'lazy-files',setup(build){build.onResolve({filter:/\/(svg-optimize|pdf-render|pdf-svg)\.ts$/},args=>args.kind==='entry-point'?undefined:({path:'./'+args.path.split('/').pop().replace('.ts','.js'),external:true}));}};
-const common = { bundle: true, sourcemap: true, logLevel: 'info', plugins:[lazySvg], define:{__PHAINT_VERSION__:JSON.stringify(version)} };
+// В приложении нет доступа к исходникам. Включаем все переводы и следим за новыми файлами в --watch.
+const localeDirectory=new URL('./src/locales/',import.meta.url);
+const locales={name:'locales',setup(build){
+  build.onLoad({filter:/[/\\]locales[/\\]catalogs\.ts$/},()=>{
+    const catalogs=readCatalogs(localeDirectory);
+    return {contents:'export const catalogs = '+JSON.stringify(catalogs),
+      watchFiles:Object.keys(catalogs).map(code=>fileURLToPath(new URL(code+'.json',localeDirectory))),
+      watchDirs:[fileURLToPath(localeDirectory)]};
+  });
+}};
+const common = { bundle: true, sourcemap: true, logLevel: 'info', plugins:[locales,lazySvg], define:{__PHAINT_VERSION__:JSON.stringify(version)} };
 const node = { ...common, platform: 'node', format: 'cjs', target: 'node22', external: ['electron'] };
 
 const configs = [
@@ -19,9 +31,9 @@ const configs = [
   { ...node, entryPoints: ['electron/pdf-compose-worker.ts'], outfile: 'dist/pdf-compose-worker.cjs' },
   { ...common, entryPoints: ['src/main.ts'], outfile: 'dist/renderer/app.js', platform: 'browser', format: 'iife', target: 'es2022' },
   { ...common, entryPoints: ['src/files/worker.ts'], outfile: 'dist/renderer/document-worker.js', platform: 'browser', format: 'iife', target: 'es2022' },
-  { ...common, plugins:[], entryPoints: ['src/files/svg-optimize.ts'], outfile: 'dist/renderer/svg-optimize.js', platform: 'browser', format: 'esm', target: 'es2022', minify:true },
-  { ...common, plugins:[], entryPoints: ['src/files/pdf-render.ts'], outfile: 'dist/renderer/pdf-render.js', platform:'browser',format:'esm',target:'es2022',minify:true },
-  { ...common, plugins:[lazySvg,{name:'mupdf',setup(build){build.onResolve({filter:/^mupdf$/},()=>({path:'./mupdf/mupdf.js',external:true}));}}], entryPoints:['src/files/pdf-svg.ts'],outfile:'dist/renderer/pdf-svg.js',platform:'browser',format:'esm',target:'es2022',minify:true },
+  { ...common, plugins:[locales], entryPoints: ['src/files/svg-optimize.ts'], outfile: 'dist/renderer/svg-optimize.js', platform: 'browser', format: 'esm', target: 'es2022', minify:true },
+  { ...common, plugins:[locales], entryPoints: ['src/files/pdf-render.ts'], outfile: 'dist/renderer/pdf-render.js', platform:'browser',format:'esm',target:'es2022',minify:true },
+  { ...common, plugins:[locales,lazySvg,{name:'mupdf',setup(build){build.onResolve({filter:/^mupdf$/},()=>({path:'./mupdf/mupdf.js',external:true}));}}], entryPoints:['src/files/pdf-svg.ts'],outfile:'dist/renderer/pdf-svg.js',platform:'browser',format:'esm',target:'es2022',minify:true },
 ];
 
 await rm('dist', { recursive: true, force: true });

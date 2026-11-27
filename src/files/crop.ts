@@ -1,4 +1,5 @@
 // Снимок области M: только пересекающиеся объекты, с локальной обрезкой и точной рамкой SVG.
+import { t } from '../core/language.ts';
 import { boxPolygon, insideClip, intersectClip, polygonArea, polygonBounds, withClipBounds } from '../core/clip.ts';
 import { bboxIntersects, matApply, matInvert, type Pt, type Mat } from '../core/geom.ts';
 import { objectMatrix } from '../core/transform.ts';
@@ -8,7 +9,7 @@ export interface ExportArea { corners:readonly Pt[] }
 export function cropDocument(data:DocumentData,area:ExportArea):DocumentData {
   const corners=area.corners,bounds=polygonBounds(corners);
   const [a,b,,d]=corners,width=Math.hypot(b.x-a.x,b.y-a.y),height=Math.hypot(d.x-a.x,d.y-a.y);
-  if(width<1e-6||height<1e-6)throw new Error('Область сохранения слишком мала.');
+  if(width<1e-6||height<1e-6)throw new Error(t('error.cropSize'));
   const matrix:Mat={a:(b.x-a.x)/width,b:(d.x-a.x)/height,c:(b.y-a.y)/width,d:(d.y-a.y)/height,e:0,f:0};
   matrix.e=-matrix.a*a.x-matrix.c*a.y;matrix.f=-matrix.b*a.x-matrix.d*a.y;
   const objects=data.objects.flatMap(o=>{

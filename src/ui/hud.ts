@@ -1,6 +1,5 @@
 // Всплывающая подсказка внизу экрана («Толщина 2.6», «125 %») и отладочная панель с числами о пере и отрисовке.
-import { t } from '../core/language.ts';
-import { translate } from '../core/menu-text.ts';
+import { currentLanguage, t } from '../core/language.ts';
 import type { App } from '../app.ts';
 import type { InkSettings } from '../core/settings.ts';
 import { h } from './dom.ts';
@@ -12,7 +11,7 @@ declare const __PHAINT_VERSION__:string;
 const TOAST_MS = 900;
 const DEBUG_MS = 250;
 type LinePattern = 'solid'|'dash'|'dots';
-const PATTERN_LABELS={solid:'Сплошная линия',dash:'Штриховая линия',dots:'Линия из точек'};
+const PATTERN_LABELS={solid:'action.style.solid',dash:'action.style.dashed',dots:'panel.dottedLine'} as const;
 
 /** Нормированная толщина: образец показывает шаг/концы штрихов даже у очень тонкого пера. */
 function lineSample(mode:LinePattern,ink?:InkSettings):SVGSVGElement {
@@ -51,8 +50,8 @@ export class Hud {
       h(
         'div',
         { class: 'debug-buttons' },
-        h('button', { class: 'btn', onclick: () => app.actions.run('debug.generate') }, '+10 000 штрихов'),
-        h('button', { class: 'btn', onclick: () => app.actions.run('debug.clear') }, 'Очистить'),
+        h('button', { class: 'btn', onclick: () => app.actions.run('debug.generate') }, t('debug.generate')),
+        h('button', { class: 'btn', onclick: () => app.actions.run('debug.clear') }, t('debug.clear')),
       ),
     );
     root.append(this.toastEl, this.debugEl);
@@ -73,7 +72,7 @@ export class Hud {
 
   linePattern(mode:LinePattern):void {
     this.toast('');
-    this.toastEl.setAttribute('aria-label',translate(PATTERN_LABELS[mode]));
+    this.toastEl.setAttribute('aria-label',t(PATTERN_LABELS[mode]));
     this.toastEl.append(lineSample(mode));
   }
 
@@ -88,13 +87,13 @@ export class Hud {
     const swatch=h('span',{class:'toast-color','aria-hidden':'true'});swatch.style.backgroundColor=ink.color;
     this.toastEl.replaceChildren(h('div',{class:'toast-tool'},swatch,
       h('div',{class:'toast-tool-detail'},h('span',null,this.toolText),lineSample(mode,ink))));
-    this.toastEl.setAttribute('aria-label',`${this.toolText}. ${t('Цвет','Color')} ${ink.color}. ${translate(PATTERN_LABELS[mode])}`);
+    this.toastEl.setAttribute('aria-label',t('hud.toolInk',{tool:this.toolText,color:ink.color,pattern:t(PATTERN_LABELS[mode])}));
   }
 
   refreshLanguage():void {
     const [generate,clear]=this.debugEl.querySelectorAll('button');
-    generate.textContent=t('+10 000 штрихов','+10,000 strokes');
-    clear.textContent=t('Очистить','Clear');
+    generate.textContent=t('debug.generate');
+    clear.textContent=t('debug.clear');
   }
 
   setDebug(on: boolean): void {
@@ -126,20 +125,20 @@ export class Hud {
     const tiles = renderer.tiles.stats();
     const saved=this.app.files?.lastWrite,processing=saved?.processing;
     this.debugText.textContent = [
-      `Phaint · ${t('версия','version')} ${__PHAINT_VERSION__}`,
-      t(`устройство: ${input.lastType}   нажатие: ${input.lastPressure.toFixed(2)}`,`device: ${input.lastType}   pressure: ${input.lastPressure.toFixed(2)}`),
-      t(`точек/с: ${input.rate || '—'}   в событии: ${input.perEvent || '—'}   предсказано: ${input.predictedCount}`,`points/s: ${input.rate || '—'}   per event: ${input.perEvent || '—'}   predicted: ${input.predictedCount}`),
-      t(`кадр: ${renderer.frameMs.toFixed(1)} мс   кадров/с: ${this.fps || '—'}`,`frame: ${renderer.frameMs.toFixed(1)} ms   fps: ${this.fps || '—'}`),
-      t(`объектов: ${doc.size}   плиток: ${tiles.ready}/${tiles.tiles}   холстов: ${tiles.canvases}`,`objects: ${doc.size}   tiles: ${tiles.ready}/${tiles.tiles}   canvases: ${tiles.canvases}`),
-      `${t('история','history')}: ${formatFileBytes(this.app.history.bytes)} / ${formatFileBytes(this.app.history.maxBytes)}`,
-      t(`масштаб: ${Math.round(view.scale * 100)} %   поворот: ${view.angle}°   dpr: ${view.dpr}`,`zoom: ${Math.round(view.scale * 100)}%   rotation: ${view.angle}°   dpr: ${view.dpr}`),
-      platform.native ? t('оболочка: Electron','platform: Electron') : t('оболочка: браузер','platform: browser'),
+      t('debug.version',{version:__PHAINT_VERSION__}),
+      t('debug.device', {device:input.lastType, pressure:input.lastPressure.toFixed(2)}),
+      t('debug.points', {rate:input.rate || '—', perEvent:input.perEvent || '—', predicted:input.predictedCount}),
+      t('debug.frame', {milliseconds:renderer.frameMs.toFixed(1), fps:this.fps || '—'}),
+      t('debug.objects', {objects:doc.size, ready:tiles.ready, tiles:tiles.tiles, canvases:tiles.canvases}),
+      t('debug.history',{used:formatFileBytes(this.app.history.bytes),limit:formatFileBytes(this.app.history.maxBytes)}),
+      t('debug.view', {zoom:Math.round(view.scale * 100), angle:view.angle, dpr:view.dpr}),
+      platform.native ? t('debug.platformElectron') : t('debug.platformBrowser'),
       ...(this.tabletText ? [this.tabletText] : []),
-      ...(saved?['',`${saved.action==='export'?t('Экспорт','Export'):t('Сохранение','Save')}: ${saved.name}`,`${t('Записано','Written')}: ${formatFileBytes(saved.bytes)}`]:[]),
+      ...(saved?['',`${saved.action==='export'?t('export.export'):t('debug.save')}: ${saved.name}`,t('debug.written',{size:formatFileBytes(saved.bytes)})]:[]),
       ...(processing?[
-        `${t('До SVGO','Before SVGO')}: ${formatFileBytes(processing.before)}`,
-        processing.after===null?`SVGO: ${t('не удалось обработать','processing failed')} — ${processing.error??t('ошибка','error')}`:`${t('После SVGO','After SVGO')}: ${formatFileBytes(processing.after)}`,
-        processing.used?`${t('Сохранён результат SVGO','Saved SVGO output')} (−${((1-saved!.bytes/processing.before)*100).toFixed(1).replace('.',',')} %).`:t('Сохранён вариант до SVGO.','Saved the original version.'),
+        t('debug.beforeSvgo',{size:formatFileBytes(processing.before)}),
+        processing.after===null?`SVGO: ${t('debug.processingFailed')} — ${processing.error??t('debug.error')}`:t('debug.afterSvgo',{size:formatFileBytes(processing.after)}),
+        processing.used?t('debug.savedSvgoOutput',{percent:((1-saved!.bytes/processing.before)*100).toLocaleString(currentLanguage(),{minimumFractionDigits:1,maximumFractionDigits:1})}):t('debug.savedTheOriginalVersion'),
       ]:[]),
     ].join('\n');
     if (platform.native && !this.tabletPending) {
@@ -147,7 +146,7 @@ export class Hud {
       void platform.tabletStats().then(s => {
         if (!s || this.debugEl.hidden) return;
         const rate = s.seconds > 0 ? Math.round(s.tablet / s.seconds) : 0;
-        this.tabletText = `macOS: ${rate || '—'} ${t('точек/с; нажим','points/s, pressure')} ${s.pressureMin.toFixed(2)}–${s.pressureMax.toFixed(2)}`;
+        this.tabletText = t('debug.tablet',{rate:rate||'—',min:s.pressureMin.toFixed(2),max:s.pressureMax.toFixed(2)});
       }).catch(() => undefined).finally(() => { this.tabletPending = false; });
     }
   }
