@@ -4,7 +4,7 @@
 
 Phaint (physical paint) is a vector whiteboard inspired by MyPaint and Xournal++. Its drawing tools are designed for teaching physics.
 
-https://github.com/user-attachments/assets/f194643c-255f-449e-9235-20c16f131eb0
+https://github.com/user-attachments/assets/031d23c6-f419-401b-a1b4-3d7bff75437d
 
 - Draw on an infinite canvas.
 - Assign your preferred keyboard shortcut to any tool.
