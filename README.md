@@ -2,13 +2,14 @@
 
 [Русская версия](README.ru.md) · [Download for macOS](https://github.com/pozitron57/phaint/releases/latest)
 
-Phaint (physical paint) is a vector whiteboard inspired by MyPaint and Xournal++. Its drawing tools are designed for teaching physics.
+Phaint (physical paint) is a vector whiteboard for online teaching. Inspired by MyPaint and Xournal++, it includes drawing tools for physics teachers.
 
 https://github.com/user-attachments/assets/031d23c6-f419-401b-a1b4-3d7bff75437d
 
 - Draw on an infinite canvas.
 - Assign your preferred keyboard shortcut to any tool.
 - Open and edit SVGs from other apps. Move, rotate or stretch individual objects.
+- Paste images from the clipboard.
 - Adjust how strongly pen pressure affects line width on a graphics tablet.
 - Draw freehand, erase and highlight. Dedicated tools cover coordinate axes, parabolas, hyperbolas, sine waves, arrows, straight lines, Bézier curves, circles and ellipses.
 - Adjust the grid spacing and snap objects to grid intersections.

@@ -6,7 +6,7 @@ Phaint (physical paint) — векторная доска-рисовалка д�
 По мотивам MyPaint и xournal++.
 Набор инструментов и возможностей подойдет для преподавателей физики.
 
-https://github.com/user-attachments/assets/f194643c-255f-449e-9235-20c16f131eb0
+https://github.com/user-attachments/assets/031d23c6-f419-401b-a1b4-3d7bff75437d
 
 - Бесконечный холст.
 - Любому инструменту можно назначить любую комбинацию клавиш.
